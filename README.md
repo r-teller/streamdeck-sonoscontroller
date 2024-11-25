@@ -13,11 +13,9 @@ The StreamDeck Sonos Controller plugin allows you to manage your Sonos devices s
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/YourUsername/streamdeck-sonos.git
-   ```
-2. Follow the setup instructions in the images below.
+### Manual installation    
+* Download the latest plugin release [here](https://github.com/r-teller/streamdeck-sonoscontroller/releases)
+* Open the downloaded .streamDeckPlugin file. It will be automatically installed into your Stream-Deck application
 
 ### Initial Setup
 
