@@ -1,0 +1,286 @@
+{
+  "UUID": "com.r-teller.sonoscontroller",
+  "Actions": [
+    {
+      "Icon": "images/actions/muted",
+      "Name": "Toggle Mute",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Toggle mute state between muted and unmuted.",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Unmuted",
+          "Image": "images/keys/unmuted",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        },
+        {
+          "Name": "Muted",
+          "Image": "images/keys/muted",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ],
+      "UUID": "com.r-teller.sonoscontroller.toggle-mute-unmute"
+    },
+    {
+      "Icon": "images/actions/paused",
+      "Name": "Toggle Play/Pause",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Toggle play/pause state between playing and paused.",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Paused",
+          "Image": "images/keys/paused",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        },
+        {
+          "Name": "Playing",
+          "Image": "images/keys/playing",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        },
+        {
+          "Name": "Stopped",
+          "Image": "images/keys/stopped",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ],
+      "UUID": "com.r-teller.sonoscontroller.toggle-play-pause"
+    },
+    {
+      "Icon": "images/actions/shuffle",
+      "Name": "Toggle Play Mode",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Toggle play mode between normal, shuffle and repeat.",
+      "UUID": "com.r-teller.sonoscontroller.toggle-play-mode",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Normal",
+          "Image": "images/keys/play_normal",
+          "TitleAlignment": "bottom",
+          "FontSize": 11
+        },
+        {
+          "Name": "Shuffle_NoRepeat",
+          "Image": "images/keys/shuffle_no_repeat",
+          "TitleAlignment": "bottom",
+          "FontSize": 11
+        },
+        {
+          "Name": "Shuffle_Repeat_One",
+          "Image": "images/keys/shuffle_one",
+          "TitleAlignment": "bottom",
+          "FontSize": 11
+        },
+        {
+          "Name": "Shuffle",
+          "Image": "images/keys/shuffle_on",
+          "TitleAlignment": "bottom",
+          "FontSize": 11
+        },
+        {
+          "Name": "Repeat_One",
+          "Image": "images/keys/repeat_one",
+          "TitleAlignment": "bottom",
+          "FontSize": 11
+        },
+        {
+          "Name": "Repeat_All",
+          "Image": "images/keys/repeat_all",
+          "TitleAlignment": "bottom",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Icon": "images/actions/input_source",
+      "Name": "Toggle Input Source",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Toggle input source between line-in, aux and usb.",
+      "UUID": "com.r-teller.sonoscontroller.toggle-input-source",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Sonos_Queue",
+          "Image": "images/keys/input_sonos_queue",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        },
+        {
+          "Name": "TV_Input",
+          "Image": "images/keys/input_tv",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        },
+        {
+          "Name": "Line_In",
+          "Image": "images/keys/input_line_in",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Icon": "images/actions/next_track",
+      "Name": "Play Next Track",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Skip to next track in queue",
+      "UUID": "com.r-teller.sonoscontroller.play-next-track",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Next_Track",
+          "Image": "images/keys/next_track",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Icon": "images/actions/previous_track",
+      "Name": "Play Previous Track",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Skip to previous track in queue",
+      "UUID": "com.r-teller.sonoscontroller.play-previous-track",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Previous_Track",
+          "Image": "images/keys/previous_track",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Icon": "images/actions/volume_up",
+      "Name": "Volume Up",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Increase volume by 2",
+      "UUID": "com.r-teller.sonoscontroller.volume-up",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Volume_Up",
+          "Image": "images/keys/volume_up",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Icon": "images/actions/volume_down",
+      "Name": "Volume Down",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Decrease volume by 2",
+      "UUID": "com.r-teller.sonoscontroller.volume-down",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Volume_Down",
+          "Image": "images/keys/volume_down",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Icon": "images/actions/play_favorite",
+      "Name": "Play Sonos Favorite",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Play Sonos favorite",
+      "UUID": "com.r-teller.sonoscontroller.play-sonos-favorite",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": true,
+      "DisableAutomaticStates": true,
+      "DisableCaching": false,
+      "States": [
+        {
+          "Name": "Play Favorite",
+          "Image": "images/keys/play_favorite",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Icon": "images/actions/equalizer",
+      "Name": "Audio Equalizer",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Adjust audio equalizer settings",
+      "UUID": "com.r-teller.sonoscontroller.encoder-audio-equalizer",
+      "Controllers": ["Encoder"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Audio Equalizer",
+          "Image": "images/keys/equalizer"
+        }
+      ],
+      "Encoder": {
+        "layout": "layouts/encoder-audio-equalizer.json",
+        "TriggerDescription": {
+          "Rotate": "Equalizer"
+        }
+      }
+    }
+  ],
+  "SDKVersion": 2,
+  "Author": "Robert Teller",
+  "CodePath": "plugin.html",
+  "Description": "Control Sonos devices using Stream Deck",
+  "Name": "Sonos Controller",
+  "Icon": "images/sonos",
+  "URL": "https://github.com/r-teller",
+  "Version": "99.99.99.99",
+  "Category": "Sonos Controller",
+  "CategoryIcon": "images/category",
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.11"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Software": {
+    "MinimumVersion": "6.5"
+  },
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "enabled"
+  }
+}
