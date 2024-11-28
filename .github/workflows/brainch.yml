@@ -4,6 +4,13 @@ on:
   # Trigger on both pushes and pull requests to any branch except main
   push:
     branches-ignore: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'pi.html'
+      - 'public.html'
+      - 'package.json'
+      - 'vite.config.js'
 
 jobs:
   validate-branch:
