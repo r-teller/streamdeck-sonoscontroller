@@ -15,7 +15,7 @@ KEY_RADIUS=14
 CATEGORY_COLOR="#c8c8c8"
 CATEGORY_SIZE=28
 
-SRC="./.refs/material-design-icons/svg/$VARIANT"
+SRC="./material-design-icons/svg/$VARIANT"
 
 mask() {
 	KEY_SIZE_2=$((KEY_SIZE * 2))
@@ -171,6 +171,9 @@ key graphic_eq equalizer
 
 action playlist_play play_favorite
 key playlist_play play_favorite
+
+action spatial_tracking currently_playing
+key spatial_tracking currently_playing
 
 # action skip_next next
 # key skip_next next

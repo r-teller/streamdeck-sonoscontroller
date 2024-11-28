@@ -7,15 +7,14 @@
     "dev": "vite",
     "discovery": "node src/discovery.js",
     "build": "vite build",
-    "build_old": "vite build && shx mv ./dist ./com.r-teller.sonoscontroller.sdPlugin",
     "validate": "streamdeck validate --no-update-check ./com.r-teller.sonoscontroller.sdPlugin",
-    "package": "streamdeck pack --no-update-check  ./com.r-teller.sonoscontroller.sdPlugin",
-    "build_dev": "vite build --sourcemap inline --minify false && shx mv ./dist ./com.r-teller.sonoscontroller.sdPlugin",
-    "build_dev_incr": "node -e \"const fs=require('fs');const m=JSON.parse(fs.readFileSync('public/manifest.json'));m.Version=m.Version.split('.').map((n,i)=>i===3?parseInt(n)+1:n).join('.');fs.writeFileSync('public/manifest.json',JSON.stringify(m,null,2));\" &&vite build --sourcemap inline --minify false && shx mv ./dist ./com.r-teller.sonoscontroller.sdPlugin",
+    "package": "streamdeck pack --no-update-check -f ./com.r-teller.sonoscontroller.sdPlugin",
+    "build_dev": "vite build --sourcemap inline --minify false",
+    "build_dev_incr": "node -e \"const fs=require('fs');const m=JSON.parse(fs.readFileSync('public/manifest.json'));m.Version=m.Version.split('.').map((n,i)=>i===3?parseInt(n)+1:n).join('.');fs.writeFileSync('public/manifest.json',JSON.stringify(m,null,2));\" &&vite build --sourcemap inline --minify false",
     "preview": "vite preview",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
+    "lint": "eslint ./src --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "format": "prettier --write src/",
-    "clean": "shx rm -rf ./dist && shx rm -rf ./com.r-teller.sonoscontroller.sdPlugin && shx rm -f ./com.r-teller.sonoscontroller.streamDeckPlugin"
+    "clean": "shx rm -rf ./com.r-teller.sonoscontroller.sdPlugin && shx rm -f ./com.r-teller.sonoscontroller.streamDeckPlugin"
   },
   "dependencies": {
     "@elgato/streamdeck": "^1.2.0",

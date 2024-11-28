@@ -70,6 +70,12 @@ export const sonosControllerActions = {
       encoder: encoder_audio_equalizer_state,
     },
   },
+  currentlyPlaying: {
+    action: refresh_speaker_state_action,
+    state: {
+      default: currently_playing_state,
+    },
+  },
 };
 
 /** Helper functions Start */
@@ -101,7 +107,8 @@ const getInputSourceMappings = (uri) => {
     },
   };
 
-  const [currentSource] = Object.entries(sourceMap).find(([, config]) => config.detect(uri)) || [];
+  const [currentSource] =
+    Object.entries(sourceMap).find(([, config]) => config.detect(uri)) || [];
   // const [currentSource] = Object.entries(sourceMap).find(([config]) => config.detect(uri));
   // const [currentSource = undefined] = Object.entries(sourceMap).find(([, config]) => config.detect(uri)) || [];
   return {
@@ -122,11 +129,22 @@ const getInputSourceMappings = (uri) => {
  * @param {object} inActionSettings - The settings of the action
  * @param {number} stateIndex - The current state index
  * @param {object} StreamDeckConnection - The Stream Deck connection object
+ * @param {string} customTitle - The custom title to display
+ * @param {string} customAlbumArt - The custom album art to display
+ * @param {string} customAlbumTitle - The custom album title to display
  */
-function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpeakerState, inFutureStateIndex = inActionSettings.currentStateIndex, StreamDeckConnection, customTitle = null }) {
+function updateStreamDeckStateAndTitle({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  inFutureStateIndex = inActionSettings.currentStateIndex,
+  StreamDeckConnection,
+  customTitle = null,
+  customAlbumArt = null,
+}) {
   const currentStateIndex = inActionSettings?.currentStateIndex;
   const stateName = inActionSettings.states[inFutureStateIndex].Name;
-  const marqueeWidth = inActionSettings.marqueeWidth || 8; // Default width of visible text
+  const marqueeWidth = inActionSettings.marqueeWidth || 10; // Default width of visible text
 
   customTitle =
     customTitle ||
@@ -148,8 +166,12 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
   // - Title has never been updated, or
   // - More than 1 second since last update and marquee titles enabled
   if (
-    (inActionSettings?.status?.titleLastUpdated === undefined || $NOW - inActionSettings?.status?.titleLastUpdated > 1000 || inActionSettings.currentStateIndex !== inFutureStateIndex) &&
-    (inActionSettings?.displayMarqueeTitle || inActionSettings?.displayMarqueeAlbumTitle || inActionSettings?.displayStateBasedTitle)
+    (inActionSettings?.status?.titleLastUpdated === undefined ||
+      $NOW - inActionSettings?.status?.titleLastUpdated > 1000 ||
+      inActionSettings.currentStateIndex !== inFutureStateIndex) &&
+    (inActionSettings?.displayMarqueeTitle ||
+      inActionSettings?.displayMarqueeAlbumTitle ||
+      inActionSettings?.displayStateBasedTitle)
   ) {
     // Reset marquee position and update title if:
     // - Custom title has changed from last value, or
@@ -165,20 +187,40 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
 
       switch (true) {
         // When both marquee title and album title are enabled, but state-based title is disabled
-        case inActionSettings.displayMarqueeTitle && inActionSettings.displayMarqueeAlbumTitle && !inActionSettings?.displayStateBasedTitle:
-          if (customTitle !== inActionSettings?.status?.lastCustomTitle || inActionSettings?.status?.marqueeTitleTopValue === undefined) {
-            inActionSettings.status.marqueeTitleTopValue = customTitle;
+        case inActionSettings.displayMarqueeTitle &&
+          inActionSettings.displayMarqueeAlbumTitle &&
+          !inActionSettings?.displayStateBasedTitle:
+          if (
+            customTitle !== inActionSettings?.status?.lastCustomTitle ||
+            inActionSettings?.status?.marqueeTitleTopValue === undefined
+          ) {
+            // inActionSettings.status.marqueeTitleTopValue = customTitle;
+            inActionSettings.status.marqueeTitleTopValue =
+              customTitle.length > marqueeWidth
+                ? customTitle
+                : customTitle.padStart((marqueeWidth + customTitle.length) / 2, " ");
+
             inActionSettings.marqueePositionTop = 0;
           }
-          if (inSonosSpeakerState?.playing?.title !== inActionSettings?.status?.lastPlayingTitle || inActionSettings?.status?.marqueeTitleBottomValue === undefined) {
-            inActionSettings.status.marqueeTitleBottomValue = inSonosSpeakerState.playing.title;
+          if (
+            inSonosSpeakerState?.playing?.title !==
+              inActionSettings?.status?.lastPlayingTitle ||
+            inActionSettings?.status?.marqueeTitleBottomValue === undefined
+          ) {
+            inActionSettings.status.marqueeTitleBottomValue =
+              inSonosSpeakerState?.playing?.title;
             inActionSettings.marqueePositionBottom = 0;
           }
           break;
 
         // When only marquee title is enabled, but album title and state-based title are disabled
-        case inActionSettings.displayMarqueeTitle && !inActionSettings?.displayMarqueeAlbumTitle && !inActionSettings?.displayStateBasedTitle:
-          if (customTitle !== inActionSettings?.status?.lastCustomTitle || inActionSettings?.status?.marqueeTitleTopValue === undefined) {
+        case inActionSettings.displayMarqueeTitle &&
+          !inActionSettings?.displayMarqueeAlbumTitle &&
+          !inActionSettings?.displayStateBasedTitle:
+          if (
+            customTitle !== inActionSettings?.status?.lastCustomTitle ||
+            inActionSettings?.status?.marqueeTitleTopValue === undefined
+          ) {
             inActionSettings.status.marqueeTitleTopValue = customTitle;
             inActionSettings.marqueePositionTop = 0;
           }
@@ -186,20 +228,40 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
           break;
 
         // When state-based title and album title are enabled, but marquee title is disabled
-        case inActionSettings.displayStateBasedTitle && inActionSettings?.displayMarqueeAlbumTitle && !inActionSettings?.displayMarqueeTitle:
-          if (customTitle !== inActionSettings?.status?.lastCustomTitle || inActionSettings?.status?.marqueeTitleTopValue === undefined || inActionSettings.currentStateIndex !== inFutureStateIndex) {
-            inActionSettings.status.marqueeTitleTopValue = customTitle.length > 10 ? customTitle : customTitle.padStart((10 + customTitle.length) / 2, " ");
+        case inActionSettings.displayStateBasedTitle &&
+          inActionSettings?.displayMarqueeAlbumTitle &&
+          !inActionSettings?.displayMarqueeTitle:
+          if (
+            customTitle !== inActionSettings?.status?.lastCustomTitle ||
+            inActionSettings?.status?.marqueeTitleTopValue === undefined ||
+            inActionSettings.currentStateIndex !== inFutureStateIndex
+          ) {
+            inActionSettings.status.marqueeTitleTopValue =
+              customTitle.length > marqueeWidth
+                ? customTitle
+                : customTitle.padStart((marqueeWidth + customTitle.length) / 2, " ");
             inActionSettings.marqueePositionTop = 0;
           }
-          if (inSonosSpeakerState?.playing?.title !== inActionSettings?.status?.lastPlayingTitle || inActionSettings?.status?.marqueeTitleBottomValue === undefined) {
-            inActionSettings.status.marqueeTitleBottomValue = inSonosSpeakerState?.playing?.title;
+          if (
+            inSonosSpeakerState?.playing?.title !==
+              inActionSettings?.status?.lastPlayingTitle ||
+            inActionSettings?.status?.marqueeTitleBottomValue === undefined
+          ) {
+            inActionSettings.status.marqueeTitleBottomValue =
+              inSonosSpeakerState?.playing?.title;
             inActionSettings.marqueePositionBottom = 0;
           }
           break;
 
         // When only state-based title is enabled, but album title and marquee title are disabled
-        case inActionSettings.displayStateBasedTitle && !inActionSettings?.displayMarqueeAlbumTitle && !inActionSettings?.displayMarqueeTitle:
-          if (customTitle !== inActionSettings?.status?.lastCustomTitle || inActionSettings?.status?.marqueeTitleTopValue === undefined || inActionSettings.currentStateIndex !== inFutureStateIndex) {
+        case inActionSettings.displayStateBasedTitle &&
+          !inActionSettings?.displayMarqueeAlbumTitle &&
+          !inActionSettings?.displayMarqueeTitle:
+          if (
+            customTitle !== inActionSettings?.status?.lastCustomTitle ||
+            inActionSettings?.status?.marqueeTitleTopValue === undefined ||
+            inActionSettings.currentStateIndex !== inFutureStateIndex
+          ) {
             inActionSettings.status.marqueeTitleTopValue = customTitle;
             inActionSettings.marqueePositionTop = 0;
           }
@@ -207,8 +269,14 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
           break;
 
         // When only album title is enabled, but marquee title and state-based title are disabled
-        case inActionSettings.displayMarqueeAlbumTitle && !inActionSettings?.displayMarqueeTitle && !inActionSettings?.displayStateBasedTitle:
-          if (inSonosSpeakerState?.playing?.title !== inActionSettings?.status?.lastPlayingTitle || inActionSettings?.status?.marqueeTitleTopValue === undefined) {
+        case inActionSettings.displayMarqueeAlbumTitle &&
+          !inActionSettings?.displayMarqueeTitle &&
+          !inActionSettings?.displayStateBasedTitle:
+          if (
+            inSonosSpeakerState?.playing?.title !==
+              inActionSettings?.status?.lastPlayingTitle ||
+            inActionSettings?.status?.marqueeTitleTopValue === undefined
+          ) {
             inActionSettings.status.marqueeTitleTopValue = inSonosSpeakerState?.playing?.title;
             inActionSettings.marqueePositionTop = 0;
           }
@@ -228,7 +296,11 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
     }
 
     let formattedTitle = inActionSettings.status.marqueeTitleTopValue;
-    if ((inActionSettings?.displayMarqueeTitle || inActionSettings?.displayMarqueeAlbumTitle) && !inActionSettings?.displayStateBasedTitle && formattedTitle) {
+    if (
+      (inActionSettings?.displayMarqueeTitle || inActionSettings?.displayMarqueeAlbumTitle) &&
+      !inActionSettings?.displayStateBasedTitle &&
+      formattedTitle?.length > marqueeWidth
+    ) {
       const titleTop = formattedTitle;
       const paddedTextTop = `${titleTop}    ${titleTop}`;
 
@@ -266,7 +338,12 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
       inActionSettings.status.lastTitleValue = formattedTitle;
       StreamDeckConnection.setTitle({ context: inContext, title: formattedTitle });
     }
-  } else if (!inActionSettings?.displayMarqueeTitle && !inActionSettings?.displayMarqueeAlbumTitle && !inActionSettings?.displayStateBasedTitle && inActionSettings.status?.lastTitleValue === undefined) {
+  } else if (
+    !inActionSettings?.displayMarqueeTitle &&
+    !inActionSettings?.displayMarqueeAlbumTitle &&
+    !inActionSettings?.displayStateBasedTitle &&
+    inActionSettings.status?.lastTitleValue === undefined
+  ) {
     inActionSettings.status.lastTitleValue = null;
     StreamDeckConnection.setTitle({ context: inContext, title: null });
   }
@@ -276,28 +353,63 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
   // - Album art display setting is enabled in action settings
   // - Album art URI exists in current track metadata
   if (inActionSettings?.displayAlbumArt) {
-    const albumArtURI = inSonosSpeakerState?.playing?.albumArtURI;
-    if (inActionSettings?.status?.albumArtURILastValue === undefined || inActionSettings.status.albumArtURILastValue !== inSonosSpeakerState?.playing?.albumArtURI || inActionSettings.currentStateIndex !== inFutureStateIndex) {
+    const albumArtURI = customAlbumArt || inSonosSpeakerState?.playing?.albumArtURI;
+    if (
+      inActionSettings?.status?.albumArtURILastValue === undefined ||
+      inActionSettings.status.albumArtURILastValue !== albumArtURI ||
+      inActionSettings.currentStateIndex !== inFutureStateIndex
+    ) {
       if (albumArtURI) {
         inActionSettings.status.albumArtURILastValue = albumArtURI;
-        fetch(albumArtURI)
-          .then((response) => response.arrayBuffer())
-          .then((buffer) => {
-            const base64 = Buffer.from(buffer).toString("base64");
-            StreamDeckConnection.setImage({ context: inContext, image: `data:image/png;base64,${base64}`, state: inFutureStateIndex });
-          })
-          .catch((error) => console.error("Error fetching albumArtURI:", error));
+        if (albumArtURI.startsWith("http")) {
+          fetch(albumArtURI)
+            .then((response) => response.arrayBuffer())
+            .then((buffer) => {
+              const base64 = Buffer.from(buffer).toString("base64");
+              StreamDeckConnection.setImage({
+                context: inContext,
+                image: `data:image/png;base64,${base64}`,
+                state: inFutureStateIndex,
+              });
+            })
+            .catch((error) => console.error("Error fetching albumArtURI:", error));
+        } else {
+          StreamDeckConnection.setImage({
+            context: inContext,
+            image: albumArtURI,
+            state: inFutureStateIndex,
+          });
+        }
       } else {
         inActionSettings.status.albumArtURILastValue = null;
-        StreamDeckConnection.setImage({ context: inContext, image: null, state: inFutureStateIndex });
+        StreamDeckConnection.setImage({
+          context: inContext,
+          image: null,
+          state: inFutureStateIndex,
+        });
       }
     }
-  } else if (inActionSettings?.displayAlbumArt === false && inActionSettings?.status?.albumArtURILastValue === undefined) {
+  } else if (
+    inActionSettings?.displayAlbumArt === false &&
+    inActionSettings?.status?.albumArtURILastValue === undefined
+  ) {
     inActionSettings.status.albumArtURILastValue = null;
-    StreamDeckConnection.setImage({ context: inContext, image: null, state: inFutureStateIndex });
-  } else if (inActionSettings?.displayAlbumArt === false && inActionSettings?.status?.albumArtURILastValue !== undefined && inActionSettings.currentStateIndex !== inFutureStateIndex) {
+    StreamDeckConnection.setImage({
+      context: inContext,
+      image: null,
+      state: inFutureStateIndex,
+    });
+  } else if (
+    inActionSettings?.displayAlbumArt === false &&
+    inActionSettings?.status?.albumArtURILastValue !== undefined &&
+    inActionSettings.currentStateIndex !== inFutureStateIndex
+  ) {
     inActionSettings.status.albumArtURILastValue = null;
-    StreamDeckConnection.setImage({ context: inContext, image: null, state: inFutureStateIndex });
+    StreamDeckConnection.setImage({
+      context: inContext,
+      image: null,
+      state: inFutureStateIndex,
+    });
   }
 }
 
@@ -315,11 +427,20 @@ function updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpe
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function toggle_mute_unmute_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function toggle_mute_unmute_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Toggle Mute/Unmute Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `[Toggle Mute/Unmute Action] inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `[Toggle Mute/Unmute Action] inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const isMuted = inSonosSpeakerState?.muted ?? false;
@@ -327,18 +448,36 @@ export async function toggle_mute_unmute_action({ inContext, inActionSettings, i
 
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout toggling mute")), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout toggling mute")), deviceTimeoutDuration * 1000)
+    );
     const setMuteState = await Promise.race([sonosController.setMute(newMuteState), timeout]);
 
     if (!setMuteState.timedOut) {
       const updatedSonosSpeakerState = { ...inSonosSpeakerState, muted: newMuteState };
       clearTimeout(setMuteState.timedOut);
-      return { status: "SUCCESS", completed: true, message: `${functionName} Sonos mute state toggled to: ${newMuteState}`, updatedSonosSpeakerState };
+      return {
+        status: "SUCCESS",
+        completed: true,
+        message: `${functionName} Sonos mute state toggled to: ${newMuteState}`,
+        updatedSonosSpeakerState,
+      };
     }
-    return { status: "ERROR", completed: false, message: `${functionName} Error toggling Sonos mute state for context ${inContext}: ${setMuteState.error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error toggling Sonos mute state for context ${inContext}: ${setMuteState.error.message}`,
+    };
   } catch (error) {
-    console.error(`${functionName} Error toggling Sonos mute state for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error toggling Sonos mute state for context ${inContext}: ${error.message}` };
+    console.error(
+      `${functionName} Error toggling Sonos mute state for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error toggling Sonos mute state for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -353,17 +492,35 @@ export async function toggle_mute_unmute_action({ inContext, inActionSettings, i
  * @property {boolean} completed - Whether the action was completed successfully
  * @property {string} message - The message describing the action
  */
-export async function toggle_mute_unmute_state({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection }) {
+export async function toggle_mute_unmute_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
   const functionName = "[Toggle Mute/Unmute State]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const stateName = inSonosSpeakerState.muted ? "Muted" : "Unmuted";
-    const futureStateIndex = inActionSettings.states.findIndex((state) => state.Name.toLowerCase() === stateName.toLowerCase()) || 0;
+    const futureStateIndex =
+      inActionSettings.states.findIndex(
+        (state) => state.Name.toLowerCase() === stateName.toLowerCase()
+      ) || 0;
 
-    updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpeakerState, inFutureStateIndex: futureStateIndex, StreamDeckConnection });
+    updateStreamDeckStateAndTitle({
+      inContext,
+      inActionSettings,
+      inSonosSpeakerState,
+      inFutureStateIndex: futureStateIndex,
+      StreamDeckConnection,
+    });
 
     return {
       status: "SUCCESS",
@@ -372,7 +529,10 @@ export async function toggle_mute_unmute_state({ inContext, inActionSettings, in
       futureStateIndex,
     };
   } catch (error) {
-    console.error(`${functionName} Error updating Sonos mute state for context ${inContext}:`, error);
+    console.error(
+      `${functionName} Error updating Sonos mute state for context ${inContext}:`,
+      error
+    );
     return {
       status: "ERROR",
       completed: false,
@@ -392,11 +552,20 @@ export async function toggle_mute_unmute_state({ inContext, inActionSettings, in
  * @property {boolean} completed - Whether the action was completed successfully
  * @property {string} message - The message describing the action
  */
-export async function toggle_play_pause_state({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection }) {
+export async function toggle_play_pause_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
   const functionName = "[Toggle Play/Pause State]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     let stateName;
@@ -414,9 +583,19 @@ export async function toggle_play_pause_state({ inContext, inActionSettings, inS
         stateName = "Stopped"; // fallback state
     }
 
-    const futureStateIndex = inActionSettings.states.findIndex((state) => state.Name.toLowerCase() === stateName.toLowerCase()) || 0;
+    const futureStateIndex =
+      inActionSettings.states.findIndex(
+        (state) => state.Name.toLowerCase() === stateName.toLowerCase()
+      ) || 0;
     // StreamDeckConnection.setState(inContext, stateIndex);
-    updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpeakerState, inFutureStateIndex: futureStateIndex, StreamDeckConnection, customTitle: stateName });
+    updateStreamDeckStateAndTitle({
+      inContext,
+      inActionSettings,
+      inSonosSpeakerState,
+      inFutureStateIndex: futureStateIndex,
+      StreamDeckConnection,
+      customTitle: stateName,
+    });
 
     return {
       status: "SUCCESS",
@@ -425,7 +604,10 @@ export async function toggle_play_pause_state({ inContext, inActionSettings, inS
       futureStateIndex,
     };
   } catch (error) {
-    console.error(`${functionName} Error updating Sonos playback state for context ${inContext}:`, error);
+    console.error(
+      `${functionName} Error updating Sonos playback state for context ${inContext}:`,
+      error
+    );
     return {
       status: "ERROR",
       completed: false,
@@ -445,22 +627,44 @@ export async function toggle_play_pause_state({ inContext, inActionSettings, inS
  * @property {boolean} completed - Whether the action was completed successfully
  * @property {string} message - The message describing the action
  */
-export async function toggle_play_pause_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function toggle_play_pause_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Toggle Play/Pause Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
-    const isPlaying = (inSonosSpeakerState == null ? void 0 : inSonosSpeakerState.playbackState) === "PLAYING" ?? false;
+    const isPlaying =
+      (inSonosSpeakerState == null ? void 0 : inSonosSpeakerState.playbackState) ===
+        "PLAYING" ?? false;
 
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout controlling playback")), deviceTimeoutDuration * 1000));
-    const setPlayPauseState = await Promise.race([isPlaying ? sonosController.pause() : sonosController.play(), timeout]);
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout controlling playback")),
+        deviceTimeoutDuration * 1000
+      )
+    );
+    const setPlayPauseState = await Promise.race([
+      isPlaying ? sonosController.pause() : sonosController.play(),
+      timeout,
+    ]);
 
     if (!setPlayPauseState.timedOut) {
-      const updatedSonosSpeakerState = { ...inSonosSpeakerState, playbackState: isPlaying ? "PAUSED_PLAYBACK" : "PLAYING" };
+      const updatedSonosSpeakerState = {
+        ...inSonosSpeakerState,
+        playbackState: isPlaying ? "PAUSED_PLAYBACK" : "PLAYING",
+      };
       clearTimeout(setPlayPauseState.timedOut);
       return {
         status: "SUCCESS",
@@ -475,7 +679,10 @@ export async function toggle_play_pause_action({ inContext, inActionSettings, in
       message: `${functionName} Error toggling Sonos playback state for context ${inContext}: ${setPlayPauseState.error.message}`,
     };
   } catch (error) {
-    console.error(`${functionName} Error toggling Sonos playback state for context ${inContext}:`, error);
+    console.error(
+      `${functionName} Error toggling Sonos playback state for context ${inContext}:`,
+      error
+    );
     return {
       status: "ERROR",
       completed: false,
@@ -497,11 +704,20 @@ export async function toggle_play_pause_action({ inContext, inActionSettings, in
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function toggle_play_mode_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function toggle_play_mode_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Toggle Play Mode Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const currentPlayMode = inSonosSpeakerState?.playMode || "NORMAL";
@@ -511,24 +727,47 @@ export async function toggle_play_mode_action({ inContext, inActionSettings, inS
     const nextMode =
       currentIndex === -1
         ? inActionSettings.selectedPlayModes[0] // Start at beginning if current mode not found
-        : inActionSettings.selectedPlayModes[(currentIndex + 1) % inActionSettings.selectedPlayModes.length];
+        : inActionSettings.selectedPlayModes[
+            (currentIndex + 1) % inActionSettings.selectedPlayModes.length
+          ];
 
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout setting play mode")), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout setting play mode")),
+        deviceTimeoutDuration * 1000
+      )
+    );
 
-    const setPlayModeState = await Promise.race([sonosController.setPlayMode(nextMode), timeout]);
+    const setPlayModeState = await Promise.race([
+      sonosController.setPlayMode(nextMode),
+      timeout,
+    ]);
 
     if (!setPlayModeState.timedOut) {
       const updatedSonosSpeakerState = { ...inSonosSpeakerState, playMode: nextMode };
       clearTimeout(setPlayModeState.timedOut);
-      return { status: "SUCCESS", completed: true, message: `${functionName} Play mode changed to: ${nextMode}`, updatedSonosSpeakerState };
+      return {
+        status: "SUCCESS",
+        completed: true,
+        message: `${functionName} Play mode changed to: ${nextMode}`,
+        updatedSonosSpeakerState,
+      };
     }
-    return { status: "ERROR", completed: false, message: `${functionName} Error setting play mode for context ${inContext}: ${setPlayModeState.error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error setting play mode for context ${inContext}: ${setPlayModeState.error.message}`,
+    };
   } catch (error) {
     console.error(`${functionName} Error toggling play mode for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error toggling play mode for context ${inContext}: ${error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error toggling play mode for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -540,15 +779,27 @@ export async function toggle_play_mode_action({ inContext, inActionSettings, inS
  * @param {object} StreamDeckConnection - The Stream Deck connection object
  * @returns {object} - Status object indicating success/failure
  */
-export async function toggle_play_mode_state({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection }) {
+export async function toggle_play_mode_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
   const functionName = "[Toggle Play Mode State]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const playMode = inSonosSpeakerState.playMode || "NORMAL";
-    const futureStateIndex = inActionSettings.states.findIndex((state) => state.Name.toUpperCase() === playMode.toUpperCase()) || 0;
+    const futureStateIndex =
+      inActionSettings.states.findIndex(
+        (state) => state.Name.toUpperCase() === playMode.toUpperCase()
+      ) || 0;
 
     // StreamDeckConnection.setState(inContext, stateIndex);
     // Add short title logic
@@ -570,7 +821,14 @@ export async function toggle_play_mode_state({ inContext, inActionSettings, inSo
         break;
     }
 
-    updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpeakerState, inFutureStateIndex: futureStateIndex, StreamDeckConnection, customTitle });
+    updateStreamDeckStateAndTitle({
+      inContext,
+      inActionSettings,
+      inSonosSpeakerState,
+      inFutureStateIndex: futureStateIndex,
+      StreamDeckConnection,
+      customTitle,
+    });
 
     return {
       status: "SUCCESS",
@@ -579,7 +837,10 @@ export async function toggle_play_mode_state({ inContext, inActionSettings, inSo
       futureStateIndex,
     };
   } catch (error) {
-    console.error(`${functionName} Error updating play mode state for context ${inContext}:`, error);
+    console.error(
+      `${functionName} Error updating play mode state for context ${inContext}:`,
+      error
+    );
     return {
       status: "ERROR",
       completed: false,
@@ -600,11 +861,20 @@ export async function toggle_play_mode_state({ inContext, inActionSettings, inSo
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function toggle_input_source_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function toggle_input_source_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Toggle Input Source Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
 
   try {
@@ -612,34 +882,69 @@ export async function toggle_input_source_action({ inContext, inActionSettings, 
     const inputSourceMappings = getInputSourceMappings(currentURI);
 
     // If current play mode isn't in selected modes, start from beginning
-    const currentIndex = inActionSettings.selectedInputSources.indexOf(inputSourceMappings.sourceName.toUpperCase());
+    const currentIndex = inActionSettings.selectedInputSources.indexOf(
+      inputSourceMappings.sourceName.toUpperCase()
+    );
     const selectNextSource =
       currentIndex === -1
         ? inActionSettings.selectedInputSources[0] // Start at beginning if current mode not found
-        : inActionSettings.selectedInputSources[(currentIndex + 1) % inActionSettings.selectedInputSources.length];
+        : inActionSettings.selectedInputSources[
+            (currentIndex + 1) % inActionSettings.selectedInputSources.length
+          ];
 
     const nextSource = inputSourceMappings.generateUri[selectNextSource];
 
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout setting input source")), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout setting input source")),
+        deviceTimeoutDuration * 1000
+      )
+    );
 
-    const setInputSourceState = await Promise.race([sonosController.setLocalTransport(nextSource.prefix, nextSource.suffix), timeout]);
+    const setInputSourceState = await Promise.race([
+      sonosController.setLocalTransport(nextSource.prefix, nextSource.suffix),
+      timeout,
+    ]);
 
     if (!setInputSourceState.timedOut) {
-      const updatedSonosSpeakerState = { ...inSonosSpeakerState, currentURI: `${nextSource.prefix}:${inSonosSpeakerState.uuid}${nextSource.suffix}` };
+      const updatedSonosSpeakerState = {
+        ...inSonosSpeakerState,
+        currentURI: `${nextSource.prefix}:${inSonosSpeakerState.uuid}${nextSource.suffix}`,
+      };
       clearTimeout(setInputSourceState.timedOut);
       const setPlayModeState = await Promise.race([sonosController.play(), timeout]);
       if (!setPlayModeState.timedOut) {
-        return { status: "SUCCESS", completed: true, message: `${functionName} Input source changed to: ${nextSource}`, updatedSonosSpeakerState };
+        return {
+          status: "SUCCESS",
+          completed: true,
+          message: `${functionName} Input source changed to: ${nextSource}`,
+          updatedSonosSpeakerState,
+        };
       }
-      return { status: "ERROR", completed: false, message: `${functionName} Error setting input source for context ${inContext}: ${setPlayModeState.error.message}` };
+      return {
+        status: "ERROR",
+        completed: false,
+        message: `${functionName} Error setting input source for context ${inContext}: ${setPlayModeState.error.message}`,
+      };
     }
-    return { status: "ERROR", completed: false, message: `${functionName} Error setting input source for context ${inContext}: ${setInputSourceState.error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error setting input source for context ${inContext}: ${setInputSourceState.error.message}`,
+    };
   } catch (error) {
-    console.error(`${functionName} Error toggling input source for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error toggling input source for context ${inContext}: ${error.message}` };
+    console.error(
+      `${functionName} Error toggling input source for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error toggling input source for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -651,18 +956,30 @@ export async function toggle_input_source_action({ inContext, inActionSettings, 
  * @param {object} StreamDeckConnection - The Stream Deck connection object
  * @returns {object} - Status object indicating success/failure
  */
-export async function toggle_input_source_state({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection }) {
+export async function toggle_input_source_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
   const functionName = "[Toggle Input Source State]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const currentURI = inSonosSpeakerState == null ? void 0 : inSonosSpeakerState.currentURI;
     const inputSourceMappings = getInputSourceMappings(currentURI);
 
     const inputSource = inSonosSpeakerState.inputSource || inActionSettings.states[0].Name;
-    const futureStateIndex = inActionSettings.selectedInputSources.indexOf(inputSourceMappings.sourceName.toUpperCase()) || 0;
+    const futureStateIndex =
+      inActionSettings.selectedInputSources.indexOf(
+        inputSourceMappings.sourceName.toUpperCase()
+      ) || 0;
 
     // StreamDeckConnection.setState(inContext, stateIndex);
     // Add short title logic
@@ -681,7 +998,14 @@ export async function toggle_input_source_state({ inContext, inActionSettings, i
         break;
     }
 
-    updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpeakerState, inFutureStateIndex: futureStateIndex, StreamDeckConnection, customTitle });
+    updateStreamDeckStateAndTitle({
+      inContext,
+      inActionSettings,
+      inSonosSpeakerState,
+      inFutureStateIndex: futureStateIndex,
+      StreamDeckConnection,
+      customTitle,
+    });
 
     return {
       status: "SUCCESS",
@@ -690,7 +1014,10 @@ export async function toggle_input_source_state({ inContext, inActionSettings, i
       futureStateIndex,
     };
   } catch (error) {
-    console.error(`${functionName} Error updating input source state for context ${inContext}:`, error);
+    console.error(
+      `${functionName} Error updating input source state for context ${inContext}:`,
+      error
+    );
     return {
       status: "ERROR",
       completed: false,
@@ -711,28 +1038,61 @@ export async function toggle_input_source_state({ inContext, inActionSettings, i
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function play_next_track_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function play_next_track_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Play Next Track Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout skipping to next track")), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout skipping to next track")),
+        deviceTimeoutDuration * 1000
+      )
+    );
 
     const nextTrackState = await Promise.race([sonosController.next(), timeout]);
     if (!nextTrackState.timedOut) {
-      const updatedSonosSpeakerState = { ...inSonosSpeakerState, currentTrack: inSonosSpeakerState.currentTrack + 1 };
+      const updatedSonosSpeakerState = {
+        ...inSonosSpeakerState,
+        currentTrack: inSonosSpeakerState.currentTrack + 1,
+      };
       clearTimeout(nextTrackState.timedOut);
-      return { status: "SUCCESS", completed: true, message: `${functionName} Skipped to next track`, updatedSonosSpeakerState };
+      return {
+        status: "SUCCESS",
+        completed: true,
+        message: `${functionName} Skipped to next track`,
+        updatedSonosSpeakerState,
+      };
     }
-    return { status: "ERROR", completed: false, message: `${functionName} Error skipping to next track for context ${inContext}: ${nextTrackState.error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error skipping to next track for context ${inContext}: ${nextTrackState.error.message}`,
+    };
   } catch (error) {
-    console.error(`${functionName} Error skipping to next track for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error skipping to next track for context ${inContext}: ${error.message}` };
+    console.error(
+      `${functionName} Error skipping to next track for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error skipping to next track for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -748,28 +1108,61 @@ export async function play_next_track_action({ inContext, inActionSettings, inSo
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function play_previous_track_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function play_previous_track_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Play Previous Track Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout skipping to previous track")), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout skipping to previous track")),
+        deviceTimeoutDuration * 1000
+      )
+    );
 
     const previousTrackState = await Promise.race([sonosController.previous(), timeout]);
     if (!previousTrackState.timedOut) {
-      const updatedSonosSpeakerState = { ...inSonosSpeakerState, currentTrack: inSonosSpeakerState.currentTrack - 1 };
+      const updatedSonosSpeakerState = {
+        ...inSonosSpeakerState,
+        currentTrack: inSonosSpeakerState.currentTrack - 1,
+      };
       clearTimeout(previousTrackState.timedOut);
-      return { status: "SUCCESS", completed: true, message: `${functionName} Skipped to previous track`, updatedSonosSpeakerState };
+      return {
+        status: "SUCCESS",
+        completed: true,
+        message: `${functionName} Skipped to previous track`,
+        updatedSonosSpeakerState,
+      };
     }
-    return { status: "ERROR", completed: false, message: `${functionName} Error skipping to previous track for context ${inContext}: ${previousTrackState.error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error skipping to previous track for context ${inContext}: ${previousTrackState.error.message}`,
+    };
   } catch (error) {
-    console.error(`${functionName} Error skipping to previous track for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error skipping to previous track for context ${inContext}: ${error.message}` };
+    console.error(
+      `${functionName} Error skipping to previous track for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error skipping to previous track for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -785,30 +1178,67 @@ export async function play_previous_track_action({ inContext, inActionSettings, 
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function volume_up_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function volume_up_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Volume Up Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout increasing volume")), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout increasing volume")),
+        deviceTimeoutDuration * 1000
+      )
+    );
 
-    const updatedVolume = Math.min(100, parseInt(inSonosSpeakerState.audioEqualizer.volume) + (parseInt(inActionSettings.adjustVolumeIncrement) || 10));
+    const updatedVolume = Math.min(
+      100,
+      parseInt(inSonosSpeakerState.audioEqualizer.volume) +
+        (parseInt(inActionSettings.adjustVolumeIncrement) || 10)
+    );
 
-    const volumeUpState = await Promise.race([sonosController.setVolume(updatedVolume), timeout]);
+    const volumeUpState = await Promise.race([
+      sonosController.setVolume(updatedVolume),
+      timeout,
+    ]);
     if (!volumeUpState.timedOut) {
-      const updatedSonosSpeakerState = { ...inSonosSpeakerState, audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, volume: updatedVolume } };
+      const updatedSonosSpeakerState = {
+        ...inSonosSpeakerState,
+        audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, volume: updatedVolume },
+      };
       clearTimeout(volumeUpState.timedOut);
-      return { status: "SUCCESS", completed: true, message: `${functionName} Volume increased to: ${updatedVolume}`, updatedSonosSpeakerState };
+      return {
+        status: "SUCCESS",
+        completed: true,
+        message: `${functionName} Volume increased to: ${updatedVolume}`,
+        updatedSonosSpeakerState,
+      };
     }
-    return { status: "ERROR", completed: false, message: `${functionName} Error increasing volume for context ${inContext}: ${volumeUpState.error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error increasing volume for context ${inContext}: ${volumeUpState.error.message}`,
+    };
   } catch (error) {
     console.error(`${functionName} Error increasing volume for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error increasing volume for context ${inContext}: ${error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error increasing volume for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -824,30 +1254,67 @@ export async function volume_up_action({ inContext, inActionSettings, inSonosSpe
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function volume_down_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function volume_down_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Volume Down Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout decreasing volume")), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout decreasing volume")),
+        deviceTimeoutDuration * 1000
+      )
+    );
 
-    const updatedVolume = Math.max(0, parseInt(inSonosSpeakerState.audioEqualizer.volume) - (parseInt(inActionSettings.adjustVolumeIncrement) || 10));
+    const updatedVolume = Math.max(
+      0,
+      parseInt(inSonosSpeakerState.audioEqualizer.volume) -
+        (parseInt(inActionSettings.adjustVolumeIncrement) || 10)
+    );
 
-    const volumeDownState = await Promise.race([sonosController.setVolume(updatedVolume), timeout]);
+    const volumeDownState = await Promise.race([
+      sonosController.setVolume(updatedVolume),
+      timeout,
+    ]);
     if (!volumeDownState.timedOut) {
-      const updatedSonosSpeakerState = { ...inSonosSpeakerState, audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, volume: updatedVolume } };
+      const updatedSonosSpeakerState = {
+        ...inSonosSpeakerState,
+        audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, volume: updatedVolume },
+      };
       clearTimeout(volumeDownState.timedOut);
-      return { status: "SUCCESS", completed: true, message: `${functionName} Volume decreased to: ${updatedVolume}`, updatedSonosSpeakerState };
+      return {
+        status: "SUCCESS",
+        completed: true,
+        message: `${functionName} Volume decreased to: ${updatedVolume}`,
+        updatedSonosSpeakerState,
+      };
     }
-    return { status: "ERROR", completed: false, message: `${functionName} Error decreasing volume for context ${inContext}: ${volumeDownState.error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error decreasing volume for context ${inContext}: ${volumeDownState.error.message}`,
+    };
   } catch (error) {
     console.error(`${functionName} Error decreasing volume for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error decreasing volume for context ${inContext}: ${error.message}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error decreasing volume for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -864,55 +1331,134 @@ export async function volume_down_action({ inContext, inActionSettings, inSonosS
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function encoder_audio_equalizer_action({ inContext, inActionSettings, inSonosSpeakerState, inRotation, deviceTimeoutDuration = 1 }) {
+export async function encoder_audio_equalizer_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  inRotation,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Encoder Audio Equalizer Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     const sonosController = new SonosController();
     sonosController.connect(inActionSettings.hostAddress);
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout setting equalizer value for ${inActionSettings.encoderAudioEqualizerTarget}`)), deviceTimeoutDuration * 1000));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Timeout setting equalizer value for ${inActionSettings.encoderAudioEqualizerTarget}`
+            )
+          ),
+        deviceTimeoutDuration * 1000
+      )
+    );
 
     switch (inActionSettings.encoderAudioEqualizerTarget) {
       case "BASS": {
-        const updatedBass = Math.min(10, Math.max(-10, parseInt(inSonosSpeakerState.audioEqualizer.bass) + parseInt(inRotation.ticks)));
+        const updatedBass = Math.min(
+          10,
+          Math.max(
+            -10,
+            parseInt(inSonosSpeakerState.audioEqualizer.bass) + parseInt(inRotation.ticks)
+          )
+        );
         const bassState = await Promise.race([sonosController.setBass(updatedBass), timeout]);
         if (!bassState.timedOut) {
-          const updatedSonosSpeakerState = { ...inSonosSpeakerState, audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, bass: updatedBass } };
+          const updatedSonosSpeakerState = {
+            ...inSonosSpeakerState,
+            audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, bass: updatedBass },
+          };
           clearTimeout(bassState.timedOut);
-          return { status: "SUCCESS", completed: true, message: `${functionName} Bass set to: ${updatedBass}`, updatedSonosSpeakerState };
+          return {
+            status: "SUCCESS",
+            completed: true,
+            message: `${functionName} Bass set to: ${updatedBass}`,
+            updatedSonosSpeakerState,
+          };
         }
         break;
       }
       case "TREBLE": {
-        const updatedTreble = Math.min(10, Math.max(-10, parseInt(inSonosSpeakerState.audioEqualizer.treble) + parseInt(inRotation.ticks)));
-        const trebleState = await Promise.race([sonosController.setTreble(updatedTreble), timeout]);
+        const updatedTreble = Math.min(
+          10,
+          Math.max(
+            -10,
+            parseInt(inSonosSpeakerState.audioEqualizer.treble) + parseInt(inRotation.ticks)
+          )
+        );
+        const trebleState = await Promise.race([
+          sonosController.setTreble(updatedTreble),
+          timeout,
+        ]);
         if (!trebleState.timedOut) {
-          const updatedSonosSpeakerState = { ...inSonosSpeakerState, audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, treble: updatedTreble } };
+          const updatedSonosSpeakerState = {
+            ...inSonosSpeakerState,
+            audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, treble: updatedTreble },
+          };
           clearTimeout(trebleState.timedOut);
-          return { status: "SUCCESS", completed: true, message: `${functionName} Treble set to: ${updatedTreble}`, updatedSonosSpeakerState };
+          return {
+            status: "SUCCESS",
+            completed: true,
+            message: `${functionName} Treble set to: ${updatedTreble}`,
+            updatedSonosSpeakerState,
+          };
         }
         break;
       }
       case "VOLUME": {
-        const updatedVolume = Math.min(100, Math.max(0, parseInt(inSonosSpeakerState.audioEqualizer.volume) + parseInt(inRotation.ticks)));
-        const volumeState = await Promise.race([sonosController.setVolume(updatedVolume), timeout]);
+        const updatedVolume = Math.min(
+          100,
+          Math.max(
+            0,
+            parseInt(inSonosSpeakerState.audioEqualizer.volume) + parseInt(inRotation.ticks)
+          )
+        );
+        const volumeState = await Promise.race([
+          sonosController.setVolume(updatedVolume),
+          timeout,
+        ]);
         if (!volumeState.timedOut) {
-          const updatedSonosSpeakerState = { ...inSonosSpeakerState, audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, volume: updatedVolume } };
+          const updatedSonosSpeakerState = {
+            ...inSonosSpeakerState,
+            audioEqualizer: { ...inSonosSpeakerState.audioEqualizer, volume: updatedVolume },
+          };
           clearTimeout(volumeState.timedOut);
-          return { status: "SUCCESS", completed: true, message: `${functionName} Volume set to: ${updatedVolume}`, updatedSonosSpeakerState };
+          return {
+            status: "SUCCESS",
+            completed: true,
+            message: `${functionName} Volume set to: ${updatedVolume}`,
+            updatedSonosSpeakerState,
+          };
         }
         break;
       }
       default:
-        return { status: "ERROR", completed: false, message: `${functionName} Invalid equalizer action for context ${inContext}` };
+        return {
+          status: "ERROR",
+          completed: false,
+          message: `${functionName} Invalid equalizer action for context ${inContext}`,
+        };
     }
   } catch (error) {
-    console.error(`${functionName} Error updating equalizer state for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error updating equalizer state for context ${inContext}: ${error.message}` };
+    console.error(
+      `${functionName} Error updating equalizer state for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error updating equalizer state for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -924,11 +1470,20 @@ export async function encoder_audio_equalizer_action({ inContext, inActionSettin
  * @param {object} StreamDeckConnection - The Stream Deck connection object
  * @returns {object} - An object with status, completed, and message properties
  */
-export async function encoder_audio_equalizer_state({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection }) {
+export async function encoder_audio_equalizer_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
   const functionName = "[Encoder Audio Equalizer State]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   try {
     inActionSettings.status = inActionSettings.status || {};
@@ -940,7 +1495,10 @@ export async function encoder_audio_equalizer_state({ inContext, inActionSetting
     switch (inActionSettings.encoderAudioEqualizerTarget) {
       case "BASS":
         if (inActionSettings.status.lastAudioEqualizerBass !== lastAudioEqualizerBass) {
-          if (inActionSettings.status.lastAudioEqualizerLayout !== "./layouts/encoder-gbar-10-10.json") {
+          if (
+            inActionSettings.status.lastAudioEqualizerLayout !==
+            "./layouts/encoder-gbar-10-10.json"
+          ) {
             StreamDeckConnection.setFeedbackLayout({
               context: inContext,
               payload: {
@@ -957,12 +1515,16 @@ export async function encoder_audio_equalizer_state({ inContext, inActionSetting
             },
           });
           inActionSettings.status.lastAudioEqualizerBass = lastAudioEqualizerBass;
-          inActionSettings.status.lastAudioEqualizerLayout = "./layouts/encoder-gbar-10-10.json";
+          inActionSettings.status.lastAudioEqualizerLayout =
+            "./layouts/encoder-gbar-10-10.json";
         }
         break;
       case "TREBLE":
         if (inActionSettings.status.lastAudioEqualizerTreble !== lastAudioEqualizerTreble) {
-          if (inActionSettings.status.lastAudioEqualizerLayout !== "./layouts/encoder-gbar-10-10.json") {
+          if (
+            inActionSettings.status.lastAudioEqualizerLayout !==
+            "./layouts/encoder-gbar-10-10.json"
+          ) {
             StreamDeckConnection.setFeedbackLayout({
               context: inContext,
               payload: {
@@ -979,12 +1541,16 @@ export async function encoder_audio_equalizer_state({ inContext, inActionSetting
             },
           });
           inActionSettings.status.lastAudioEqualizerTreble = lastAudioEqualizerTreble;
-          inActionSettings.status.lastAudioEqualizerLayout = "./layouts/encoder-gbar-10-10.json";
+          inActionSettings.status.lastAudioEqualizerLayout =
+            "./layouts/encoder-gbar-10-10.json";
         }
         break;
       case "VOLUME":
         if (inActionSettings.status.lastAudioEqualizerVolume !== lastAudioEqualizerVolume) {
-          if (inActionSettings.status.lastAudioEqualizerLayout !== "./layouts/encoder-bar-0-100.json") {
+          if (
+            inActionSettings.status.lastAudioEqualizerLayout !==
+            "./layouts/encoder-bar-0-100.json"
+          ) {
             StreamDeckConnection.setFeedbackLayout({
               context: inContext,
               payload: {
@@ -1013,8 +1579,15 @@ export async function encoder_audio_equalizer_state({ inContext, inActionSetting
       futureStateIndex: 0,
     };
   } catch (error) {
-    console.error(`${functionName} Error updating equalizer state for context ${inContext}:`, error);
-    return { status: "ERROR", completed: false, message: `${functionName} Error updating equalizer state for context ${inContext}: ${error.message}` };
+    console.error(
+      `${functionName} Error updating equalizer state for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error updating equalizer state for context ${inContext}: ${error.message}`,
+    };
   }
 }
 
@@ -1030,11 +1603,20 @@ export async function encoder_audio_equalizer_state({ inContext, inActionSetting
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function play_sonos_favorite_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function play_sonos_favorite_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
   const functionName = "[Play Sonos Favorite Action]";
   if (!inActionSettings?.selectedSonosFavorite) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
 
   try {
@@ -1042,16 +1624,34 @@ export async function play_sonos_favorite_action({ inContext, inActionSettings, 
     sonosController.connect(inActionSettings.hostAddress);
     const favorite = inActionSettings.selectedSonosFavorite;
 
-    const timeout = (sonosAction) => new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration} seconds`)), deviceTimeoutDuration * 1e3));
-    const removeAllTracksFromQueue = await Promise.race([sonosController.removeAllTracksFromQueue(), timeout("removing all tracks from queue")]);
+    const timeout = (sonosAction) =>
+      new Promise((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration} seconds`)
+            ),
+          deviceTimeoutDuration * 1e3
+        )
+      );
+    const removeAllTracksFromQueue = await Promise.race([
+      sonosController.removeAllTracksFromQueue(),
+      timeout("removing all tracks from queue"),
+    ]);
 
     if (!removeAllTracksFromQueue.timedOut) {
       clearTimeout(removeAllTracksFromQueue.timedOut);
-      const playFavoriteState = await Promise.race([sonosController.setServiceURI({ uri: favorite.uri, metadata: favorite.metadata }), timeout("playing favorite")]);
+      const playFavoriteState = await Promise.race([
+        sonosController.setServiceURI({ uri: favorite.uri, metadata: favorite.metadata }),
+        timeout("playing favorite"),
+      ]);
 
       if (!playFavoriteState.timedOut) {
         clearTimeout(playFavoriteState.timedOut);
-        const setStartPlayingState = await Promise.race([sonosController.play(), timeout("setting start playing state")]);
+        const setStartPlayingState = await Promise.race([
+          sonosController.play(),
+          timeout("setting start playing state"),
+        ]);
         if (!setStartPlayingState.timedOut) {
           const updatedSonosSpeakerState = { ...inSonosSpeakerState };
           clearTimeout(setStartPlayingState.timedOut);
@@ -1071,7 +1671,10 @@ export async function play_sonos_favorite_action({ inContext, inActionSettings, 
       message: `${functionName} Error playing Sonos favorite for context ${inContext}: ${removeAllTracksFromQueue.timedOut}`,
     };
   } catch (error) {
-    console.error(`${functionName} Error playing Sonos favorite for context ${inContext}:`, error);
+    console.error(
+      `${functionName} Error playing Sonos favorite for context ${inContext}:`,
+      error
+    );
     return {
       status: "ERROR",
       completed: false,
@@ -1088,19 +1691,33 @@ export async function play_sonos_favorite_action({ inContext, inActionSettings, 
  * @param {object} StreamDeckConnection - The Stream Deck connection object
  * @returns {object} - An object with status, completed, and message properties
  */
-export async function play_sonos_favorite_state({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection }) {
+export async function play_sonos_favorite_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
   const functionName = "[Play Sonos Favorite State]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
 
   try {
-    const currentURI = inSonosSpeakerState == null ? void 0 : inSonosSpeakerState.currentURI;
-    const inputSourceMappings = getInputSourceMappings(currentURI);
-    if (inputSourceMappings.sourceName !== "TV_Input" && inputSourceMappings.sourceName !== "Line_In") {
-      updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection, customTitle: inActionSettings.selectedSonosFavorite.title });
-    }
+    const albumArtURI = inActionSettings.selectedSonosFavorite.albumArtURI || null;
+    updateStreamDeckStateAndTitle({
+      inContext,
+      inActionSettings,
+      inSonosSpeakerState,
+      StreamDeckConnection,
+      customTitle: inActionSettings.selectedSonosFavorite.title,
+      customAlbumArt: albumArtURI,
+    });
+
     return {
       status: "SUCCESS",
       completed: true,
@@ -1108,7 +1725,10 @@ export async function play_sonos_favorite_state({ inContext, inActionSettings, i
       futureStateIndex: 0,
     };
   } catch (error) {
-    console.error(`${functionName} Error updating play favorite state for context ${inContext}:`, error);
+    console.error(
+      `${functionName} Error updating play favorite state for context ${inContext}:`,
+      error
+    );
     return {
       status: "ERROR",
       completed: false,
@@ -1117,22 +1737,182 @@ export async function play_sonos_favorite_state({ inContext, inActionSettings, i
   }
 }
 
-export async function generic_state({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection }) {
+/**
+ * Refresh device state action
+ * @param {string} inContext - The context of the action
+ * @param {object} inActionSettings - The settings of the action
+ * @param {object} inSonosSpeakerState - The state of the Sonos speaker
+ * @param {object} StreamDeckConnection - The Stream Deck connection object
+ * @returns {object} - An object with status, completed, and message properties
+ */
+export async function refresh_speaker_state_action({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  deviceTimeoutDuration = 1,
+}) {
+  const functionName = "[Refresh Speaker State Action]";
+  if (!inSonosSpeakerState) {
+    console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
+  }
+  try {
+    const sonosController = new SonosController();
+    sonosController.connect(inActionSettings.hostAddress);
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Timeout getting devices")),
+        deviceTimeoutDuration * 1000
+      )
+    );
+
+    const updatedSonosSpeakerState = await Promise.race([
+      sonosController.getDeviceInfo(),
+      timeout,
+    ]);
+
+    if (!updatedSonosSpeakerState.timedOut) {
+      clearTimeout(updatedSonosSpeakerState.timedOut);
+
+      return {
+        status: "SUCCESS",
+        completed: true,
+        message: `${functionName} Refreshed device state for ${inActionSettings.speakerKey}`,
+        updatedSonosSpeakerState,
+      };
+    }
+  } catch (error) {
+    console.error(
+      `${functionName} Error refreshing device state for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error refreshing device state for context ${inContext}: ${error.message}`,
+    };
+  }
+}
+
+/**
+ * Currently playing state
+ * @param {string} inContext - The context of the action
+ * @param {object} inActionSettings - The settings of the action
+ * @param {object} inSonosSpeakerState - The state of the Sonos speaker
+ * @param {object} StreamDeckConnection - The Stream Deck connection object
+ * @returns {object} - An object with status, completed, and message properties
+ */
+export async function currently_playing_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
+  const functionName = "[Currently Playing State]";
+  if (!inSonosSpeakerState) {
+    console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
+  }
+  try {
+    const currentURI = inSonosSpeakerState == null ? void 0 : inSonosSpeakerState.currentURI;
+    const inputSourceMappings = getInputSourceMappings(currentURI);
+    let customTitle = null;
+    let customAlbumArt = null;
+    // if (inputSourceMappings.sourceName !== "TV_Input" && inputSourceMappings.sourceName !== "Line_In") {
+    //   customTitle = inSonosSpeakerState.playing?.title;
+    //   customAlbumArt = inSonosSpeakerState.playing?.albumArt;
+    // } else {
+    switch (inputSourceMappings.sourceName) {
+      case "TV_Input":
+        customTitle = "TV";
+        customAlbumArt = "./images/keys/input_tv.png";
+        break;
+      case "Line_In":
+        customTitle = "Line In";
+        customAlbumArt = "./images/keys/input_line_in.png";
+        break;
+      default:
+        customTitle = "Queue";
+        customAlbumArt = inSonosSpeakerState.playing?.albumArt;
+        break;
+      // }
+    }
+
+    updateStreamDeckStateAndTitle({
+      inContext,
+      inActionSettings,
+      inSonosSpeakerState,
+      StreamDeckConnection,
+      customTitle,
+      customAlbumArt,
+    });
+    return {
+      status: "SUCCESS",
+      completed: true,
+      message: `${functionName} Updated currently playing state`,
+      futureStateIndex: 0,
+    };
+  } catch (error) {
+    console.error(
+      `${functionName} Error updating currently playing state for context ${inContext}:`,
+      error
+    );
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} Error updating currently playing state for context ${inContext}: ${error.message}`,
+    };
+  }
+}
+
+/**
+ * Generic state
+ * @param {string} inContext - The context of the action
+ * @param {object} inActionSettings - The settings of the action
+ * @param {object} inSonosSpeakerState - The state of the Sonos speaker
+ * @param {object} StreamDeckConnection - The Stream Deck connection object
+ * @returns {object} - An object with status, completed, and message properties
+ */
+export async function generic_state({
+  inContext,
+  inActionSettings,
+  inSonosSpeakerState,
+  StreamDeckConnection,
+}) {
   const functionName = "[Generic State]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
-    return { status: "ERROR", completed: false, message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}` };
+    return {
+      status: "ERROR",
+      completed: false,
+      message: `${functionName} inSonosSpeakerState is undefined for context ${inContext}`,
+    };
   }
   const stateName = inActionSettings.states[inActionSettings.currentStateIndex].Name;
   let customTitle = stateName.split("_");
   if (customTitle.length > 1) {
-    let customTitleTop = customTitle[0].charAt(0).toUpperCase() + customTitle[0].slice(1).toLowerCase();
+    let customTitleTop =
+      customTitle[0].charAt(0).toUpperCase() + customTitle[0].slice(1).toLowerCase();
     if (customTitleTop.length < 10) {
-      customTitleTop = customTitleTop.padStart((10 + customTitleTop.length) / 2, " ").padEnd(9, " ");
+      customTitleTop = customTitleTop
+        .padStart((10 + customTitleTop.length) / 2, " ")
+        .padEnd(9, " ");
     }
-    let customTitleBottom = customTitle[1].charAt(0).toUpperCase() + customTitle[1].slice(1).toLowerCase();
+    let customTitleBottom =
+      customTitle[1].charAt(0).toUpperCase() + customTitle[1].slice(1).toLowerCase();
     if (customTitleBottom.length < 10) {
-      customTitleBottom = customTitleBottom.padStart((10 + customTitleBottom.length) / 2, " ").padEnd(9, " ");
+      customTitleBottom = customTitleBottom
+        .padStart((10 + customTitleBottom.length) / 2, " ")
+        .padEnd(9, " ");
     }
     customTitle = `${customTitleTop}\r\n\r\n\r\n${customTitleBottom}`;
   } else {
@@ -1142,7 +1922,13 @@ export async function generic_state({ inContext, inActionSettings, inSonosSpeake
     }
   }
 
-  updateStreamDeckStateAndTitle({ inContext, inActionSettings, inSonosSpeakerState, StreamDeckConnection, customTitle });
+  updateStreamDeckStateAndTitle({
+    inContext,
+    inActionSettings,
+    inSonosSpeakerState,
+    StreamDeckConnection,
+    customTitle,
+  });
   return {
     status: "SUCCESS",
     completed: true,

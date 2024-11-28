@@ -1,6 +1,6 @@
 <template>
   <div class="container-fluid">
-    <div v-if="sonosConnectionState === CONNECTION_STATES.CONNECTED" class="clearfix mb-3">
+    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED" class="clearfix mb-3">
       <h1>Sonos Speakers</h1>
       <SonosSelection class="mb-3" :available-sonos-speakers="availableSonosSpeakers" v-model="sonosSpeaker" @selection-saved="saveSettings"></SonosSelection>
 
@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <div v-if="sonosConnectionState === CONNECTION_STATES.CONNECTED && isTogglePlayMode">
+    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isTogglePlayMode">
       <h1>Play Mode(s)</h1>
       <div class="d-flex flex-column gap-2 mb-3">
         <div v-for="option in availablePlayModes" :key="option.value" class="form-check form-switch">
@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <div v-if="sonosConnectionState === CONNECTION_STATES.CONNECTED && isToggleInputSource">
+    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isToggleInputSource">
       <h1>Input Source(s)</h1>
       <div class="d-flex flex-column gap-2 mb-3">
         <div v-for="option in availableInputSources" :key="option.value" class="form-check form-switch">
@@ -46,7 +46,7 @@
       </div>
     </div>
 
-    <div v-if="sonosConnectionState === CONNECTION_STATES.CONNECTED && isEncoderAudioEqualizer">
+    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isEncoderAudioEqualizer">
       <!-- <label class="form-label" for="encoderAudioEqualizerTarget">Equalizer Target</label> -->
       <!-- <div class="input-group"> -->
       <h1>Equalizer Target</h1>
@@ -59,7 +59,7 @@
       </div>
     </div>
 
-    <div v-if="sonosConnectionState === CONNECTION_STATES.CONNECTED && isPlaySonosFavorite">
+    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isPlaySonosFavorite">
       <h1>Sonos Favorite(s)</h1>
       <div class="d-flex flex-column gap-2 mb-3">
         <select class="form-select form-select-sm" v-model="sonosFavorite" @change="saveSettings">
@@ -89,9 +89,9 @@
         <button class="btn-close" type="button" @click="sonosError = ''"></button>
       </div>
 
-      <button :disabled="!isSonosSettingsComplete || sonosConnectionState === 'connecting'" class="btn btn-sm btn-primary float-end" v-on:click="saveGlobalSettings">
-        <span v-if="sonosConnectionState === 'connecting'" aria-hidden="true" class="spinner-border spinner-border-sm" role="status"></span>
-        <span>{{ sonosConnectionState === "connected" ? "Save and Reconnect" : "Save and Connect" }}</span>
+      <button :disabled="!isSonosSettingsComplete || sonosConnectionState === OPERATIONAL_STATUS.CONNECTING" class="btn btn-sm btn-primary float-end" v-on:click="saveGlobalSettings">
+        <span v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTING" aria-hidden="true" class="spinner-border spinner-border-sm" role="status"></span>
+        <span>{{ sonosConnectionState === OPERATIONAL_STATUS.CONNECTED ? "Save and Reconnect" : "Save and Connect" }}</span>
       </button>
     </div>
   </div>
@@ -99,6 +99,7 @@
 
 <script setup>
 import { SonosController } from "@/modules/common/sonosController";
+import { OPERATIONAL_STATUS } from "@/modules/plugin/SonosSpeakers";
 import { SonosSpeaker } from "@/modules/pi/SonosSpeaker";
 import { StreamDeck } from "@/modules/common/streamdeck";
 import { computed, onMounted, ref } from "vue";
@@ -106,18 +107,18 @@ import { Buffer } from "buffer";
 import SonosSelection from "@/components/SonosSelection.vue";
 import manifest from "@manifest";
 
-const CONNECTION_STATES = {
-  CONNECTED: "connected",
-  DISCONNECTED: "disconnected",
-  CONNECTING: "connecting",
-};
+// const CONNECTION_STATES = {
+//   CONNECTED: "connected",
+//   DISCONNECTED: "disconnected",
+//   CONNECTING: "connecting",
+// };
 
-let $SD = null;
+const streamDeckConnection = ref(null);
 const sonosError = ref("");
 const primaryDeviceAddress = ref("");
 const deviceCheckInterval = ref(10);
 const deviceTimeoutDuration = ref(5);
-const sonosConnectionState = ref("disconnected");
+const sonosConnectionState = ref(OPERATIONAL_STATUS.DISCONNECTED);
 const availableSonosSpeakers = ref([]);
 const actionSettings = ref({});
 
@@ -145,13 +146,13 @@ const selectedInputSources = ref([]);
 const displayStateBasedTitleFor = ["toggle-play-mode", "toggle-input-source", "toggle-play-pause", "toggle-mute-unmute", "volume-up", "volume-down", "play-previous-track", "play-next-track"];
 const displayStateBasedTitle = ref(false);
 
-const displayAlbumArtFor = ["toggle-play-pause", "play-sonos-favorite"];
+const displayAlbumArtFor = ["toggle-play-pause", "play-sonos-favorite", "currently-playing"];
 const displayAlbumArt = ref(false);
 
-const displayMarqueeTitleFor = ["play-sonos-favorite"];
+const displayMarqueeTitleFor = ["play-sonos-favorite", "currently-playing"];
 const displayMarqueeTitle = ref(false);
 
-const displayMarqueeAlbumTitleFor = ["play-sonos-favorite", "toggle-play-pause"];
+const displayMarqueeAlbumTitleFor = ["toggle-play-pause", "currently-playing"];
 const displayMarqueeAlbumTitle = ref(false);
 
 const isEncoderAudioEqualizer = ref(false);
@@ -160,7 +161,7 @@ const encoderAudioEqualizerTarget = ref("");
 
 onMounted(() => {
   window.connectElgatoStreamDeckSocket = (exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo) => {
-    $SD = new StreamDeck(exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo);
+    streamDeckConnection.value = new StreamDeck(exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo);
     const exActionInfoObject = JSON.parse(exActionInfo);
     actionName.value = exActionInfoObject.action.split(".").pop();
     manifestAction.value = manifest.Actions.find((manifestAction) => manifestAction.UUID === exActionInfoObject.action);
@@ -168,22 +169,21 @@ onMounted(() => {
     action.value = exActionInfoObject.action;
     controllerType.value = exActionInfoObject.payload.controller;
 
-    $SD.on("connected", () => {
-      $SD.requestGlobalSettings();
+    streamDeckConnection.value.on("connected", () => {
+      streamDeckConnection.value.requestGlobalSettings();
     });
 
-    $SD.on("globalsettings", (inGlobalSettings) => {
+    streamDeckConnection.value.on("globalsettings", (inGlobalSettings) => {
       if (inGlobalSettings) {
         if (inGlobalSettings.devices) {
           deviceCheckInterval.value = inGlobalSettings.deviceCheckInterval;
           deviceTimeoutDuration.value = inGlobalSettings.deviceTimeoutDuration;
           const primaryDevice = Object.values(inGlobalSettings.devices).find((device) => device.primary === true);
           if (primaryDevice) {
-            console.log("primaryDevice", primaryDevice);
             primaryDeviceAddress.value = primaryDevice.hostAddress;
             actionSettings.value = JSON.parse(exActionInfo).payload.settings;
 
-            sonosConnectionState.value = CONNECTION_STATES.CONNECTED;
+            sonosConnectionState.value = OPERATIONAL_STATUS.CONNECTED;
             switch (actionName.value) {
               case "toggle-play-mode":
                 isTogglePlayMode.value = true;
@@ -223,6 +223,7 @@ onMounted(() => {
                   title: favorite.title,
                   metadata: Buffer.from(favorite.metadata, "utf-8").toString("base64"),
                   value: favorite.uri,
+                  albumArtURI: favorite.albumArtURI,
                 }));
                 if (actionSettings.value?.selectedSonosFavorite) {
                   sonosFavorite.value = actionSettings.value.selectedSonosFavorite.uri;
@@ -261,7 +262,6 @@ onMounted(() => {
               inActionSettings: actionSettings.value,
               triggerSaveSettings: !actionSettings.value || Object.keys(actionSettings.value).length === 0,
             });
-            console.log("Primary Device set to:", primaryDevice);
           } else {
             console.log("No primary device found");
           }
@@ -287,7 +287,6 @@ function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, trigg
         })
     )
     .sort((a, b) => (a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0));
-  // .sort((a, b) => a.title.localeCompare(b.title));
 
   if (inActionSettings?.uuid) {
     sonosSpeaker.value = inActionSettings.uuid;
@@ -305,25 +304,32 @@ function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, trigg
 
 async function saveGlobalSettings() {
   sonosError.value = "";
-  sonosConnectionState.value = CONNECTION_STATES.CONNECTING;
+  sonosConnectionState.value = OPERATIONAL_STATUS.CONNECTING;
   const $SONOS = new SonosController();
   $SONOS.connect(primaryDeviceAddress.value);
 
   try {
     const timeout = (sonosAction) => new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration.value} seconds`)), deviceTimeoutDuration.value * 1000));
-    const devices = await Promise.race([$SONOS.getDevices({ setAsPrimary: true }), timeout("getting devices")]);
-    if (!devices.timedOut) {
-      clearTimeout(devices.timedOut);
+    const getDevices = await Promise.race([$SONOS.getDevices({ setAsPrimary: true }), timeout("getting devices")]);
+    if (!getDevices.timedOut) {
+      clearTimeout(getDevices.timedOut);
     }
-    const favorites = await Promise.race([$SONOS.getFavorites(), timeout("getting favorites")]);
-    if (!favorites.timedOut) {
-      clearTimeout(favorites.timedOut);
+    const getFavorites = await Promise.race([$SONOS.getFavorites(), timeout("getting favorites")]);
+    if (!getFavorites.timedOut) {
+      clearTimeout(getFavorites.timedOut);
     }
-    sonosConnectionState.value = CONNECTION_STATES.CONNECTED;
-    refreshAvailableSonosSpeakers({ inDevices: devices, inActionSettings: actionSettings.value });
-    $SD.saveGlobalSettings({ payload: { devices, deviceCheckInterval: deviceCheckInterval.value, deviceTimeoutDuration: deviceTimeoutDuration.value, favorites: favorites.list } });
+    sonosConnectionState.value = OPERATIONAL_STATUS.CONNECTED;
+    refreshAvailableSonosSpeakers({ inDevices: getDevices.list, inActionSettings: actionSettings.value });
+    streamDeckConnection.value.saveGlobalSettings({
+      payload: {
+        devices: getDevices.list,
+        deviceCheckInterval: deviceCheckInterval.value,
+        deviceTimeoutDuration: deviceTimeoutDuration.value,
+        favorites: getFavorites.list,
+      },
+    });
   } catch (error) {
-    sonosConnectionState.value = CONNECTION_STATES.DISCONNECTED;
+    sonosConnectionState.value = OPERATIONAL_STATUS.DISCONNECTED;
     console.error("Failed to get devices:", error.message);
     sonosError.value = `Failed to get devices: ${error.message}`;
   }
@@ -352,10 +358,10 @@ function saveSettings() {
           title: selectedSonosFavorite.title,
           uri: selectedSonosFavorite.value,
           metadata: Buffer.from(selectedSonosFavorite.metadata, "base64").toString("utf-8"),
+          albumArtURI: selectedSonosFavorite.albumArtURI,
         }
       : null,
   };
-  console.log("actionSettings.value", actionSettings.value);
-  $SD.saveSettings({ actionSettings: actionSettings.value });
+  streamDeckConnection.value.saveSettings({ actionSettings: actionSettings.value });
 }
 </script>

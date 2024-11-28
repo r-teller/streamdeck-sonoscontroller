@@ -10,13 +10,17 @@ import { sonosControllerActions } from "@/modules/actions/sonosController";
 import SonosSpeakers from "@/modules/plugin/SonosSpeakers";
 import { onMounted, ref } from "vue";
 
-const $SD = ref(null);
+const streamDeckConnection = ref(null);
 
 const globalSettings = ref({});
 const actionSettings = ref([]);
 
 const deviceCheckInterval = ref(10);
 const deviceTimeoutDuration = ref(5);
+
+// At some point we may want to add a speaker check interval and timeout duration
+// const speakerCheckInterval = ref(10);
+// const speakerTimeoutDuration = ref(5);
 
 let rotationTimeout = [];
 let rotationAmount = [];
@@ -94,22 +98,29 @@ const actionFunctionMap = {
       encoder: sonosControllerActions.encoderAudioEqualizer.state.encoder,
     },
   },
+  "currently-playing": {
+    keyDown: [sonosControllerActions.currentlyPlaying.action],
+    state: {
+      default: sonosControllerActions.currentlyPlaying.state.default,
+      keypad: null,
+      encoder: null,
+    },
+  },
 };
 
 const sonosSpeakers = new SonosSpeakers();
 onMounted(async () => {
   window.connectElgatoStreamDeckSocket = (exPort, exPluginUUID, exRegisterEvent, exInfo) => {
-    $SD.value = new StreamDeck(exPort, exPluginUUID, exRegisterEvent, exInfo, "{}");
-    // $SONOS.value = new SonosController();
-    $SD.value.on("connected", () => {
-      $SD.value.requestGlobalSettings();
+    streamDeckConnection.value = new StreamDeck(exPort, exPluginUUID, exRegisterEvent, exInfo, "{}");
+
+    streamDeckConnection.value.on("connected", () => {
+      streamDeckConnection.value.requestGlobalSettings();
     });
 
-    $SD.value.on("willAppear", (inMessage) => {
+    streamDeckConnection.value.on("willAppear", (inMessage) => {
       let context = inMessage.context;
       rotationAmount[context] = 0;
       rotationPercent[context] = 0;
-      // actionSettings.value[context] = inMessage.payload.settings;
       actionSettings.value[context] = {
         ...inMessage.payload.settings,
         currentStateIndex: inMessage.payload.state || 0,
@@ -122,26 +133,22 @@ onMounted(async () => {
       // until then we will just wait for the didReceiveSettings event and handle it from there
       // If the action was already defined this section handles adding the speaker and context
       if (sonosSpeakerUUID) {
-        if (!sonosSpeakers.containsContext({ speakerKey: sonosSpeakerUUID, context })) {
-          const added = sonosSpeakers.addContext({ speakerKey: sonosSpeakerUUID, context, createIfNotExists: true });
-          if (added.status === "SUCCESS") {
-            // console.log(`Successfully added context ${context} to speaker ${sonosSpeakerUUID}`);
-          } else {
+        if (!sonosSpeakers.containsContext({ UUID: sonosSpeakerUUID, context })) {
+          const added = sonosSpeakers.addContext({ UUID: sonosSpeakerUUID, context, createIfNotExists: true });
+          if (added.status !== "SUCCESS") {
             console.error(`Failed to add context ${context} to speaker ${sonosSpeakerUUID}: ${added.message}`);
           }
-        } else {
-          console.log(`Context ${context} already exists for speaker ${sonosSpeakerUUID}`);
         }
       }
     });
 
-    $SD.value.on("globalsettings", (inGlobalSettings) => {
+    streamDeckConnection.value.on("globalsettings", (inGlobalSettings) => {
       globalSettings.value = inGlobalSettings;
       deviceCheckInterval.value = inGlobalSettings.deviceCheckInterval;
       deviceTimeoutDuration.value = inGlobalSettings.deviceTimeoutDuration;
     });
 
-    $SD.value.on("willDisappear", (inMessage) => {
+    streamDeckConnection.value.on("willDisappear", (inMessage) => {
       let context = inMessage.context;
       delete actionSettings.value[context];
 
@@ -149,7 +156,7 @@ onMounted(async () => {
       const sonosSpeakerUUID = inMessage.payload.settings.uuid;
 
       // Remove context from the speaker and set deleteIfLast to true
-      const removed = sonosSpeakers.removeContext({ speakerKey: sonosSpeakerUUID, context, deleteIfLast: true });
+      const removed = sonosSpeakers.removeContext({ UUID: sonosSpeakerUUID, context, deleteIfLast: true });
       if (removed.status === "SUCCESS") {
         console.log(`Removed context ${context} from speaker ${sonosSpeakerUUID}`);
       } else {
@@ -158,7 +165,7 @@ onMounted(async () => {
     });
 
     // add async refresh logic here based on actionSettings.value[context].hostAddress
-    $SD.value.on("didReceiveSettings", (inMessage) => {
+    streamDeckConnection.value.on("didReceiveSettings", (inMessage) => {
       let context = inMessage.context;
       rotationAmount[context] = 0;
 
@@ -170,22 +177,23 @@ onMounted(async () => {
       const sonosSpeakerUUID = inMessage.payload.settings.uuid;
 
       if (sonosSpeakerUUID) {
-        // Get current speaker assigned to this context
-        const currentSpeakerUUID = sonosSpeakers.getSpeakerByContext({ context });
+        const currentSpeaker = sonosSpeakers.getSpeakerByContext({ context });
 
-        if (currentSpeakerUUID === sonosSpeakerUUID) {
+        if (currentSpeaker.status === "SUCCESS" && currentSpeaker.UUID === sonosSpeakerUUID) {
           // Do nothing since the speaker is already assigned to this context
-        } else if (currentSpeakerUUID && currentSpeakerUUID !== sonosSpeakerUUID) {
-          // Attempt to move context from old speaker
-          const moved = sonosSpeakers.moveContext({ speakerKey: sonosSpeakerUUID, context, deleteIfLast: true, createIfNotExists: true });
-          if (moved.status === "SUCCESS") {
-            // console.log(`Moved context ${context} from speaker ${currentSpeakerUUID} to ${sonosSpeakerUUID}`);
-          } else {
-            console.error(`Failed to move context ${context} from speaker ${currentSpeakerUUID} to ${sonosSpeakerUUID}: ${moved.message}`);
+        } else if (currentSpeaker.status === "SUCCESS" && currentSpeaker.UUID !== sonosSpeakerUUID) {
+          const moved = sonosSpeakers.moveContext({
+            UUID: sonosSpeakerUUID,
+            context,
+            deleteIfLast: true,
+            createIfNotExists: true,
+          });
+          if (moved.status !== "SUCCESS") {
+            console.error(`Failed to move context ${context} from speaker ${currentSpeaker.UUID} to ${sonosSpeakerUUID}: ${moved.message}`);
           }
         } else {
           // If the context is not moving from a different speaker, just add it to the new speaker
-          const added = sonosSpeakers.addContext({ speakerKey: sonosSpeakerUUID, context, createIfNotExists: true });
+          const added = sonosSpeakers.addContext({ UUID: sonosSpeakerUUID, context, createIfNotExists: true });
           if (added.status === "SUCCESS") {
             // console.log(`Added context ${context} to speaker ${sonosSpeakerUUID}`);
           } else {
@@ -196,19 +204,13 @@ onMounted(async () => {
     });
 
     // Actions below
-    $SD.value.on("dialRotate", (inMessage) => {
+    streamDeckConnection.value.on("dialRotate", (inMessage) => {
       let context = inMessage.context;
 
       let scaledTicks = inMessage.payload.ticks;
       let tickBucketSizeMs = 300;
 
       rotationAmount[context] += scaledTicks;
-      // rotationPercent[context] += scaledTicks;
-      // if (rotationPercent[context] < 0) {
-      //   rotationPercent[context] = 0;
-      // } else if (rotationPercent[context] > 100) {
-      //   rotationPercent[context] = 100;
-      // }
 
       if (rotationTimeout[context]) return;
 
@@ -218,8 +220,6 @@ onMounted(async () => {
           inEvent: inMessage.event,
           inRotation: {
             ticks: rotationAmount[context],
-            // rotationPercent: rotationPercent[context],
-            // rotationAbsolute: 2.55 * rotationPercent[context],
           },
         });
         rotationAmount[context] = 0;
@@ -233,92 +233,107 @@ onMounted(async () => {
       }
     });
 
-    $SD.value.on("keyDown", (inMessage) => {
+    streamDeckConnection.value.on("keyDown", (inMessage) => {
       let context = inMessage.context;
       callAction({ inContext: context, inEvent: inMessage.event });
     });
 
-    // $SD.value.on("keyUp", (inMessage) => {});
+    // streamDeckConnection.value.on("keyUp", (inMessage) => {});
 
-    $SD.value.on("dialDown", (inMessage) => {
+    streamDeckConnection.value.on("dialDown", (inMessage) => {
       let context = inMessage.context;
 
       callAction({ inContext: context, inEvent: inMessage.event });
     });
 
-    // $SD.value.on("dialUp", (inMessage) => {});
+    // streamDeckConnection.value.on("dialUp", (inMessage) => {});
 
-    $SD.value.on("touchTap", (inMessage) => {
+    streamDeckConnection.value.on("touchTap", (inMessage) => {
       let context = inMessage.context;
 
       callAction({ inContext: context, inEvent: inMessage.event });
     });
 
     setInterval(() => {
-      // try {
-      sonosSpeakers.getAllSpeakers().forEach(async (sonosSpeakerUUID) => {
-        //  Temp debug logic to stop the interval from running in loop
-        // deviceCheckInterval.value = 0;
-        const speaker = sonosSpeakers.getDevice({ speakerKey: sonosSpeakerUUID });
+      sonosSpeakers.getAllSpeakers().UUIDs.forEach(async (sonosSpeakerUUID) => {
+        const speaker = sonosSpeakers.getSpeaker({ UUID: sonosSpeakerUUID });
+        if (speaker.status === "ERROR") {
+          console.error(`Failed to get speaker info for ${sonosSpeakerUUID}: ${speaker.message}`);
+          return;
+        }
         const contexts = speaker.contexts;
-        if (speaker.status !== "UPDATING" && speaker.status !== "RATE_LIMITED" && speaker.secondsSinceChecked >= deviceCheckInterval.value) {
+        if (speaker.operationalStatus !== SonosSpeakers.OPERATIONAL_STATUS.UPDATING && speaker.operationalStatus !== SonosSpeakers.OPERATIONAL_STATUS.RATE_LIMITED && speaker.secondsLastChecked >= deviceCheckInterval.value) {
           const hostAddress = globalSettings.value.devices[sonosSpeakerUUID].hostAddress;
           try {
             const sonosController = new SonosController();
             sonosController.connect(hostAddress);
-            sonosSpeakers.setStatus({ speakerKey: sonosSpeakerUUID, status: "UPDATING" });
-            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout getting devices")), deviceTimeoutDuration.value * 1000));
-            const updatedDeviceInfo = await Promise.race([sonosController.getDeviceInfo(), timeout]);
-            if (!updatedDeviceInfo.timedOut) {
-              clearTimeout(updatedDeviceInfo.timedOut);
-              sonosSpeakers.updateDeviceInfo({ speakerKey: sonosSpeakerUUID, deviceInfo: updatedDeviceInfo, updateLastChecked: true });
+            sonosSpeakers.setOperationalStatus({ UUID: sonosSpeakerUUID, operationalStatus: SonosSpeakers.OPERATIONAL_STATUS.UPDATING });
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout getting speaker info for ${sonosSpeakerUUID} [${hostAddress}]`)), deviceTimeoutDuration.value * 1000));
+            const updatedSpeakerState = await Promise.race([sonosController.getDeviceInfo(), timeout]);
+            if (!updatedSpeakerState.timedOut) {
+              clearTimeout(updatedSpeakerState.timedOut);
+              sonosSpeakers.updateSpeakerState({ UUID: sonosSpeakerUUID, state: updatedSpeakerState, updateLastChecked: true });
             }
           } catch (error) {
             console.log(`Failed to get device info for ${hostAddress}: ${error}`);
             contexts.forEach((context) => {
-              $SD.value.showAlert({ context });
+              streamDeckConnection.value.showAlert({ context });
             });
-            sonosSpeakers.setStatus({ speakerKey: sonosSpeakerUUID, status: "DISCONNECTED" });
+            sonosSpeakers.setOperationalStatus({ UUID: sonosSpeakerUUID, operationalStatus: SonosSpeakers.OPERATIONAL_STATUS.DISCONNECTED });
           }
         }
-        const device = sonosSpeakers.getDevice({ speakerKey: sonosSpeakerUUID });
-        if (device.status === "UPDATED") {
+        const updatedSpeaker = sonosSpeakers.getSpeaker({ UUID: sonosSpeakerUUID });
+        if (updatedSpeaker.operationalStatus === SonosSpeakers.OPERATIONAL_STATUS.UPDATED) {
           contexts.forEach((context) => {
-            refreshStateAndTitle({ inContext: context, inSonosSpeakerState: device.deviceInfo });
+            refreshStateAndTitle({ inContext: context, inSonosSpeakerState: updatedSpeaker.state });
           });
         }
       });
-    }, 0.5 * 1e3);
+    }, 0.5 * 1000);
   };
 });
 
 function callAction({ inContext, inEvent, inRotation = null }) {
   const settings = actionSettings.value[inContext];
   const actionName = settings.action.split(".").pop();
-  // const controller = settings.controller.toLowerCase();
 
   Object.keys(actionFunctionMap).map((key) => {
     if (key === actionName) {
       if (actionFunctionMap[key][inEvent]) {
         actionFunctionMap[key][inEvent].forEach(async (actionFunction) => {
-          const sonosSpeakerUUID = sonosSpeakers.getSpeakerByContext({ context: inContext });
-          const speaker = sonosSpeakers.getDevice({ speakerKey: sonosSpeakerUUID });
-          sonosSpeakers.setStatus({ speakerKey: sonosSpeakerUUID, status: "UPDATING" });
+          const sonosSpeakerResult = sonosSpeakers.getSpeakerByContext({ context: inContext });
+          if (sonosSpeakerResult.status !== "SUCCESS") {
+            console.error(`Failed to get speaker for context ${inContext}: ${sonosSpeakerResult.message}`);
+            return;
+          }
+          const sonosSpeakerUUID = sonosSpeakerResult.UUID;
+          const speaker = sonosSpeakers.getSpeaker({ UUID: sonosSpeakerUUID });
+          if (speaker.status !== "SUCCESS") {
+            console.error(`Failed to get speaker info for ${sonosSpeakerUUID}: ${speaker.message}`);
+            return;
+          }
+          sonosSpeakers.setOperationalStatus({
+            UUID: sonosSpeakerUUID,
+            operationalStatus: SonosSpeakers.OPERATIONAL_STATUS.UPDATING,
+          });
           const actionResult = await actionFunction({
             inContext,
             inActionSettings: settings,
-            inSonosSpeakerState: speaker.deviceInfo,
+            inSonosSpeakerState: speaker.state,
             inRotation,
             deviceTimeoutDuration: deviceTimeoutDuration.value,
           });
           if (actionResult.status === "SUCCESS") {
-            sonosSpeakers.updateDeviceInfo({ speakerKey: sonosSpeakerUUID, deviceInfo: actionResult.updatedSonosSpeakerState });
+            sonosSpeakers.updateSpeakerState({ UUID: sonosSpeakerUUID, state: actionResult.updatedSonosSpeakerState });
           } else {
             const contexts = speaker.contexts;
             contexts.forEach((context) => {
-              $SD.value.showAlert({ context });
+              streamDeckConnection.value.showAlert({ context });
             });
-            sonosSpeakers.setStatus({ speakerKey: sonosSpeakerUUID, status: "DISCONNECTED" });
+            sonosSpeakers.setOperationalStatus({
+              UUID: sonosSpeakerUUID,
+              operationalStatus: SonosSpeakers.OPERATIONAL_STATUS.DISCONNECTED,
+            });
           }
         });
       }
@@ -344,14 +359,12 @@ async function refreshStateAndTitle({ inContext, inSonosSpeakerState }) {
         inContext,
         inActionSettings: settings,
         inSonosSpeakerState,
-        StreamDeckConnection: $SD.value,
+        StreamDeckConnection: streamDeckConnection.value,
       });
       if (stateResult.status === "SUCCESS" && stateResult.futureStateIndex !== currentStateIndex) {
         actionSettings.value[inContext].currentStateIndex = stateResult.futureStateIndex;
-      } else if (stateResult.status === "SUCCESS" && stateResult.futureStateIndex === currentStateIndex) {
-        // This is a no-op to handle the case where the state is already up to date
-      } else {
-        console.log(`[Refresh State and Title] Failed to update state for context ${inContext} [${settings.action}] from ${currentStateIndex} to ${stateResult.futureStateIndex}`);
+      } else if (stateResult.status !== "SUCCESS") {
+        console.error(`[Refresh State and Title] Failed to update state for context ${inContext}: ${stateResult.message}`);
       }
     } else {
       console.log(`No state handler found for ${actionName} (controller: ${controller})`);

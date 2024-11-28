@@ -183,7 +183,7 @@ export class SonosController {
       }
     }
 
-    return devices;
+    return { list: devices };
   }
 
   async getDeviceInfo(getQueue = false) {

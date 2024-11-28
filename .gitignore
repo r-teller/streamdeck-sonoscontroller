@@ -135,3 +135,5 @@ dist
 .aider*
 .archive*
 com.r-teller.sonos*
+
+./material-design-icons/*
