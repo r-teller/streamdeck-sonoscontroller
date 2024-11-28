@@ -13,7 +13,8 @@
     "build_dev_incr": "node -e \"const fs=require('fs');const m=JSON.parse(fs.readFileSync('public/manifest.json'));m.Version=m.Version.split('.').map((n,i)=>i===3?parseInt(n)+1:n).join('.');fs.writeFileSync('public/manifest.json',JSON.stringify(m,null,2));\" &&vite build --sourcemap inline --minify false",
     "preview": "vite preview",
     "lint": "eslint ./src --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
-    "format": "prettier --print-width 128 --write src/",
+    "format": "prettier --print-width 128 --write ./src/",
+    "format:check": "prettier --check --print-width 128 ./src/",
     "clean": "shx rm -rf ./com.r-teller.sonoscontroller.sdPlugin && shx rm -f ./com.r-teller.sonoscontroller.streamDeckPlugin"
   },
   "dependencies": {
