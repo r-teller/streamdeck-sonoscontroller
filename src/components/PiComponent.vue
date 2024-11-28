@@ -2,22 +2,51 @@
   <div class="container-fluid">
     <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED" class="clearfix mb-3">
       <h1>Sonos Speakers</h1>
-      <SonosSelection class="mb-3" :available-sonos-speakers="availableSonosSpeakers" v-model="sonosSpeaker" @selection-saved="saveSettings"></SonosSelection>
+      <SonosSelection
+        class="mb-3"
+        :available-sonos-speakers="availableSonosSpeakers"
+        v-model="sonosSpeaker"
+        @selection-saved="saveSettings"
+      ></SonosSelection>
 
       <div class="form-check form-switch" v-if="displayStateBasedTitleFor.includes(actionName)">
-        <input id="chkButtonTitle" v-model="displayStateBasedTitle" class="form-check-input" type="checkbox" @change="saveSettings" />
+        <input
+          id="chkButtonTitle"
+          v-model="displayStateBasedTitle"
+          class="form-check-input"
+          type="checkbox"
+          @change="saveSettings"
+        />
         <label class="form-check-label" for="chkButtonTitle">Display State Based Title</label>
       </div>
       <div class="form-check form-switch" v-if="displayMarqueeTitleFor.includes(actionName)">
-        <input id="chkButtonMarqueeTitle" v-model="displayMarqueeTitle" class="form-check-input" type="checkbox" @change="saveSettings" />
+        <input
+          id="chkButtonMarqueeTitle"
+          v-model="displayMarqueeTitle"
+          class="form-check-input"
+          type="checkbox"
+          @change="saveSettings"
+        />
         <label class="form-check-label" for="chkButtonMarqueeTitle">Display Marquee Title</label>
       </div>
       <div class="form-check form-switch" v-if="displayMarqueeAlbumTitleFor.includes(actionName)">
-        <input id="chkButtonAlbumTitle" v-model="displayMarqueeAlbumTitle" class="form-check-input" type="checkbox" @change="saveSettings" />
+        <input
+          id="chkButtonAlbumTitle"
+          v-model="displayMarqueeAlbumTitle"
+          class="form-check-input"
+          type="checkbox"
+          @change="saveSettings"
+        />
         <label class="form-check-label" for="chkButtonAlbumTitle">Display Marquee Album Title</label>
       </div>
       <div class="form-check form-switch" v-if="displayAlbumArtFor.includes(actionName)">
-        <input id="chkButtonAlbumArt" v-model="displayAlbumArt" class="form-check-input" type="checkbox" @change="saveSettings" />
+        <input
+          id="chkButtonAlbumArt"
+          v-model="displayAlbumArt"
+          class="form-check-input"
+          type="checkbox"
+          @change="saveSettings"
+        />
         <label class="form-check-label" for="chkButtonAlbumArt">Display Album Art</label>
       </div>
     </div>
@@ -26,7 +55,14 @@
       <h1>Play Mode(s)</h1>
       <div class="d-flex flex-column gap-2 mb-3">
         <div v-for="option in availablePlayModes" :key="option.value" class="form-check form-switch">
-          <input type="checkbox" class="form-check-input" :id="option.value" :value="option.value" v-model="selectedPlayModes" @change="saveSettings" />
+          <input
+            type="checkbox"
+            class="form-check-input"
+            :id="option.value"
+            :value="option.value"
+            v-model="selectedPlayModes"
+            @change="saveSettings"
+          />
           <label class="form-check-label" :for="option.value">
             {{ option.label }}
           </label>
@@ -38,7 +74,14 @@
       <h1>Input Source(s)</h1>
       <div class="d-flex flex-column gap-2 mb-3">
         <div v-for="option in availableInputSources" :key="option.value" class="form-check form-switch">
-          <input type="checkbox" class="form-check-input" :id="option.value" :value="option.value" v-model="selectedInputSources" @change="saveSettings" />
+          <input
+            type="checkbox"
+            class="form-check-input"
+            :id="option.value"
+            :value="option.value"
+            v-model="selectedInputSources"
+            @change="saveSettings"
+          />
           <label class="form-check-label" :for="option.value">
             {{ option.label }}
           </label>
@@ -51,7 +94,12 @@
       <!-- <div class="input-group"> -->
       <h1>Equalizer Target</h1>
       <div class="d-flex flex-column gap-2 mb-3">
-        <select id="encoderAudioEqualizerTarget" v-model="encoderAudioEqualizerTarget" class="form-select form-select-sm" @change="saveSettings">
+        <select
+          id="encoderAudioEqualizerTarget"
+          v-model="encoderAudioEqualizerTarget"
+          class="form-select form-select-sm"
+          @change="saveSettings"
+        >
           <option v-for="option in availableEqualizerTargets" :key="option" :value="option.toUpperCase()">
             {{ option.charAt(0).toUpperCase() + option.slice(1).toLowerCase() }}
           </option>
@@ -63,7 +111,12 @@
       <h1>Sonos Favorite(s)</h1>
       <div class="d-flex flex-column gap-2 mb-3">
         <select class="form-select form-select-sm" v-model="sonosFavorite" @change="saveSettings">
-          <option v-for="option in availableSonosFavorites" :key="option.value" :value="option.value" :metadata="option.metadata">
+          <option
+            v-for="option in availableSonosFavorites"
+            :key="option.value"
+            :value="option.value"
+            :metadata="option.metadata"
+          >
             {{ option.title }}
           </option>
         </select>
@@ -80,7 +133,9 @@
         <small class="text-muted d-block">Note: This timeout is used when executing device actions (in seconds)</small>
         <input id="deviceTimeoutDuration" v-model="deviceTimeoutDuration" class="form-control form-control-sm" type="number" />
         <label class="form-label" for="deviceCheckInterval">Device Check Interval (Actions)</label>
-        <small class="text-muted d-block">Note: This interval is used to check the status of the device selected for this action (in seconds)</small>
+        <small class="text-muted d-block"
+          >Note: This interval is used to check the status of the device selected for this action (in seconds)</small
+        >
         <input id="deviceCheckInterval" v-model="deviceCheckInterval" class="form-control form-control-sm" type="number" />
       </div>
 
@@ -89,8 +144,17 @@
         <button class="btn-close" type="button" @click="sonosError = ''"></button>
       </div>
 
-      <button :disabled="!isSonosSettingsComplete || sonosConnectionState === OPERATIONAL_STATUS.CONNECTING" class="btn btn-sm btn-primary float-end" v-on:click="saveGlobalSettings">
-        <span v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTING" aria-hidden="true" class="spinner-border spinner-border-sm" role="status"></span>
+      <button
+        :disabled="!isSonosSettingsComplete || sonosConnectionState === OPERATIONAL_STATUS.CONNECTING"
+        class="btn btn-sm btn-primary float-end"
+        v-on:click="saveGlobalSettings"
+      >
+        <span
+          v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTING"
+          aria-hidden="true"
+          class="spinner-border spinner-border-sm"
+          role="status"
+        ></span>
         <span>{{ sonosConnectionState === OPERATIONAL_STATUS.CONNECTED ? "Save and Reconnect" : "Save and Connect" }}</span>
       </button>
     </div>
@@ -143,7 +207,16 @@ const isToggleInputSource = ref(false);
 const availableInputSources = ref([]);
 const selectedInputSources = ref([]);
 
-const displayStateBasedTitleFor = ["toggle-play-mode", "toggle-input-source", "toggle-play-pause", "toggle-mute-unmute", "volume-up", "volume-down", "play-previous-track", "play-next-track"];
+const displayStateBasedTitleFor = [
+  "toggle-play-mode",
+  "toggle-input-source",
+  "toggle-play-pause",
+  "toggle-mute-unmute",
+  "volume-up",
+  "volume-down",
+  "play-previous-track",
+  "play-next-track",
+];
 const displayStateBasedTitle = ref(false);
 
 const displayAlbumArtFor = ["toggle-play-pause", "play-sonos-favorite", "currently-playing"];
@@ -172,6 +245,15 @@ onMounted(() => {
     streamDeckConnection.value.on("connected", () => {
       streamDeckConnection.value.requestGlobalSettings();
     });
+
+    // this is called when the user clicks the save button external from the pi
+    // saving in case logic is needed in the future
+    // streamDeckConnection.value.on("didReceiveSettings", (inMessage) => {
+    //   actionSettings.value = inMessage.payload.settings;
+    // });
+    // streamDeckConnection.value.on("sendToPropertyInspector", (inMessage) => {
+    //   console.log(inMessage);
+    // });
 
     streamDeckConnection.value.on("globalsettings", (inGlobalSettings) => {
       if (inGlobalSettings) {
@@ -284,9 +366,11 @@ function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, trigg
           hostAddress: device.hostAddress,
           uuid: device.uuid,
           isSatellite: device.isSatellite,
-        })
+        }),
     )
-    .sort((a, b) => (a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0));
+    .sort((a, b) =>
+      a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0,
+    );
 
   if (inActionSettings?.uuid) {
     sonosSpeaker.value = inActionSettings.uuid;
@@ -309,7 +393,13 @@ async function saveGlobalSettings() {
   $SONOS.connect(primaryDeviceAddress.value);
 
   try {
-    const timeout = (sonosAction) => new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration.value} seconds`)), deviceTimeoutDuration.value * 1000));
+    const timeout = (sonosAction) =>
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration.value} seconds`)),
+          deviceTimeoutDuration.value * 1000,
+        ),
+      );
     const getDevices = await Promise.race([$SONOS.getDevices({ setAsPrimary: true }), timeout("getting devices")]);
     if (!getDevices.timedOut) {
       clearTimeout(getDevices.timedOut);
@@ -319,7 +409,10 @@ async function saveGlobalSettings() {
       clearTimeout(getFavorites.timedOut);
     }
     sonosConnectionState.value = OPERATIONAL_STATUS.CONNECTED;
-    refreshAvailableSonosSpeakers({ inDevices: getDevices.list, inActionSettings: actionSettings.value });
+    refreshAvailableSonosSpeakers({
+      inDevices: getDevices.list,
+      inActionSettings: actionSettings.value,
+    });
     streamDeckConnection.value.saveGlobalSettings({
       payload: {
         devices: getDevices.list,
@@ -336,7 +429,9 @@ async function saveGlobalSettings() {
 }
 
 function saveSettings() {
-  const selectedSonosSpeaker = availableSonosSpeakers.value.find((selectedSonosSpeaker) => selectedSonosSpeaker.uuid === sonosSpeaker.value);
+  const selectedSonosSpeaker = availableSonosSpeakers.value.find(
+    (selectedSonosSpeaker) => selectedSonosSpeaker.uuid === sonosSpeaker.value,
+  );
   const selectedSonosFavorite = availableSonosFavorites.value.find((favorite) => favorite.value === sonosFavorite.value);
   actionSettings.value = {
     action: action.value,
@@ -362,6 +457,8 @@ function saveSettings() {
         }
       : null,
   };
-  streamDeckConnection.value.saveSettings({ actionSettings: actionSettings.value });
+  streamDeckConnection.value.saveSettings({
+    actionSettings: actionSettings.value,
+  });
 }
 </script>

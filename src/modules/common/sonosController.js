@@ -283,11 +283,17 @@ export class SonosController {
   }
 
   async setAVTransportURI(uri, metadata) {
-    return this.avTransport.execute("SetAVTransportURI", { CurrentURI: uri, CurrentURIMetaData: metadata || "" });
+    return this.avTransport.execute("SetAVTransportURI", {
+      CurrentURI: uri,
+      CurrentURIMetaData: metadata || "",
+    });
   }
 
   async setMute(mute) {
-    return this.renderingControl.execute("SetMute", { Channel: "Master", DesiredMute: mute ? "1" : "0" });
+    return this.renderingControl.execute("SetMute", {
+      Channel: "Master",
+      DesiredMute: mute ? "1" : "0",
+    });
   }
 
   async getBass() {
@@ -303,7 +309,9 @@ export class SonosController {
   }
 
   async setTreble(treble) {
-    return this.renderingControl.execute("SetTreble", { DesiredTreble: treble });
+    return this.renderingControl.execute("SetTreble", {
+      DesiredTreble: treble,
+    });
   }
 
   async getVolume() {
@@ -311,11 +319,17 @@ export class SonosController {
   }
 
   async setVolume(volume) {
-    return this.renderingControl.execute("SetVolume", { Channel: "Master", DesiredVolume: volume });
+    return this.renderingControl.execute("SetVolume", {
+      Channel: "Master",
+      DesiredVolume: volume,
+    });
   }
 
   async setRelativeVolume(relativeVolume) {
-    return this.renderingControl.execute("SetRelativeVolume", { Channel: "Master", RelativeVolume: relativeVolume });
+    return this.renderingControl.execute("SetRelativeVolume", {
+      Channel: "Master",
+      RelativeVolume: relativeVolume,
+    });
   }
 
   async setServiceURI({ uri, metadata }) {
@@ -530,7 +544,13 @@ class SonosService {
   }
 
   escape(txt) {
-    return txt.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+    return txt
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
   }
 }
 

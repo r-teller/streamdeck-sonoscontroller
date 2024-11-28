@@ -63,6 +63,9 @@ export class StreamDeck {
         case "sendToPlugin":
           this.events.emit("sendToPlugin", incomingEvent);
           break;
+        case "sendToPropertyInspector":
+          this.events.emit("sendToPropertyInspector", incomingEvent);
+          break;
         case "propertyInspectorDidAppear":
           this.events.emit("propertyInspectorDidAppear", incomingEvent);
           break;
@@ -97,10 +100,18 @@ export class StreamDeck {
     this.streamDeckWebsocket.send(JSON.stringify(message));
   }
 
-  saveSettings({ actionSettings }) {
+  getSettings({ context = this.propertyInspectorUUID } = {}) {
+    let message = {
+      event: "getSettings",
+      context: context,
+    };
+    this.streamDeckWebsocket.send(JSON.stringify(message));
+  }
+
+  saveSettings({ actionSettings, context = this.propertyInspectorUUID }) {
     let message = {
       event: "setSettings",
-      context: this.propertyInspectorUUID,
+      context: context,
       payload: actionSettings,
     };
     this.streamDeckWebsocket.send(JSON.stringify(message));
@@ -187,6 +198,27 @@ export class StreamDeck {
       payload: {
         state: stateIndex,
       },
+    };
+
+    this.streamDeckWebsocket.send(JSON.stringify(message));
+  }
+
+  sendToPlugin({ context, payload }) {
+    let message = {
+      action: this.propertyInspectorUUID,
+      event: "sendToPlugin",
+      context: context,
+      payload,
+    };
+
+    this.streamDeckWebsocket.send(JSON.stringify(message));
+  }
+
+  sendToPropertyInspector({ context, payload }) {
+    let message = {
+      event: "sendToPropertyInspector",
+      context: context,
+      payload,
     };
 
     this.streamDeckWebsocket.send(JSON.stringify(message));

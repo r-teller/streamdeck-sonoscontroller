@@ -14,12 +14,24 @@
       :value="modelValue"
       class="form-select form-select-sm mb-1"
     >
-      <option v-for="sonosSpeaker in filteredSonosSpeakers" v-bind:key="sonosSpeaker" :value="sonosSpeaker.uuid" :title="sonosSpeaker?.title" :hostAddress="sonosSpeaker?.hostAddress" :zoneName="sonosSpeaker?.zoneName">
+      <option
+        v-for="sonosSpeaker in filteredSonosSpeakers"
+        v-bind:key="sonosSpeaker"
+        :value="sonosSpeaker.uuid"
+        :title="sonosSpeaker?.title"
+        :hostAddress="sonosSpeaker?.hostAddress"
+        :zoneName="sonosSpeaker?.zoneName"
+      >
         <!-- <option v-for="{ uuid, hostAddress, zoneName } in filteredSonosSpeakers" :key="uuid" v-bind="{ value: uuid, hostAddress, zoneName, title: uuid }"> -->
         {{ sonosSpeaker.title }}
       </option>
     </select>
-    <input type="text" class="form-control form-control-sm" v-model="sonosSpeakerFilter" placeholder="Filter by name or Sonos Speaker ID..." />
+    <input
+      type="text"
+      class="form-control form-control-sm"
+      v-model="sonosSpeakerFilter"
+      placeholder="Filter by name or Sonos Speaker ID..."
+    />
   </div>
 </template>
 <script setup>
