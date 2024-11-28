@@ -203,7 +203,8 @@ export class StreamDeck {
     this.streamDeckWebsocket.send(JSON.stringify(message));
   }
 
-  sendToPlugin({ context, payload }) {    let message = {
+  sendToPlugin({ context, payload }) {
+    let message = {
       action: this.propertyInspectorUUID,
       event: "sendToPlugin",
       context: context,
