@@ -105,7 +105,11 @@ class SonosSpeakers {
       };
       return { status: "SUCCESS", message: "Speaker added", completed: true }; // Return true if the speaker was added
     }
-    return { status: "ERROR", message: "Speaker already exists", completed: false }; // Return false if the speaker already exists
+    return {
+      status: "ERROR",
+      message: "Speaker already exists",
+      completed: false,
+    }; // Return false if the speaker already exists
   }
 
   /**
@@ -124,20 +128,32 @@ class SonosSpeakers {
    */
   getSpeaker({ UUID }) {
     if (!this.speakers[UUID]) {
-      return { status: "ERROR", message: "Speaker does not exist", completed: false };
+      return {
+        status: "ERROR",
+        message: "Speaker does not exist",
+        completed: false,
+      };
     }
     const currentTime = Math.floor(Date.now() / 1000);
     const timeWindow = 10; // 10 second window
     const maxUpdates = 3; // Max updates allowed in window
     if (this.speakers[UUID].operationalStatus !== SonosSpeakers.OPERATIONAL_STATUS.UPDATED) {
-      this.speakers[UUID].updateAttempts = this.speakers[UUID].updateAttempts.filter((timestamp) => currentTime - timestamp < timeWindow);
+      this.speakers[UUID].updateAttempts = this.speakers[UUID].updateAttempts.filter(
+        (timestamp) => currentTime - timestamp < timeWindow,
+      );
 
       // If too many update attempts and not already rate limited, set status to rate limited
-      if (this.speakers[UUID].updateAttempts.length > maxUpdates && this.speakers[UUID].operationalStatus !== SonosSpeakers.OPERATIONAL_STATUS.RATE_LIMITED) {
+      if (
+        this.speakers[UUID].updateAttempts.length > maxUpdates &&
+        this.speakers[UUID].operationalStatus !== SonosSpeakers.OPERATIONAL_STATUS.RATE_LIMITED
+      ) {
         this.speakers[UUID].operationalStatus = SonosSpeakers.OPERATIONAL_STATUS.RATE_LIMITED;
       }
       // If currently rate limited but attempts have dropped below max, set back to disconnected
-      else if (this.speakers[UUID].operationalStatus === SonosSpeakers.OPERATIONAL_STATUS.RATE_LIMITED && this.speakers[UUID].updateAttempts.length < maxUpdates) {
+      else if (
+        this.speakers[UUID].operationalStatus === SonosSpeakers.OPERATIONAL_STATUS.RATE_LIMITED &&
+        this.speakers[UUID].updateAttempts.length < maxUpdates
+      ) {
         this.speakers[UUID].operationalStatus = SonosSpeakers.OPERATIONAL_STATUS.DISCONNECTED;
       }
     }
@@ -158,9 +174,18 @@ class SonosSpeakers {
    */
   getSpeakerState({ UUID }) {
     if (!this.speakers[UUID]) {
-      return { status: "ERROR", message: "Speaker does not exist", completed: false };
+      return {
+        status: "ERROR",
+        message: "Speaker does not exist",
+        completed: false,
+      };
     }
-    return { status: "SUCCESS", message: "Speaker info retrieved", completed: true, state: this.speakers[UUID].state };
+    return {
+      status: "SUCCESS",
+      message: "Speaker info retrieved",
+      completed: true,
+      state: this.speakers[UUID].state,
+    };
   }
 
   /**
@@ -171,9 +196,18 @@ class SonosSpeakers {
    */
   getSpeakerOperationalStatus({ UUID }) {
     if (!this.speakers[UUID]) {
-      return { status: "ERROR", message: "Speaker does not exist", completed: false };
+      return {
+        status: "ERROR",
+        message: "Speaker does not exist",
+        completed: false,
+      };
     }
-    return { status: "SUCCESS", message: "Speaker status retrieved", completed: true, operationalStatus: this.speakers[UUID].operationalStatus };
+    return {
+      status: "SUCCESS",
+      message: "Speaker status retrieved",
+      completed: true,
+      operationalStatus: this.speakers[UUID].operationalStatus,
+    };
   }
 
   /**
@@ -192,9 +226,17 @@ class SonosSpeakers {
         this.speakers[UUID].lastChecked = Math.floor(Date.now() / 1000);
       }
       this.speakers[UUID].lastUpdated = Math.floor(Date.now() / 1000);
-      return { status: "SUCCESS", message: "Speaker info updated", completed: true };
+      return {
+        status: "SUCCESS",
+        message: "Speaker info updated",
+        completed: true,
+      };
     }
-    return { status: "ERROR", message: "Speaker does not exist", completed: false };
+    return {
+      status: "ERROR",
+      message: "Speaker does not exist",
+      completed: false,
+    };
   }
 
   /**
@@ -208,7 +250,11 @@ class SonosSpeakers {
       delete this.speakers[UUID];
       return { status: "SUCCESS", message: "Speaker removed", completed: true }; // Return true if the speaker was removed
     }
-    return { status: "ERROR", message: "Speaker does not exist", completed: false }; // Return false if the speaker did not exist
+    return {
+      status: "ERROR",
+      message: "Speaker does not exist",
+      completed: false,
+    }; // Return false if the speaker did not exist
   }
 
   /**
@@ -241,7 +287,11 @@ class SonosSpeakers {
         //   lastUpdated: 0, // Set lastUpdated to epoch
         // };
       } else {
-        return { status: "ERROR", message: "Speaker does not exist and createIfNotExists is false", completed: false }; // Exit if the speaker should not be created
+        return {
+          status: "ERROR",
+          message: "Speaker does not exist and createIfNotExists is false",
+          completed: false,
+        }; // Exit if the speaker should not be created
       }
     }
 
@@ -251,7 +301,11 @@ class SonosSpeakers {
       return { status: "SUCCESS", message: "Context added", completed: true }; // Return true if the context was added
     }
 
-    return { status: "ERROR", message: "Context already exists", completed: false }; // Return false if the context already exists
+    return {
+      status: "ERROR",
+      message: "Context already exists",
+      completed: false,
+    }; // Return false if the context already exists
   }
 
   /**
@@ -266,7 +320,11 @@ class SonosSpeakers {
     if (this.speakers[UUID]) {
       // Check if the context exists
       if (!this.speakers[UUID].contexts.includes(context)) {
-        return { status: "ERROR", message: "Context does not exist", completed: false };
+        return {
+          status: "ERROR",
+          message: "Context does not exist",
+          completed: false,
+        };
       }
 
       // Remove the specified context
@@ -281,9 +339,17 @@ class SonosSpeakers {
         delete this.speakers[UUID];
       }
 
-      return { status: "SUCCESS", message: "Context removed", completed: wasRemoved };
+      return {
+        status: "SUCCESS",
+        message: "Context removed",
+        completed: wasRemoved,
+      };
     }
-    return { status: "ERROR", message: "Speaker does not exist", completed: false };
+    return {
+      status: "ERROR",
+      message: "Speaker does not exist",
+      completed: false,
+    };
   }
 
   /**
@@ -298,17 +364,33 @@ class SonosSpeakers {
   moveContext({ currentUUID, futureUUID, context, deleteIfLast = false, createIfNotExists = false }) {
     if (this.containsContext({ UUID: currentUUID, context })) {
       // Remove context from the current speaker and add it to the new speaker
-      const removed = this.removeContext({ UUID: currentUUID, context, deleteIfLast });
+      const removed = this.removeContext({
+        UUID: currentUUID,
+        context,
+        deleteIfLast,
+      });
       if (removed.status === "ERROR") {
         return removed;
       }
-      const added = this.addContext({ UUID: futureUUID, context, createIfNotExists });
+      const added = this.addContext({
+        UUID: futureUUID,
+        context,
+        createIfNotExists,
+      });
       if (added.status === "ERROR") {
         return added;
       }
-      return { status: "SUCCESS", message: "Context moved", completed: removed.completed && added.completed };
+      return {
+        status: "SUCCESS",
+        message: "Context moved",
+        completed: removed.completed && added.completed,
+      };
     }
-    return { status: "ERROR", message: "Context does not exist", completed: false };
+    return {
+      status: "ERROR",
+      message: "Context does not exist",
+      completed: false,
+    };
   }
 
   /**
@@ -331,9 +413,18 @@ class SonosSpeakers {
    */
   getContexts({ UUID }) {
     if (!this.speakers[UUID]) {
-      return { status: "ERROR", message: "Speaker does not exist", completed: false };
+      return {
+        status: "ERROR",
+        message: "Speaker does not exist",
+        completed: false,
+      };
     }
-    return { status: "SUCCESS", message: "Contexts retrieved", completed: true, contexts: this.speakers[UUID].contexts };
+    return {
+      status: "SUCCESS",
+      message: "Contexts retrieved",
+      completed: true,
+      contexts: this.speakers[UUID].contexts,
+    };
   }
 
   /**
@@ -345,7 +436,12 @@ class SonosSpeakers {
   getSpeakerByContext({ context }) {
     for (const UUID in this.speakers) {
       if (this.speakers[UUID].contexts.includes(context)) {
-        return { status: "SUCCESS", message: "Context found", completed: true, UUID };
+        return {
+          status: "SUCCESS",
+          message: "Context found",
+          completed: true,
+          UUID,
+        };
       }
     }
     return { status: "ERROR", message: "Context not found", completed: false };
@@ -359,9 +455,18 @@ class SonosSpeakers {
    */
   getLastChecked({ UUID }) {
     if (!this.speakers[UUID]) {
-      return { status: "ERROR", message: "Speaker does not exist", completed: false };
+      return {
+        status: "ERROR",
+        message: "Speaker does not exist",
+        completed: false,
+      };
     }
-    return { status: "SUCCESS", message: "Last checked retrieved", completed: true, lastChecked: this.speakers[UUID].lastChecked };
+    return {
+      status: "SUCCESS",
+      message: "Last checked retrieved",
+      completed: true,
+      lastChecked: this.speakers[UUID].lastChecked,
+    };
   }
 
   /**
@@ -374,7 +479,11 @@ class SonosSpeakers {
    */
   setOperationalStatus({ UUID, operationalStatus }) {
     if (!this.speakers[UUID] || !this.validOperationalStatuses.includes(operationalStatus)) {
-      return { status: "ERROR", message: "Invalid operational status", completed: false };
+      return {
+        status: "ERROR",
+        message: "Invalid operational status",
+        completed: false,
+      };
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -389,7 +498,11 @@ class SonosSpeakers {
     }
 
     this.speakers[UUID].lastUpdated = Math.floor(Date.now() / 1000);
-    return { status: "SUCCESS", message: "Operational status set", completed: true };
+    return {
+      status: "SUCCESS",
+      message: "Operational status set",
+      completed: true,
+    };
   }
 
   /**
@@ -400,10 +513,19 @@ class SonosSpeakers {
    */
   secondsLastChecked({ UUID }) {
     if (!this.speakers[UUID]) {
-      return { status: "ERROR", message: "Speaker does not exist", completed: false };
+      return {
+        status: "ERROR",
+        message: "Speaker does not exist",
+        completed: false,
+      };
     }
     const currentTime = Math.floor(Date.now() / 1000);
-    return { status: "SUCCESS", message: "Seconds since checked retrieved", completed: true, secondsLastChecked: currentTime - this.speakers[UUID].lastChecked };
+    return {
+      status: "SUCCESS",
+      message: "Seconds since checked retrieved",
+      completed: true,
+      secondsLastChecked: currentTime - this.speakers[UUID].lastChecked,
+    };
   }
 
   /**
@@ -411,7 +533,12 @@ class SonosSpeakers {
    * @returns {BaseOperationResponse & { UUIDs: string[] }} Operation result
    */
   getAllSpeakers() {
-    return { status: "SUCCESS", message: "All speakers retrieved", completed: true, UUIDs: Object.keys(this.speakers) };
+    return {
+      status: "SUCCESS",
+      message: "All speakers retrieved",
+      completed: true,
+      UUIDs: Object.keys(this.speakers),
+    };
   }
 
   /**
@@ -423,7 +550,12 @@ class SonosSpeakers {
     for (const UUID in this.speakers) {
       this.speakers[UUID].contexts.forEach((context) => allContexts.add(context));
     }
-    return { status: "SUCCESS", message: "All contexts retrieved", completed: true, contexts: Array.from(allContexts) };
+    return {
+      status: "SUCCESS",
+      message: "All contexts retrieved",
+      completed: true,
+      contexts: Array.from(allContexts),
+    };
   }
 }
 

@@ -137,4 +137,3 @@
 //       const element = parent.querySelector(selector);
 //       return element ? element.textContent : '';
 //     }
-   

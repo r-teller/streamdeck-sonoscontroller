@@ -1,0 +1,38 @@
+name: Branch CI
+
+on:
+  # Trigger on both pushes and pull requests to any branch except main
+  push:
+    branches-ignore: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'pi.html'
+      - 'public.html'
+      - 'package.json'
+      - 'vite.config.js'
+
+jobs:
+  validate-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2.1.4
+
+      - name: NPM Install
+        run: npm install
+
+      - name: Check Format
+        run: npm run format:check || (echo "❌ Code formatting issues found. Please run 'npm run format' locally and commit changes" && exit 1)
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate Plugin
+        run: npm run validate
