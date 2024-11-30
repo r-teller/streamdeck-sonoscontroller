@@ -353,10 +353,10 @@ const isSonosSettingsComplete = computed(() => {
   return primaryDeviceAddress.value;
 });
 const selectedSonosFavorite = computed(() =>
-  availableSonosFavorites.value.find((favorite) => favorite.value === sonosFavorite.value)
+  availableSonosFavorites.value.find((favorite) => favorite.value === sonosFavorite.value),
 );
 const selectedSonosSpeaker = computed(() =>
-  availableSonosSpeakers.value.find((speaker) => speaker.uuid === sonosSpeaker.value)
+  availableSonosSpeakers.value.find((speaker) => speaker.uuid === sonosSpeaker.value),
 );
 
 function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, triggerSaveSettings = true }) {
@@ -368,10 +368,10 @@ function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, trigg
           hostAddress: device.hostAddress,
           uuid: device.uuid,
           isSatellite: device.isSatellite,
-        })
+        }),
     )
     .sort((a, b) =>
-      a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0
+      a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0,
     );
 
   if (inActionSettings?.uuid) {
@@ -399,8 +399,8 @@ async function saveGlobalSettings() {
       new Promise((_, reject) =>
         setTimeout(
           () => reject(new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration.value} seconds`)),
-          deviceTimeoutDuration.value * 1000
-        )
+          deviceTimeoutDuration.value * 1000,
+        ),
       );
     const getDevices = await Promise.race([$SONOS.getDevices({ setAsPrimary: true }), timeout("getting devices")]);
     if (!getDevices.timedOut) {
