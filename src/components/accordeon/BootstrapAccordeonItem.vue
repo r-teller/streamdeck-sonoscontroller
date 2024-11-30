@@ -2,11 +2,12 @@
   <div class="accordion-item">
     <h2 class="accordion-header" :id="itemId">
       <button
-        class="accordion-button collapsed"
+        class="accordion-button"
+        :class="{ collapsed: !forceExpanded }"
         type="button"
         data-bs-toggle="collapse"
         :data-bs-target="'#collapse' + itemId"
-        aria-expanded="true"
+        :aria-expanded="forceExpanded ? 'true' : 'false'"
         :aria-controls="'collapse' + itemId"
       >
         {{ title }}
@@ -14,7 +15,8 @@
     </h2>
     <div
       :id="'collapse' + itemId"
-      class="accordion-collapse collapse"
+      class="accordion-collapse"
+      :class="{ show: forceExpanded, collapse: !forceExpanded }"
       :aria-labelledby="itemId"
       :data-bs-parent="'#' + accordeonId"
     >
@@ -38,6 +40,10 @@ defineProps({
   title: {
     type: String,
     required: true,
+  },
+  forceExpanded: {
+    type: Boolean,
+    default: false,
   },
 });
 </script>

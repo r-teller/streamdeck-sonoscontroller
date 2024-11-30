@@ -7,7 +7,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Display the currently playing state of the selected speaker and action will manually refresh state",
       "UUID": "com.r-teller.sonoscontroller.currently-playing",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -25,7 +27,9 @@
       "Name": "Toggle Mute",
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Toggle mute state between muted and unmuted.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -50,7 +54,9 @@
       "Name": "Toggle Play/Pause",
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Toggle play/pause state between playing and paused.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -82,7 +88,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Toggle play mode between normal, shuffle and repeat.",
       "UUID": "com.r-teller.sonoscontroller.toggle-play-mode",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -131,7 +139,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Toggle input source between line-in, aux and usb.",
       "UUID": "com.r-teller.sonoscontroller.toggle-input-source",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -162,7 +172,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Skip to next track in queue",
       "UUID": "com.r-teller.sonoscontroller.play-next-track",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -181,7 +193,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Skip to previous track in queue",
       "UUID": "com.r-teller.sonoscontroller.play-previous-track",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -200,7 +214,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Increase volume by 2",
       "UUID": "com.r-teller.sonoscontroller.volume-up",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -219,7 +235,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Decrease volume by 2",
       "UUID": "com.r-teller.sonoscontroller.volume-down",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -238,7 +256,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Play Sonos favorite",
       "UUID": "com.r-teller.sonoscontroller.play-sonos-favorite",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "UserTitleEnabled": true,
       "DisableAutomaticStates": true,
       "DisableCaching": false,
@@ -257,7 +277,9 @@
       "PropertyInspectorPath": "pi.html",
       "Tooltip": "Adjust audio equalizer settings",
       "UUID": "com.r-teller.sonoscontroller.encoder-audio-equalizer",
-      "Controllers": ["Encoder"],
+      "Controllers": [
+        "Encoder"
+      ],
       "UserTitleEnabled": false,
       "DisableAutomaticStates": true,
       "DisableCaching": true,
@@ -282,7 +304,7 @@
   "Name": "Sonos Controller",
   "Icon": "images/sonos",
   "URL": "https://github.com/r-teller/streamdeck-sonoscontroller",
-  "Version": "99.99.99.14",
+  "Version": "99.99.99.33",
   "Category": "Sonos Controller",
   "CategoryIcon": "images/category",
   "OS": [

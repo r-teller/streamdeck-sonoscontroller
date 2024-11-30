@@ -2,12 +2,20 @@
   <div class="container-fluid">
     <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED" class="clearfix mb-3">
       <h1>Sonos Speakers</h1>
-      <SonosSelection
-        class="mb-3"
-        :available-sonos-speakers="availableSonosSpeakers"
-        v-model="sonosSpeaker"
-        @selection-saved="saveSettings"
-      ></SonosSelection>
+
+      <AccordeonComponent id="presses" class="mb-2">
+        <AccordeonItem accordeon-id="presses" item-id="availableSonosSpeakers" title="Available Sonos Speakers">
+          <SonosSelection
+            class="mb-3"
+            :available-sonos-speakers="availableSonosSpeakers"
+            v-model="sonosSpeaker"
+            @selection-saved="saveSettings"
+          ></SonosSelection>
+        </AccordeonItem>
+      </AccordeonComponent>
+      <div class="alert alert-light" v-if="selectedSonosSpeaker">
+        <center>{{ selectedSonosSpeaker.title }}</center>
+      </div>
 
       <div class="form-check form-switch" v-if="displayStateBasedTitleFor.includes(actionName)">
         <input
@@ -90,8 +98,6 @@
     </div>
 
     <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isEncoderAudioEqualizer">
-      <!-- <label class="form-label" for="encoderAudioEqualizerTarget">Equalizer Target</label> -->
-      <!-- <div class="input-group"> -->
       <h1>Equalizer Target</h1>
       <div class="d-flex flex-column gap-2 mb-3">
         <select
@@ -125,25 +131,38 @@
 
     <div class="clearfix mb-3">
       <h1>Global Settings</h1>
-      <div class="mb-3">
-        <label class="form-label" for="primaryDeviceAddress">Primary Device Address (Discovery)</label>
-        <small class="text-muted d-block">Note: This device is used to discover all other devices on the network</small>
-        <input id="primaryDeviceAddress" v-model="primaryDeviceAddress" class="form-control form-control-sm" type="text" />
-        <label class="form-label" for="TESTdeviceTimeoutDuration">Device Timeout Duration (Actions)</label>
-        <small class="text-muted d-block">Note: This timeout is used when executing device actions (in seconds)</small>
-        <input id="deviceTimeoutDuration" v-model="deviceTimeoutDuration" class="form-control form-control-sm" type="number" />
-        <label class="form-label" for="deviceCheckInterval">Device Check Interval (Actions)</label>
-        <small class="text-muted d-block"
-          >Note: This interval is used to check the status of the device selected for this action (in seconds)</small
+      <AccordeonComponent id="globalSettings" class="mb-2">
+        <AccordeonItem
+          accordeon-id="globalSettings"
+          item-id="globalSettings"
+          title="Global Settings"
+          :force-expanded="sonosConnectionState !== OPERATIONAL_STATUS.CONNECTED"
         >
-        <input id="deviceCheckInterval" v-model="deviceCheckInterval" class="form-control form-control-sm" type="number" />
-      </div>
+          <div class="mb-3">
+            <label class="form-label" for="primaryDeviceAddress">Primary Device Address (Discovery)</label>
+            <small class="text-muted d-block">Note: This device is used to discover all other devices on the network</small>
+            <input id="primaryDeviceAddress" v-model="primaryDeviceAddress" class="form-control form-control-sm" type="text" />
+            <label class="form-label" for="TESTdeviceTimeoutDuration">Device Timeout Duration (Actions)</label>
+            <small class="text-muted d-block">Note: This timeout is used when executing device actions (in seconds)</small>
+            <input
+              id="deviceTimeoutDuration"
+              v-model="deviceTimeoutDuration"
+              class="form-control form-control-sm"
+              type="number"
+            />
+            <label class="form-label" for="deviceCheckInterval">Device Check Interval (Actions)</label>
+            <small class="text-muted d-block"
+              >Note: This interval is used to check the status of the device selected for this action (in seconds)</small
+            >
+            <input id="deviceCheckInterval" v-model="deviceCheckInterval" class="form-control form-control-sm" type="number" />
+          </div>
 
-      <div v-if="sonosError" class="alert alert-danger alert-dismissible" role="alert">
-        {{ sonosError }}
-        <button class="btn-close" type="button" @click="sonosError = ''"></button>
-      </div>
-
+          <div v-if="sonosError" class="alert alert-danger alert-dismissible" role="alert">
+            {{ sonosError }}
+            <button class="btn-close" type="button" @click="sonosError = ''"></button>
+          </div>
+        </AccordeonItem>
+      </AccordeonComponent>
       <button
         :disabled="!isSonosSettingsComplete || sonosConnectionState === OPERATIONAL_STATUS.CONNECTING"
         class="btn btn-sm btn-primary float-end"
@@ -162,6 +181,8 @@
 </template>
 
 <script setup>
+import AccordeonComponent from "@/components/accordeon/BootstrapAccordeon.vue";
+import AccordeonItem from "@/components/accordeon/BootstrapAccordeonItem.vue";
 import { SonosController } from "@/modules/common/sonosController";
 import { OPERATIONAL_STATUS } from "@/modules/plugin/SonosSpeakers";
 import { SonosSpeaker } from "@/modules/pi/SonosSpeaker";
@@ -170,12 +191,6 @@ import { computed, onMounted, ref } from "vue";
 import { Buffer } from "buffer";
 import SonosSelection from "@/components/SonosSelection.vue";
 import manifest from "@manifest";
-
-// const CONNECTION_STATES = {
-//   CONNECTED: "connected",
-//   DISCONNECTED: "disconnected",
-//   CONNECTING: "connecting",
-// };
 
 const streamDeckConnection = ref(null);
 const sonosError = ref("");
@@ -315,29 +330,10 @@ onMounted(() => {
                 break;
             }
 
-            if (actionSettings.value?.displayStateBasedTitle) {
-              displayStateBasedTitle.value = actionSettings.value.displayStateBasedTitle;
-            } else {
-              displayStateBasedTitle.value = false;
-            }
-
-            if (actionSettings.value?.displayAlbumArt) {
-              displayAlbumArt.value = actionSettings.value.displayAlbumArt;
-            } else {
-              displayAlbumArt.value = false;
-            }
-
-            if (actionSettings.value?.displayMarqueeTitle) {
-              displayMarqueeTitle.value = actionSettings.value.displayMarqueeTitle;
-            } else {
-              displayMarqueeTitle.value = false;
-            }
-
-            if (actionSettings.value?.displayMarqueeAlbumTitle) {
-              displayMarqueeAlbumTitle.value = actionSettings.value.displayMarqueeAlbumTitle;
-            } else {
-              displayMarqueeAlbumTitle.value = false;
-            }
+            displayStateBasedTitle.value = actionSettings.value?.displayStateBasedTitle ?? false;
+            displayAlbumArt.value = actionSettings.value?.displayAlbumArt ?? false;
+            displayMarqueeTitle.value = actionSettings.value?.displayMarqueeTitle ?? false;
+            displayMarqueeAlbumTitle.value = actionSettings.value?.displayMarqueeAlbumTitle ?? false;
 
             refreshAvailableSonosSpeakers({
               inDevices: inGlobalSettings.devices,
@@ -356,6 +352,12 @@ onMounted(() => {
 const isSonosSettingsComplete = computed(() => {
   return primaryDeviceAddress.value;
 });
+const selectedSonosFavorite = computed(() =>
+  availableSonosFavorites.value.find((favorite) => favorite.value === sonosFavorite.value)
+);
+const selectedSonosSpeaker = computed(() =>
+  availableSonosSpeakers.value.find((speaker) => speaker.uuid === sonosSpeaker.value)
+);
 
 function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, triggerSaveSettings = true }) {
   availableSonosSpeakers.value = Object.values(inDevices)
@@ -366,10 +368,10 @@ function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, trigg
           hostAddress: device.hostAddress,
           uuid: device.uuid,
           isSatellite: device.isSatellite,
-        }),
+        })
     )
     .sort((a, b) =>
-      a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0,
+      a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0
     );
 
   if (inActionSettings?.uuid) {
@@ -397,8 +399,8 @@ async function saveGlobalSettings() {
       new Promise((_, reject) =>
         setTimeout(
           () => reject(new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration.value} seconds`)),
-          deviceTimeoutDuration.value * 1000,
-        ),
+          deviceTimeoutDuration.value * 1000
+        )
       );
     const getDevices = await Promise.race([$SONOS.getDevices({ setAsPrimary: true }), timeout("getting devices")]);
     if (!getDevices.timedOut) {
@@ -429,18 +431,14 @@ async function saveGlobalSettings() {
 }
 
 function saveSettings() {
-  const selectedSonosSpeaker = availableSonosSpeakers.value.find(
-    (selectedSonosSpeaker) => selectedSonosSpeaker.uuid === sonosSpeaker.value,
-  );
-  const selectedSonosFavorite = availableSonosFavorites.value.find((favorite) => favorite.value === sonosFavorite.value);
   actionSettings.value = {
     action: action.value,
     states: manifestAction.value.States,
     controller: controllerType.value,
-    uuid: selectedSonosSpeaker.uuid,
-    title: selectedSonosSpeaker.title,
-    hostAddress: selectedSonosSpeaker.hostAddress,
-    zoneName: selectedSonosSpeaker.zoneName,
+    uuid: selectedSonosSpeaker.value.uuid,
+    title: selectedSonosSpeaker.value.title,
+    hostAddress: selectedSonosSpeaker.value.hostAddress,
+    zoneName: selectedSonosSpeaker.value.zoneName,
     selectedPlayModes: selectedPlayModes.value || [],
     selectedInputSources: selectedInputSources.value || [],
     encoderAudioEqualizerTarget: encoderAudioEqualizerTarget.value,
@@ -448,12 +446,12 @@ function saveSettings() {
     displayAlbumArt: displayAlbumArtFor.includes(actionName.value) ? displayAlbumArt.value : null,
     displayMarqueeTitle: displayMarqueeTitleFor.includes(actionName.value) ? displayMarqueeTitle.value : null,
     displayMarqueeAlbumTitle: displayMarqueeAlbumTitleFor.includes(actionName.value) ? displayMarqueeAlbumTitle.value : null,
-    selectedSonosFavorite: selectedSonosFavorite
+    selectedSonosFavorite: selectedSonosFavorite.value
       ? {
-          title: selectedSonosFavorite.title,
-          uri: selectedSonosFavorite.value,
-          metadata: Buffer.from(selectedSonosFavorite.metadata, "base64").toString("utf-8"),
-          albumArtURI: selectedSonosFavorite.albumArtURI,
+          title: selectedSonosFavorite.value.title,
+          uri: selectedSonosFavorite.value.value,
+          metadata: Buffer.from(selectedSonosFavorite.value.metadata, "base64").toString("utf-8"),
+          albumArtURI: selectedSonosFavorite.value.albumArtURI,
         }
       : null,
   };
