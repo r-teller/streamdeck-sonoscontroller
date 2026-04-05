@@ -155,6 +155,15 @@
               >Note: This interval is used to check the status of the device selected for this action (in seconds)</small
             >
             <input id="deviceCheckInterval" v-model="deviceCheckInterval" class="form-control form-control-sm" type="number" />
+            <label class="form-label" for="adjustVolumeIncrement">Volume Increment (Up/Down)</label>
+            <small class="text-muted d-block">Note: Volume range is 0–100. Used by Volume Up and Volume Down actions unless overridden per-button.</small>
+            <input
+              id="adjustVolumeIncrement"
+              v-model.number="adjustVolumeIncrement"
+              class="form-control form-control-sm"
+              type="number"
+              min="1"
+            />
           </div>
 
           <div v-if="sonosError" class="alert alert-danger alert-dismissible" role="alert">
@@ -197,6 +206,7 @@ const sonosError = ref("");
 const primaryDeviceAddress = ref("");
 const deviceCheckInterval = ref(10);
 const deviceTimeoutDuration = ref(5);
+const adjustVolumeIncrement = ref(10);
 const sonosConnectionState = ref(OPERATIONAL_STATUS.DISCONNECTED);
 const availableSonosSpeakers = ref([]);
 const actionSettings = ref({});
@@ -275,6 +285,7 @@ onMounted(() => {
         if (inGlobalSettings.devices) {
           deviceCheckInterval.value = inGlobalSettings.deviceCheckInterval;
           deviceTimeoutDuration.value = inGlobalSettings.deviceTimeoutDuration;
+          adjustVolumeIncrement.value = inGlobalSettings.adjustVolumeIncrement ?? 10;
           const primaryDevice = Object.values(inGlobalSettings.devices).find((device) => device.primary === true);
           if (primaryDevice) {
             primaryDeviceAddress.value = primaryDevice.hostAddress;
@@ -420,6 +431,7 @@ async function saveGlobalSettings() {
         devices: getDevices.list,
         deviceCheckInterval: deviceCheckInterval.value,
         deviceTimeoutDuration: deviceTimeoutDuration.value,
+        adjustVolumeIncrement: adjustVolumeIncrement.value,
         favorites: getFavorites.list,
       },
     });
