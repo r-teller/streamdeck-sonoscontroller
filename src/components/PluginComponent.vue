@@ -17,6 +17,7 @@ const actionSettings = ref([]);
 
 const deviceCheckInterval = ref(10);
 const deviceTimeoutDuration = ref(5);
+const adjustVolumeIncrement = ref(10);
 
 // At some point we may want to add a speaker check interval and timeout duration
 // const speakerCheckInterval = ref(10);
@@ -150,6 +151,7 @@ onMounted(async () => {
       globalSettings.value = inGlobalSettings;
       deviceCheckInterval.value = inGlobalSettings.deviceCheckInterval;
       deviceTimeoutDuration.value = inGlobalSettings.deviceTimeoutDuration;
+      adjustVolumeIncrement.value = inGlobalSettings.adjustVolumeIncrement ?? 10;
     });
 
     streamDeckConnection.value.on("willDisappear", (inMessage) => {
@@ -363,6 +365,7 @@ function callAction({ inContext, inEvent, inRotation = null }) {
             inSonosSpeakerState: speaker.state,
             inRotation,
             deviceTimeoutDuration: deviceTimeoutDuration.value,
+            globalAdjustVolumeIncrement: adjustVolumeIncrement.value,
           });
           if (actionResult.status === "SUCCESS") {
             sonosSpeakers.updateSpeakerState({
