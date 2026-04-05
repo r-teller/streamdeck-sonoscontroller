@@ -1086,7 +1086,7 @@ export async function play_previous_track_action({
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function volume_up_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function volume_up_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1, globalAdjustVolumeIncrement = 10 }) {
   const functionName = "[Volume Up Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
@@ -1106,7 +1106,7 @@ export async function volume_up_action({ inContext, inActionSettings, inSonosSpe
 
     const updatedVolume = Math.min(
       100,
-      parseInt(inSonosSpeakerState.audioEqualizer.volume) + (parseInt(inActionSettings.adjustVolumeIncrement) || 10),
+      parseInt(inSonosSpeakerState.audioEqualizer.volume) + (parseInt(inActionSettings.adjustVolumeIncrement) || globalAdjustVolumeIncrement),
     );
 
     const volumeUpState = await Promise.race([sonosController.setVolume(updatedVolume), timeout]);
@@ -1153,7 +1153,7 @@ export async function volume_up_action({ inContext, inActionSettings, inSonosSpe
  * @property {string} message - The message describing the action
  * @property {object} updatedSonosSpeakerState - The updated state of the Sonos speaker
  */
-export async function volume_down_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1 }) {
+export async function volume_down_action({ inContext, inActionSettings, inSonosSpeakerState, deviceTimeoutDuration = 1, globalAdjustVolumeIncrement = 10 }) {
   const functionName = "[Volume Down Action]";
   if (!inSonosSpeakerState) {
     console.log(`${functionName} inSonosSpeakerState is undefined for context ${inContext}`);
@@ -1173,7 +1173,7 @@ export async function volume_down_action({ inContext, inActionSettings, inSonosS
 
     const updatedVolume = Math.max(
       0,
-      parseInt(inSonosSpeakerState.audioEqualizer.volume) - (parseInt(inActionSettings.adjustVolumeIncrement) || 10),
+      parseInt(inSonosSpeakerState.audioEqualizer.volume) - (parseInt(inActionSettings.adjustVolumeIncrement) || globalAdjustVolumeIncrement),
     );
 
     const volumeDownState = await Promise.race([sonosController.setVolume(updatedVolume), timeout]);
