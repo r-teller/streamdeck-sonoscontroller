@@ -212,7 +212,7 @@
       "Icon": "images/actions/volume_up",
       "Name": "Volume Up",
       "PropertyInspectorPath": "pi.html",
-      "Tooltip": "Increase volume by 2",
+      "Tooltip": "Increase volume",
       "UUID": "com.r-teller.sonoscontroller.volume-up",
       "Controllers": [
         "Keypad"
@@ -233,7 +233,7 @@
       "Icon": "images/actions/volume_down",
       "Name": "Volume Down",
       "PropertyInspectorPath": "pi.html",
-      "Tooltip": "Decrease volume by 2",
+      "Tooltip": "Decrease volume",
       "UUID": "com.r-teller.sonoscontroller.volume-down",
       "Controllers": [
         "Keypad"

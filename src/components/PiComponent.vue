@@ -97,6 +97,23 @@
       </div>
     </div>
 
+    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isVolumeAction">
+      <h1>Volume Increment</h1>
+      <div class="d-flex flex-column gap-2 mb-3">
+        <label class="form-label" for="perButtonAdjustVolumeIncrement">Override increment (leave empty to use global default)</label>
+        <small class="text-muted d-block">Volume range: 0–100</small>
+        <input
+          id="perButtonAdjustVolumeIncrement"
+          v-model.number="perButtonAdjustVolumeIncrement"
+          class="form-control form-control-sm"
+          type="number"
+          min="1"
+          :placeholder="`Global default: ${adjustVolumeIncrement}`"
+          @change="saveSettings"
+        />
+      </div>
+    </div>
+
     <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isEncoderAudioEqualizer">
       <h1>Equalizer Target</h1>
       <div class="d-flex flex-column gap-2 mb-3">
@@ -155,6 +172,15 @@
               >Note: This interval is used to check the status of the device selected for this action (in seconds)</small
             >
             <input id="deviceCheckInterval" v-model="deviceCheckInterval" class="form-control form-control-sm" type="number" />
+            <label class="form-label" for="adjustVolumeIncrement">Volume Increment (Up/Down)</label>
+            <small class="text-muted d-block">Note: Volume range is 0–100. Used by Volume Up and Volume Down actions unless overridden per-button.</small>
+            <input
+              id="adjustVolumeIncrement"
+              v-model.number="adjustVolumeIncrement"
+              class="form-control form-control-sm"
+              type="number"
+              min="1"
+            />
           </div>
 
           <div v-if="sonosError" class="alert alert-danger alert-dismissible" role="alert">
@@ -197,6 +223,7 @@ const sonosError = ref("");
 const primaryDeviceAddress = ref("");
 const deviceCheckInterval = ref(10);
 const deviceTimeoutDuration = ref(5);
+const adjustVolumeIncrement = ref(10);
 const sonosConnectionState = ref(OPERATIONAL_STATUS.DISCONNECTED);
 const availableSonosSpeakers = ref([]);
 const actionSettings = ref({});
@@ -247,6 +274,9 @@ const isEncoderAudioEqualizer = ref(false);
 const availableEqualizerTargets = ref(["volume", "bass", "treble"]);
 const encoderAudioEqualizerTarget = ref("");
 
+const isVolumeAction = ref(false);
+const perButtonAdjustVolumeIncrement = ref(null);
+
 onMounted(() => {
   window.connectElgatoStreamDeckSocket = (exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo) => {
     streamDeckConnection.value = new StreamDeck(exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo);
@@ -275,6 +305,7 @@ onMounted(() => {
         if (inGlobalSettings.devices) {
           deviceCheckInterval.value = inGlobalSettings.deviceCheckInterval;
           deviceTimeoutDuration.value = inGlobalSettings.deviceTimeoutDuration;
+          adjustVolumeIncrement.value = inGlobalSettings.adjustVolumeIncrement ?? 10;
           const primaryDevice = Object.values(inGlobalSettings.devices).find((device) => device.primary === true);
           if (primaryDevice) {
             primaryDeviceAddress.value = primaryDevice.hostAddress;
@@ -313,6 +344,11 @@ onMounted(() => {
                 } else {
                   encoderAudioEqualizerTarget.value = "VOLUME";
                 }
+                break;
+              case "volume-up":
+              case "volume-down":
+                isVolumeAction.value = true;
+                perButtonAdjustVolumeIncrement.value = actionSettings.value?.adjustVolumeIncrement ?? null;
                 break;
               case "play-sonos-favorite":
                 isPlaySonosFavorite.value = true;
@@ -420,6 +456,7 @@ async function saveGlobalSettings() {
         devices: getDevices.list,
         deviceCheckInterval: deviceCheckInterval.value,
         deviceTimeoutDuration: deviceTimeoutDuration.value,
+        adjustVolumeIncrement: Math.max(1, adjustVolumeIncrement.value),
         favorites: getFavorites.list,
       },
     });
@@ -454,6 +491,7 @@ function saveSettings() {
           albumArtURI: selectedSonosFavorite.value.albumArtURI,
         }
       : null,
+    adjustVolumeIncrement: perButtonAdjustVolumeIncrement.value ?? null,
   };
   streamDeckConnection.value.saveSettings({
     actionSettings: actionSettings.value,
