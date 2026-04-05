@@ -43,6 +43,6 @@ Where action handlers are called, pass `globalAdjustVolumeIncrement: adjustVolum
 
 ## Manifest fix
 
-In `public/manifest.json`, update:
-- Volume Up `Tooltip`: `"Increase volume by 2"` → `"Increase volume by 10"`
-- Volume Down `Tooltip`: `"Decrease volume by 2"` → `"Decrease volume by 10"`
+In `public/manifest.json`, remove the hardcoded increment from both tooltips (it would become inaccurate once the setting is configurable):
+- Volume Up `Tooltip`: `"Increase volume by 2"` → `"Increase volume"`
+- Volume Down `Tooltip`: `"Decrease volume by 2"` → `"Decrease volume"`
