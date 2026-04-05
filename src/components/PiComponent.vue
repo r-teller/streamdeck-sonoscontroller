@@ -456,7 +456,7 @@ async function saveGlobalSettings() {
         devices: getDevices.list,
         deviceCheckInterval: deviceCheckInterval.value,
         deviceTimeoutDuration: deviceTimeoutDuration.value,
-        adjustVolumeIncrement: adjustVolumeIncrement.value,
+        adjustVolumeIncrement: Math.max(1, adjustVolumeIncrement.value),
         favorites: getFavorites.list,
       },
     });
@@ -491,7 +491,7 @@ function saveSettings() {
           albumArtURI: selectedSonosFavorite.value.albumArtURI,
         }
       : null,
-    adjustVolumeIncrement: perButtonAdjustVolumeIncrement.value || null,
+    adjustVolumeIncrement: perButtonAdjustVolumeIncrement.value ?? null,
   };
   streamDeckConnection.value.saveSettings({
     actionSettings: actionSettings.value,
