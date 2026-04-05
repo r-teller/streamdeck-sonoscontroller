@@ -97,6 +97,23 @@
       </div>
     </div>
 
+    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isVolumeAction">
+      <h1>Volume Increment</h1>
+      <div class="d-flex flex-column gap-2 mb-3">
+        <label class="form-label" for="perButtonAdjustVolumeIncrement">Override increment (leave empty to use global default)</label>
+        <small class="text-muted d-block">Volume range: 0–100</small>
+        <input
+          id="perButtonAdjustVolumeIncrement"
+          v-model.number="perButtonAdjustVolumeIncrement"
+          class="form-control form-control-sm"
+          type="number"
+          min="1"
+          :placeholder="`Global default: ${adjustVolumeIncrement}`"
+          @change="saveSettings"
+        />
+      </div>
+    </div>
+
     <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isEncoderAudioEqualizer">
       <h1>Equalizer Target</h1>
       <div class="d-flex flex-column gap-2 mb-3">
@@ -257,6 +274,9 @@ const isEncoderAudioEqualizer = ref(false);
 const availableEqualizerTargets = ref(["volume", "bass", "treble"]);
 const encoderAudioEqualizerTarget = ref("");
 
+const isVolumeAction = ref(false);
+const perButtonAdjustVolumeIncrement = ref(null);
+
 onMounted(() => {
   window.connectElgatoStreamDeckSocket = (exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo) => {
     streamDeckConnection.value = new StreamDeck(exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo);
@@ -324,6 +344,11 @@ onMounted(() => {
                 } else {
                   encoderAudioEqualizerTarget.value = "VOLUME";
                 }
+                break;
+              case "volume-up":
+              case "volume-down":
+                isVolumeAction.value = true;
+                perButtonAdjustVolumeIncrement.value = actionSettings.value?.adjustVolumeIncrement ?? null;
                 break;
               case "play-sonos-favorite":
                 isPlaySonosFavorite.value = true;
@@ -466,6 +491,7 @@ function saveSettings() {
           albumArtURI: selectedSonosFavorite.value.albumArtURI,
         }
       : null,
+    adjustVolumeIncrement: perButtonAdjustVolumeIncrement.value || null,
   };
   streamDeckConnection.value.saveSettings({
     actionSettings: actionSettings.value,
