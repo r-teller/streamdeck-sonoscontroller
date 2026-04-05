@@ -100,7 +100,7 @@ export class SonosController {
     };
 
     // Search through all zone groups
-    const groups = jsonState?.ZoneGroups?.ZoneGroup || [];
+    const groups = [].concat(jsonState?.ZoneGroups?.ZoneGroup || []);
     for (const group of groups) {
       // Check main zone group member
       const member = group.ZoneGroupMember;
@@ -155,7 +155,7 @@ export class SonosController {
     };
 
     // Process all zone groups
-    const groups = jsonState?.ZoneGroups?.ZoneGroup || [];
+    const groups = [].concat(jsonState?.ZoneGroups?.ZoneGroup || []);
     for (const group of groups) {
       // Handle zone group members
       const members = group.ZoneGroupMember;
