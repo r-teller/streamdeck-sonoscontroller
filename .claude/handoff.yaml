@@ -1,0 +1,23 @@
+# Handoff — session state log
+# Captures where work stands at end of each session.
+# gogogo/leroy reads entries[0]; wrapup prepends a new entry.
+# IMPORTANT: Always quote commit hashes — e.g. ["abc1234"] not [abc1234].
+
+template_entry:
+  date: "YYYY-MM-DD HH:MM UTC"
+  branch: "feature/work-YYYYMMDD-HHMM-short-description"
+  focus: [feature, bugfix, refactor, infrastructure, documentation, stabilization]
+  completed:
+    - "bead-id: what was accomplished"
+  discovered:
+    - "bead-id: new feature/bug filed this session"
+  in_progress:
+    - "bead-id: current state of partial work"
+  blockers:
+    - "bead-id: what's stuck and why"
+  next_steps:
+    - "bead-id: what to do next, in priority order"
+  epic_progress: "epic-id XX% → YY%"
+  commits: ["abc1234", "def5678"]
+
+entries: []

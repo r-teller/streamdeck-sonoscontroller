@@ -1,0 +1,3 @@
+# Session plans are local-only — useful for context but not worth committing.
+# Remove this line if your team wants shared plan history.
+plans/*.md

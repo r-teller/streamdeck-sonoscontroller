@@ -1,0 +1,33 @@
+# Changelog — structured session log
+# Each entry is one session/branch. Newest first.
+# gogogo reads entries[0]; wrapup prepends to the top of entries[].
+# Each area bullet is prefixed with added:|changed:|fixed: to indicate change type.
+#
+# Version Numbering (SemVer):
+#   MAJOR (X.0.0) — incompatible / breaking API changes
+#   MINOR (0.X.0) — new features, backwards-compatible
+#   PATCH (0.0.X) — bug fixes, minor improvements
+#   MVP: use 0.x.x while iterating; bump to 1.0.0 when core features are stable
+#
+# IMPORTANT: Always quote commit hashes — e.g. ["abc1234"] not [abc1234].
+
+template_entry:
+  version: "0.X.Y"
+  date: "YYYY-MM-DD"
+  branch: "feature/work-YYYYMMDD-HHMM-short-description"
+  focus: [feature, bugfix, refactor, infrastructure, documentation, stabilization]
+  summary: "One-line summary of the session's work"
+  beads: [bead-id-1, bead-id-2]
+  epic_progress: "epic-id XX% → YY%"
+  backend:
+    - "added: Models/API/service changes"
+  frontend:
+    - "changed: Pages/components/UX changes"
+  infra:
+    - "added: Migrations, config, tooling, CI changes"
+  docs:
+    - "added: Context docs, commands, workflow changes"
+  tests: "N new/updated, M total passing"
+  commits: ["abc1234", "def5678"]
+
+entries: []
