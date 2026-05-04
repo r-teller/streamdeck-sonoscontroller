@@ -22,6 +22,17 @@ const SERVICES = Object.freeze({
 
 const DEFAULT_TIMEOUT_SEC = 10;
 
+// Per xml.js: a text-only element with no attributes returns as a plain string;
+// an element WITH attributes returns as `{_attributes, _text, ...}`. Favorites
+// pull both shapes (e.g. `<dc:title>` is a bare string; `<res protocolInfo="…">`
+// carries `_text`). Centralize the lookup so the per-field extraction at the
+// call site stays readable.
+function extractText(value) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") return value._text ?? "";
+  return "";
+}
+
 export class SonosController {
   /**
    * @param {object} [opts]
@@ -108,6 +119,56 @@ export class SonosController {
     } catch (err) {
       throw translateSonosError(err, {
         op: "get devices",
+        host: this.host,
+        port: 1400,
+        timeoutSec: this.timeoutSec,
+      });
+    }
+  }
+
+  /**
+   * Browse the speaker's saved Sonos favorites (`ObjectID=FV:2`) and return
+   * one record per `<item>` per data-model.md §"Shape: Favorite". Powers the
+   * PI's "Sonos Favorite(s)" dropdown (prd-what.md §7.3) and the
+   * `play-sonos-favorite` action's queueing path (prd-what.md §5.10).
+   *
+   * The Browse response's `Result` field is a string of DIDL-Lite XML
+   * (already unescaped once by the SOAP parser's textContent read). We feed
+   * that back through `convertXmlToJson` to extract each `<item>`.
+   *
+   * The `metadata` field is the raw, single-unescaped DIDL-Lite payload of
+   * `<r:resMD>` — passed verbatim back into `setServiceURI` /
+   * `AddURIToQueue` later, where the SOAP layer re-escapes it for transport.
+   *
+   * @returns {Promise<Array<{title:string, uri:string, metadata:string, albumArtURI:string}>>}
+   */
+  async getFavorites() {
+    if (!this.host) {
+      throw new Error("SonosController.getFavorites called before connect()");
+    }
+    try {
+      const response = await this.contentDirectory.execute("Browse", {
+        ObjectID: "FV:2",
+        BrowseFlag: "BrowseDirectChildren",
+        Filter: "*",
+        StartingIndex: 0,
+        RequestedCount: 0,
+        SortCriteria: "",
+      });
+      const resultXml = response.Result ?? "";
+      if (!resultXml) return [];
+      const didl = convertXmlToJson(resultXml);
+      // After convertXmlToJson, the root `<DIDL-Lite>` element is unwrapped:
+      // `didl.item` is the favorite (or array of favorites).
+      return asArray(didl?.item).map((item) => ({
+        title: extractText(item?.["dc:title"]),
+        uri: extractText(item?.res),
+        metadata: extractText(item?.["r:resMD"]),
+        albumArtURI: extractText(item?.["upnp:albumArtURI"]),
+      }));
+    } catch (err) {
+      throw translateSonosError(err, {
+        op: "get favorites",
         host: this.host,
         port: 1400,
         timeoutSec: this.timeoutSec,
