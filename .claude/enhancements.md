@@ -123,6 +123,39 @@ The rule, as it landed in `sonosController.js`:
 
 > Resolved 2026-05-04 — added §"Future optimization: cheaper coordinator-resolution endpoint" subsection under §Per-action SOAP commands in backend.md with the byte/limitation tradeoffs and a reference to the closed cel spike.
 
+---
+
+### [OPEN] Multi-line bash curl with embedded XML body is paste-fragile
+
+**Needed:** During the cel spike's live-capture phase, every multi-line `curl` command I gave the user (with `\` line continuations and an inline `--data-binary '<?xml ...>'` body) failed at least once due to the user's terminal/paste mode stripping or duplicating newlines mid-command. Bash then saw `-H` as a flag without value, or treated `Content-Type: ...` as a separate command. Cost ~5-7 turns of debugging across the session.
+
+**Where the gap is:** No project doc; this is a Claude-output convention, not a project convention.
+
+**Suggested fix:** When sharing curl commands that contain multi-line SOAP/XML payloads with the user, default to the heredoc + file-based pattern from the start:
+
+```bash
+cat > /tmp/req.xml <<'EOF'
+<?xml version="1.0"?>...
+EOF
+curl ... --data-binary @/tmp/req.xml
+```
+
+Heredoc bodies survive paste reliably (no embedded escaping); the curl command itself is short enough to never wrap. Single-line curl is fine when there's no XML body. Switch to heredoc the moment a SOAP envelope enters the picture.
+
+**Discovered during:** `cel` spike, 2026-05-04.
+
+---
+
+### [OPEN] Effort sizing — "large" items at the END of a phase are systematically over-forecast
+
+**Needed:** h75.6 was sized `cynefin:complicated, size:large` with an expected ~50-120 turns (per work-item-templates.md size-tier guide). Actual landing was ~25 turns including 11 fixtures and 43 tests. The 4-5x under-run isn't because the work was small — it really did touch ~22 methods across multiple service classes — but because by the time h75.6 was claimed, ALL its scaffolding was already in place: `translateSonosError` from h75.7, `getInputSourceMappings` from h75.5, `resolveCoordinator` from cel, plus the `getDevices` / `getFavorites` boundary-translation pattern to copy. Most of h75.6's "implementation" was sequential application of established patterns, not novel design.
+
+**Where the gap is:** `work-item-templates.md` size guide doesn't account for "foundation already built" effort discount.
+
+**Suggested fix:** Add a sizing modifier to the Size Classification Guide in `work-item-templates.md`: when a `size:large` item is the LAST in its phase and its foundations are all `closed`, scale the upper end of the turn estimate down by ~50%. Conversely, when a `size:large` item is the FIRST in a phase, lean toward the upper bound. Captures the reality that pattern-application is much cheaper than pattern-discovery.
+
+**Discovered during:** `h75.6`, 2026-05-04.
+
 
 **Needed:** The cel spike's Q5 ("is there a cheaper-to-poll endpoint than `GetZoneGroupState`?") landed an answer: `ContentDirectory.Browse` is not relevant, but `ZoneGroupTopology#GetZoneGroupAttributes` returns `CurrentZoneGroupID` formatted as `<COORD_UUID>:<seq>` (~600 bytes vs ~5KB). Splitting on `:` gives the coordinator UUID directly without walking topology. **Caveat:** `CurrentZonePlayerUUIDsInGroup` lists only PRIMARY members — satellites (sub, surrounds) are absent. So this is a viable optimization for primary-member binds but cannot resolve a satellite's coordinator.
 
