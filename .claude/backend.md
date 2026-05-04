@@ -220,6 +220,25 @@ There are **no UPnP NOTIFY subscriptions**. Every state update is **polling-base
 | Browse Favorites | `ContentDirectory#Browse(ObjectID=FV:2, BrowseFlag=BrowseDirectChildren)` |
 | Get Queue | `ContentDirectory#Browse(ObjectID=Q:0)` |
 
+#### Service routing — bound speaker vs coordinator
+
+Every per-action method on `SonosController` decides whether to POST to the **bound speaker** (the one the user pinned via the PI) or the **coordinator** of the bound speaker's group. The rule is fixed by Sonos protocol behavior:
+
+| UPnP service | Target | Rationale |
+|---|---|---|
+| `AVTransport.*` | **Coordinator** | Non-coordinators reject transport ops with `701 Transition not available`. |
+| `ContentDirectory.Browse(Q:0)` | **Coordinator** | The queue is owned by the coordinator; non-coords have an empty queue. |
+| `ContentDirectory.Browse(FV:2)` and other household-scoped browses | Bound speaker | Favorites are household-scoped — any speaker returns the same data. |
+| `RenderingControl.*` | Bound speaker | Volume / mute / bass / treble are **per-speaker**. Group members each have their own values; the action layer decides whose to set. |
+| `ZoneGroupTopology.*` | Bound speaker | Topology is household-scoped. |
+| `DeviceProperties.*` | Bound speaker | Per-speaker. |
+
+Implementation: `SonosController._coordServiceFor(serviceKey)` constructs a fresh `SonosService` targeted at the coordinator's host (resolved via `resolveCoordinator` + `getHostByUuid`). Per-call construction (no service cache) — keeps lifecycle simple and means a topology change is reflected on the next call's resolution.
+
+#### Future optimization: cheaper coordinator-resolution endpoint
+
+`ZoneGroupTopology#GetZoneGroupAttributes` returns `CurrentZoneGroupID` formatted as `<COORDINATOR_UUID>:<seq>` in ~600 bytes (vs `GetZoneGroupState`'s ~5KB). Splitting on `:` extracts the coordinator UUID directly without walking topology. **Caveat:** `CurrentZonePlayerUUIDsInGroup` lists only PRIMARY members — bonded satellites (sub, surrounds) are absent — so this can't resolve a satellite's coordinator. Today the polling cycle keeps `ZoneGroupState` cached, so per-command coord lookup is cache-walk, not a new fetch. Promote `GetZoneGroupAttributes` to the primary path only if the polling cost itself becomes a bottleneck. Background documented in `cel` spike (closed 2026-05-04).
+
 ### URI taxonomy (input source detection)
 
 | Prefix | Source |
@@ -235,7 +254,9 @@ There are **no UPnP NOTIFY subscriptions**. Every state update is **polling-base
 
 ### Group management
 
-Out of scope. The PI never lets the user change group membership. Coordinator/group topology is parsed during `getDevices` only to resolve per-device `Location` URLs. Local-transport switching uses the coordinator UUID via `setLocalTransport`. The current implementation always picks the **first** `ZoneGroup` in the topology XML, which makes behavior in multi-group households undefined — the rebuild should resolve the coordinator for the *bound speaker's* group, not the first group.
+Out of scope. The PI never lets the user change group membership. Coordinator/group topology is parsed during `getDevices` only to resolve per-device `Location` URLs and during transport routing only via `resolveCoordinator(boundUuid, topology)` (`src/modules/common/coordinatorResolver.js`). The resolver walks `ZoneGroups → ZoneGroupMember → Satellite` to find the group containing the bound speaker, then returns that group's `Coordinator` attribute. Bonded satellites (sub, surround, stereo-pair) resolve to their parent group's coordinator. When the bound speaker is missing from the current topology (offline / factory-reset UUID change), the resolver throws `SonosError(category="unknown")` so the PI surfaces a red dismissible alert prompting re-discovery (per prd-what.md §7.7) — the rebuild deliberately fails loudly rather than retrying against a stale UUID.
+
+Validated against 5 fixtures including a live capture from a real S2 home theater (3 bonded satellites + a grouped sibling room across 2 groups). See `cel` spike findings in `.archive/plans/2026-05-03-coordinator-resolution.md`.
 
 ---
 

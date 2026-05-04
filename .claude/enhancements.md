@@ -93,3 +93,43 @@ Purpose: Track documentation gaps discovered during work — places where contex
 **Suggested fix:** When `package.json` exists and `node_modules/` is missing or stale (mtime older than `package.json`), automatically launch `npm install` via Bash with `run_in_background: true` during Step 1 or Step 3d. The user is doing planning work in parallel; install completes by the time implementation starts. Worked well in this session — `npm install` ran while the navigator-survey produced the 6-bead plan.
 
 **Discovered during:** Phase 1 multi-bead session, 2026-05-03.
+
+---
+
+### [RESOLVED] Service routing rule (which UPnP service goes to coord vs bound speaker) is implicit, not documented
+
+> Resolved 2026-05-04 — added §"Service routing — bound speaker vs coordinator" subsection under §Per-action SOAP commands in backend.md with the full bound-vs-coord table and a reference to `_coordServiceFor`.
+
+
+**Needed:** While implementing h75.6 (per-action SOAP commands), the routing question — "does setVolume go to the coordinator or the bound speaker?" — had to be derived from prd-what.md §5.8/5.9 prose and Sonos protocol behavior, not from a single canonical rule statement. The same question will arise for every Phase 5 action (km1.1–km1.11) and the Phase 3 polling supervisor (etr.3).
+
+The rule, as it landed in `sonosController.js`:
+- `AVTransport.*` → coordinator (Play, Pause, Next, Prev, SetAVTransportURI, queue ops, Seek, SetPlayMode, GetTransportInfo, GetTransportSettings, GetPositionInfo)
+- `ContentDirectory.Browse(Q:0)` → coordinator (queue is coord-owned)
+- `ContentDirectory.Browse(FV:2)` and other household-scoped browses → bound speaker (favorites are household-scoped)
+- `RenderingControl.*` → bound speaker (volume / mute / bass / treble are per-speaker; group members each have their own)
+- `ZoneGroupTopology.*` → bound speaker (household-scoped)
+- `DeviceProperties.*` → bound speaker (per-speaker)
+
+**Where the gap is:** `backend.md` §"Per-action SOAP commands" or a new §"Service routing" section.
+
+**Suggested fix:** Add a "Service routing" section to backend.md with the bullet list above. Cite the per-speaker volume/mute behavior so the next session implementing a km1 action doesn't have to re-derive it from prd-what.md prose. Reference `sonosController.js` `_coordServiceFor` as the routing implementation.
+
+**Discovered during:** `h75.6` (per-action SOAP commands), 2026-05-04.
+
+---
+
+### [RESOLVED] `GetZoneGroupAttributes` exists as a cheaper coordinator-resolution endpoint
+
+> Resolved 2026-05-04 — added §"Future optimization: cheaper coordinator-resolution endpoint" subsection under §Per-action SOAP commands in backend.md with the byte/limitation tradeoffs and a reference to the closed cel spike.
+
+
+**Needed:** The cel spike's Q5 ("is there a cheaper-to-poll endpoint than `GetZoneGroupState`?") landed an answer: `ContentDirectory.Browse` is not relevant, but `ZoneGroupTopology#GetZoneGroupAttributes` returns `CurrentZoneGroupID` formatted as `<COORD_UUID>:<seq>` (~600 bytes vs ~5KB). Splitting on `:` gives the coordinator UUID directly without walking topology. **Caveat:** `CurrentZonePlayerUUIDsInGroup` lists only PRIMARY members — satellites (sub, surrounds) are absent. So this is a viable optimization for primary-member binds but cannot resolve a satellite's coordinator.
+
+This is documented in `.archive/plans/2026-05-03-coordinator-resolution.md` (gitignored) and as a `bd comments` entry on h75.6, but neither place is loaded into context for future sessions.
+
+**Where the gap is:** `backend.md` §"Per-action SOAP commands" or a new §"Available endpoints we don't use yet" section.
+
+**Suggested fix:** Add a one-paragraph "Future optimization opportunities" callout to backend.md noting `GetZoneGroupAttributes` as a backup coord-resolution endpoint, with the satellite-absence caveat. Helps a future session reaching for "make polling cheaper" find the existing investigation rather than redoing the SCPD scan.
+
+**Discovered during:** `cel` spike (live capture from S2 firmware 86.6-75110), 2026-05-04.

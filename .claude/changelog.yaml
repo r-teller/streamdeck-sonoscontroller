@@ -31,6 +31,33 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - version: "0.3.0"
+    date: "2026-05-04"
+    branch: "rebuild-from-prd"
+    focus: [feature, documentation]
+    summary: "Phase 2 (Sonos Integration Layer) closed at 100%. Shipped URI taxonomy, favorites browse, multi-group coordinator resolver (with live home-theater capture validation), and the full per-action SOAP command surface (transport / RC / polling getters / orchestrated favorite + input-source flows). 40y S1/S2 spike deferred (S2-only env); docs tightened to 'tested only on S2'."
+    beads:
+      - streamdeck-sonoscontroller-h75.5
+      - streamdeck-sonoscontroller-h75.4
+      - streamdeck-sonoscontroller-cel
+      - streamdeck-sonoscontroller-h75.6
+      - streamdeck-sonoscontroller-h75
+      - streamdeck-sonoscontroller-40y
+    epic_progress: "h75 50% → 100%"
+    backend:
+      - "added: src/modules/common/uriTaxonomy.js — getInputSourceMappings(uri) classifies AVTransport URIs by prefix/suffix into Sonos_Queue / TV_Input / Line_In and returns frozen factory pairs the action layer joins as <prefix>:<COORDINATOR_UUID><suffix> for Toggle Input Source. Pure function, no I/O."
+      - "added: SonosController.getFavorites() — Browse FV:2 with verbatim Sonos arg set, parses embedded DIDL-Lite payload, returns one record per favorite per data-model.md §Shape: Favorite (title/uri/metadata/albumArtURI). Metadata preserves single-unescaped DIDL-Lite for verbatim re-submission."
+      - "added: src/modules/common/coordinatorResolver.js — resolveCoordinator(speakerUuid, topology) walks ZoneGroups → ZoneGroupMember → Satellite to find the coordinator UUID for the bound speaker's group. Pure function. Throws SonosError(category=unknown) when speaker missing from topology (loud-fail per cel spike Q2 contract)."
+      - "added: SonosController.getHostByUuid(topology, uuid) static — companion lookup that returns a device's host from its UUID, used by transport routing to find the coord's address after resolveCoordinator."
+      - "added: SonosController._coordServiceFor(serviceKey) — async helper that constructs a fresh SonosService targeted at the bound speaker's coordinator. Per-call construction (no service cache) per cel spike recommendation."
+      - "added: connect(host, {uuid}) — boundUuid optional but required for coordinator-routed commands. Backward compatible (existing call sites without uuid still work for getDevices/getFavorites)."
+      - "added: 22 per-action methods on SonosController per h75.6: play/pause/next/previous, setMute/setVolume/setBass/setTreble, setPlayMode, setAVTransportURI, seek, addURIToQueue, removeAllTracksFromQueue, setLocalTransport (Toggle Input Source orchestration), setServiceURI (Play Favorite — radio short-circuit vs 5-step queue path), getMute/getVolume/getBass/getTreble, getTransportSettings/getTransportInfo/getPositionInfo (parses embedded TrackMetaData DIDL-Lite), getQueue (Browse Q:0 → QueueItem[]). Routing rule: AVTransport.* and ContentDirectory.Browse(Q:0) → coordinator; RenderingControl.* → bound speaker."
+    docs:
+      - "added: .archive/plans/2026-05-03-coordinator-resolution.md — cel spike recommendation doc. Pseudocode + edge-case contracts (Q1-Q5) + 5 worked traces (4 synthetic + 1 sanitized live capture from real S2 home theater with 3 bonded satellites + grouped sibling room). gitignored, local-only."
+      - "changed: prd-what.md §11.2 + architecture.md non-goals row — S1/S2 stance tightened from 'best effort, not certified' to 'tested only on S2 firmware (86.6-75110, 94.1-76070, ZPS9 platform); S1 not tested, no first-class support path'. Driven by 40y deferral (project owner's environment is S2-only)."
+      - "added: 2 enhancements.md entries — service routing rule (AVTransport→coord, RC→bound, CD(Q:0)→coord) needs documentation in backend.md; GetZoneGroupAttributes cheaper-endpoint finding from cel spike needs surfacing for future polling-cost work."
+    tests: "91 new (114 → 205 total). 3 new test files: uriTaxonomy.test.js (14), sonosController.getFavorites.test.js (13), coordinatorResolver.test.js (21), sonosController.actions.test.js (43). 14 new fixtures: browse-fv2-{empty,single,mixed}, zonegroupstate-live-bonded-and-grouped (sanitized live capture with home-theater + grouped sibling), getmute-response (+unmuted variant), getbass-response, gettreble-response, gettransportinfo-{playing,paused}, gettransportsettings-shuffle, getpositioninfo-spotify-track, browse-q0-{empty,five-tracks}, soap-empty-response."
+    commits: ["e4e0be2", "6b5f7e9", "c872745", "beb03e2", "627dddf"]
   - version: "0.2.0"
     date: "2026-05-04"
     branch: "rebuild-from-prd"

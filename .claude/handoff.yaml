@@ -21,6 +21,28 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - date: "2026-05-04 14:10 UTC"
+    branch: "rebuild-from-prd"
+    focus: [feature, documentation]
+    completed:
+      - "h75.5: URI taxonomy + getInputSourceMappings — pure classifier (Sonos_Queue / TV_Input / Line_In) + frozen factory map for input cycling; 14 tests"
+      - "h75.4: Favorites browse — SonosController.getFavorites() Browse FV:2, parses embedded DIDL-Lite, handles single-child normalization via asArray, preserves metadata as single-unescaped DIDL-Lite for round-trip; 13 tests across 3 new fixtures (empty, single, mixed-12 with non-ASCII titles)"
+      - "cel: Multi-group coordinator resolver spike — pseudocode + edge-case contracts for Q1-Q5, resolveCoordinator() lands in src/modules/common/coordinatorResolver.js as production code (h75.6 consumes it), 21 tests across 5 fixtures including a sanitized live capture from a real S2 home theater (3 bonded satellites + grouped sibling room)"
+      - "40y: S1/S2 spike DEFERRED — environment is S2-only with no S1 test capability. prd-what.md §11.2 + architecture.md non-goals row tightened: 'tested only on S2 firmware (86.6-75110, 94.1-76070, ZPS9 platform); S1 not tested, no first-class support path'"
+      - "h75.6: Per-action SOAP commands — 22 methods on SonosController (transport, RC, polling getters, orchestrated setLocalTransport + setServiceURI). Includes coord-routing infrastructure: connect(host, {uuid}), getHostByUuid, _coordServiceFor. Routing rule: AVTransport.* and ContentDirectory.Browse(Q:0) → coord; RenderingControl.* → bound. 43 tests across 11 new fixtures, all 9 ACs covered"
+      - "h75 (epic): Phase 2 Sonos Integration Layer closed at 100%"
+    discovered:
+      - "no new beads filed — all session work tracked under existing items"
+    next_steps:
+      - "etr (Phase 3 — Plugin Runtime: state, polling, dispatcher): now unblocked. Wires the polling supervisor against the getters shipped in h75.6 (GetTransportSettings/Info, GetMute/Volume/Bass/Treble, GetPositionInfo, optionally GetQueue) — see backend.md §Subscriptions / event model for the 7-call burst spec"
+      - "orw (Phase 4 — Property Inspector): unblocked. Will consume getDevices (h75.3) and getFavorites (h75.4) for the bind dropdown + favorites picker"
+      - "km1 (Phase 5 — Actions Catalog): unblocked. Each km1.1-km1.11 action binds to one or more SonosController methods from h75.6"
+      - "Recommended sequence: etr → orw → km1 (Phase 3 produces the state cache that 4+5 read from). km1 also depends on orw for action settings"
+      - "40y deferred — reopen if S1 hardware becomes available or S1 user complaints surface"
+    blockers:
+      - "bd dolt push still fails — no dolt remote configured. Beads data is local-only (unchanged from prior sessions)"
+    epic_progress: "h75 50% → 100% (closed). etr/orw/km1 0% → still 0% but now claimable (unblocked)"
+    commits: ["e4e0be2", "6b5f7e9", "c872745", "beb03e2", "627dddf"]
   - date: "2026-05-04 06:10 UTC"
     branch: "rebuild-from-prd"
     focus: [feature, refactor]
