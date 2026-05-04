@@ -20,4 +20,36 @@ template_entry:
   epic_progress: "epic-id XX% → YY%"
   commits: ["abc1234", "def5678"]
 
-entries: []
+entries:
+  - date: "2026-05-04 05:30 UTC"
+    branch: "rebuild-from-prd"
+    focus: [feature, infrastructure, documentation]
+    completed:
+      - "buu: LICENSE (MIT, byte-equal to main) at repo root"
+      - "4kb.7: repo hygiene baseline (.gitignore, ESLint, Prettier, package.json with 9 vestigial deps dropped)"
+      - "8ss: SDK compat spike — Software.MinimumVersion 6.5 confirmed; recommendation at .archive/plans/2026-05-03-streamdeck-sdk-compat.md"
+      - "4kb.1: Vite multi-entry config + plugin/pi.html stubs + jsconfig"
+      - "4kb.5: src/modules/common/xml.js — convertXmlToJson + asArray (16 vitest tests pass)"
+      - "4kb.6: src/modules/common/timers.js — Web Worker timer shim with Vitest fallback"
+      - "4kb.4: src/modules/common/streamdeck.js — WS client extending EventEmitter, sendToPlugin bug fixed (16 vitest tests pass)"
+      - "4kb.3: material-design-icons submodule + 96 PNGs seeded from main + cleaned generateImages.sh"
+      - "4kb.2: public/manifest.json + 3 encoder layouts; 5 corrections vs main; npm run validate ✓"
+      - "orw.1: src/components/PiComponent.vue minimal shell with reactive state + section anchors"
+      - "cbz: Mobile/Pedal device support spike — no manifest changes needed; recommendation at .archive/plans/2026-05-03-streamdeck-device-support.md"
+      - "4kb (epic): auto-closed when last child landed"
+    discovered:
+      - "bg9: Refactor build_dev_incr to ESM-friendly script (P3, triage:ready, cynefin:clear, size:small, layer:infra)"
+    blockers:
+      - "bd dolt push fails — no dolt remote configured. Beads data is local-only. Set up dolt remote when ready to share bead state across machines."
+    next_steps:
+      - "h75.1: SonosService SOAP envelope + transport (Phase 2 foundation; cynefin:complicated, size:small) — natural next step now that Phase 1 is closed"
+      - "h75.5: URI taxonomy + getInputSourceMappings (independent of h75.1; can interleave)"
+      - "cel: Multi-group coordinator resolution algorithm spike (cynefin:complex, size:medium) — required before h75.6 (per-action SOAP commands)"
+      - "40y: needs promotion from triage:triaged → triage:ready before claiming (S1 vs S2 spike, low priority)"
+      - "Optionally: 2ut.2 (XML fixture corpus) needs promotion from triage:triaged → triage:ready to unblock the Phase 6 testing cascade"
+    epic_progress: "4kb 0% → 100% (auto-closed); orw 0% → 15% (orw.1 closed; orw.2-12 still open)"
+    commits: ["e9d5fac"]
+    notes: |
+      End-to-end gates green: lint, format:check, build, validate, 32/32 vitest tests pass.
+      Branch pushed to origin/rebuild-from-prd; no PR opened (per workflow — request explicitly).
+      .claude/enhancements.md created with 5 documented gaps (3 resolved by this session via architecture.md edits, 2 open as workflow tooling notes).

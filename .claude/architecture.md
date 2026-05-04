@@ -127,9 +127,11 @@ Used by `/leroy` and `/gogogo` to verify the dev environment is ready. Update th
 
 | Service | Check Command | Expected |
 |---------|--------------|----------|
-| Node version | `node --version` | `v20.x.x` |
-| Build output exists | `test -d com.r-teller.sonoscontroller.sdPlugin && echo "exists"` | `exists` |
+| Node version (dev tooling) | `node --version` | `v20.x.x` or newer (manifest pins plugin runtime to Node 20; dev tooling tolerates Node 22) |
+| Dependencies installed | `test -d node_modules && echo "ok"` | `ok` |
+| Build output exists | `test -d com.r-teller.sonoscontroller.sdPlugin && echo "exists"` | `exists` (run `npm run build` if missing) |
 | Manifest is valid | `npm run validate` | exits 0 with no errors |
+| Tests pass | `npx vitest run` | `Tests N passed (N)` with no failures |
 | Sonos primary device reachable | `curl -s -m 3 -o /dev/null -w "%{http_code}" http://<PRIMARY_IP>:1400/xml/device_description.xml` | `200` |
 | material-design-icons submodule | `test -d material-design-icons/svg/outlined && echo "ok"` | `ok` (only needed for icon regen) |
 

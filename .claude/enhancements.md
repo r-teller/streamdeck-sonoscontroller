@@ -81,3 +81,15 @@ Purpose: Track documentation gaps discovered during work — places where contex
 **Suggested fix:** Document in `rules/workflow-planning.md` §Labels: "bd label add accepts ONE label per call. To set multiple labels, loop: `for label in triage:ready cynefin:clear size:small; do bd label add <id> "$label"; done`." Or check whether `--labels` flag (used during create) is available on `label add`.
 
 **Discovered during:** Wrapup task 3b — triaging `bg9`, 2026-05-03.
+
+---
+
+### [OPEN] `/leroy` could background `npm install` early
+
+**Needed:** Multi-bead sessions that touch JS code typically need `npm install` (or `npm ci`) to be run before any vitest / build / validate step. Running it inline blocks the session for 30-60s of progress reporting; running it in the background while the navigator-survey agent plans the work overlaps the wait with useful work.
+
+**Where the gap is:** `/leroy` Step 1 (Quick Environment Check) or Step 3d (Plan selected work).
+
+**Suggested fix:** When `package.json` exists and `node_modules/` is missing or stale (mtime older than `package.json`), automatically launch `npm install` via Bash with `run_in_background: true` during Step 1 or Step 3d. The user is doing planning work in parallel; install completes by the time implementation starts. Worked well in this session — `npm install` ran while the navigator-survey produced the 6-bead plan.
+
+**Discovered during:** Phase 1 multi-bead session, 2026-05-03.
