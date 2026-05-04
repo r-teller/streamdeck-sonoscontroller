@@ -75,13 +75,15 @@ Before adding a new library, check this table — the problem may already be sol
 | **Bundler** | Vite | ^4.4.9 | Multi-entry build → `com.r-teller.sonoscontroller.sdPlugin/` |
 | **CSS / Components** | Bootstrap 5 | ^5.3.2 | PI accordion, form-switch, alerts; dark theme |
 | **Stream Deck CLI** | `@elgato/cli` | ^1.0.1 | `streamdeck validate` / `streamdeck pack` |
-| **Stream Deck SDK** | `@elgato/streamdeck` | ^1.2.0 | Only `EventEmitter` consumed; WebSocket client is hand-rolled |
+| **Stream Deck SDK** | `@elgato/streamdeck` | ^1.2.0 | Only `EventEmitter` consumed; WebSocket client is hand-rolled. Note: importing from this package eagerly reads `manifest.json` from `process.cwd()` — unit tests must `vi.mock('@elgato/streamdeck', () => ({ EventEmitter: NodeEventEmitter }))`. |
 | **HTTP client** | native `fetch` | n/a | `axios` is in `package.json` but unused — prefer fetch |
 | **Linter** | ESLint + `eslint-plugin-vue` + Prettier passthrough | latest | `vue/vue3-essential` + `eslint:recommended` |
 | **Formatter** | Prettier | ^3.0.3 | Print width 128 |
+| **Test runner** | Vitest | ^1.0.0 | jsdom environment for DOM-touching tests; pin `jsdom@22.x` (jsdom 24+ is incompatible with vitest 1.x due to a CJS/ESM mismatch in `html-encoding-sniffer`). |
 | **Icon source** | `material-design-icons` (git submodule, `outlined` variant) | n/a | Rasterized to PNG by `generateImages.sh` (ImageMagick) |
-| **Stream Deck app** | host application | ≥ 6.5 | Minimum version that supports `Encoder` / `setFeedback` (Stream Deck +) |
+| **Stream Deck app** | host application | ≥ 6.5 | Minimum version that supports `Encoder` / `setFeedback` (Stream Deck +) — confirmed by spike `streamdeck-sonoscontroller-8ss` (see `.archive/plans/2026-05-03-streamdeck-sdk-compat.md`) |
 | **Supported OS** | macOS / Windows | macOS 10.11+, Windows 10+ | Per `manifest.json` `OS` block |
+| **Device gating** | per-action `Controllers` array | n/a | Modern SDK has no top-level `Devices` bitmask field; per-action `Controllers: ["Keypad"]` or `["Encoder"]` is the only gating mechanism. Pedal counts as Keypad; Mobile is keypad-style. Spike `streamdeck-sonoscontroller-cbz` confirmed (see `.archive/plans/2026-05-03-streamdeck-device-support.md`). |
 
 > **Update strategy:** Dependencies are updated manually. Several listed dependencies (`axios`, `sonos`, `js-yaml`, `nunjucks`, `snapsvg-cjs`, `fs`, `core-js`, `@mdi/font`, `@mdi/js`) are vestigial in the existing codebase and should be removed during the rebuild rather than carried forward.
 

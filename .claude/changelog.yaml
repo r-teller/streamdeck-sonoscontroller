@@ -30,4 +30,46 @@ template_entry:
   tests: "N new/updated, M total passing"
   commits: ["abc1234", "def5678"]
 
-entries: []
+entries:
+  - version: "0.1.0"
+    date: "2026-05-03"
+    branch: "rebuild-from-prd"
+    focus: [feature, infrastructure, documentation]
+    summary: "Phase 1 (Build & Scaffolding) complete: LICENSE, hygiene, SDK compat spike, vite + manifest + WS client + XML parser + timer shim + assets + PI shell + device spike. Project bootable end-to-end."
+    beads:
+      - streamdeck-sonoscontroller-buu
+      - streamdeck-sonoscontroller-4kb.7
+      - streamdeck-sonoscontroller-8ss
+      - streamdeck-sonoscontroller-4kb.1
+      - streamdeck-sonoscontroller-4kb.5
+      - streamdeck-sonoscontroller-4kb.6
+      - streamdeck-sonoscontroller-4kb.4
+      - streamdeck-sonoscontroller-4kb.3
+      - streamdeck-sonoscontroller-4kb.2
+      - streamdeck-sonoscontroller-orw.1
+      - streamdeck-sonoscontroller-cbz
+    epic_progress: "4kb 0% → 100% (auto-closed); orw 0% → 15%"
+    backend:
+      - "added: src/modules/common/streamdeck.js — hand-rolled WebSocket client extending EventEmitter, registration handshake, full event re-emit table, outgoing helpers. Fixes main's sendToPlugin bug (action UUID was conflated with propertyInspectorUUID)."
+      - "added: src/modules/common/xml.js — convertXmlToJson + asArray helpers. Single-child returns as object/string, multi-sibling collapses to array. Empty element returns ''. Attributes under _attributes."
+      - "added: src/modules/common/timers.js — Web Worker–backed setTimeout/setInterval shim. Survives Stream Deck app focus loss. Vitest fallback when Worker is undefined."
+    frontend:
+      - "added: src/components/PiComponent.vue — minimal PI shell with reactive state (actionUUID, settings, globalSettings, connectionState UNINITIALIZED/CONNECTING/CONNECTED/DISCONNECTED). Section anchors for Sonos Speakers (top) and Global Settings (bottom). Stub no-op saveSettings/saveGlobalSettings exposed via defineExpose for orw.11 / orw.12 wiring."
+      - "added: src/pi/main.js wired to PiComponent (was Placeholder); src/scss/styles.scss imports Bootstrap 5."
+      - "added: plugin.html + pi.html with connectElgatoStreamDeckSocket hook exposing window.\\$SD."
+    infra:
+      - "added: LICENSE (MIT, byte-equal to main's)."
+      - "added: .gitignore merged with main's Node-flavored ignores + preserved .dolt + *.db."
+      - "added: .eslintrc.cjs (Vue 3 essential + Prettier passthrough), .prettierrc (printWidth 128), .prettierignore, package.json (type: module, full dep manifest, 9 vestigial deps dropped: axios/sonos/js-yaml/nunjucks/snapsvg-cjs/fs/core-js/@mdi/font/@mdi/js, plus babel-eslint)."
+      - "added: vite.config.js multi-entry (plugin.html + pi.html → com.r-teller.sonoscontroller.sdPlugin/), Vue plugin, path aliases (@, ~bootstrap, @manifest), base ./."
+      - "added: jsconfig.json with @ → src alias for editor IntelliSense."
+      - "added: public/manifest.json with all 11 actions + Software.MinimumVersion 6.5 + OS macOS 10.11+ / Windows 10+ + Nodejs 20. Five corrections vs main: Toggle Input Source tooltip rewritten, Volume Up/Down tooltips trimmed, Encoder layout default → encoder-bar-0-100.json, Version → 0.1.0.0."
+      - "added: public/layouts/{encoder-audio-equalizer,encoder-bar-0-100,encoder-gbar-10-10}.json (verbatim from main)."
+      - "added: material-design-icons git submodule (outlined variant), generateImages.sh (cleaned with set -euo pipefail, 30 lines of dead code removed)."
+      - "added: 96 PNGs under public/images/ (38 actions, 52 keys, 2 plugin-level + sonos, 2 marketplace card)."
+      - "added: jsdom@22 devDep for vitest jsdom environment."
+    tests: "32 new tests (16 streamdeck.js + 16 xml.js), all passing"
+    docs:
+      - "added: .archive/plans/2026-05-03-streamdeck-sdk-compat.md — SDK compat spike recommendation (Software.MinimumVersion 6.5 confirmed, evidence table, 3 source citations)."
+      - "added: .archive/plans/2026-05-03-streamdeck-device-support.md — Device support spike recommendation (no manifest changes needed, modern SDK has no Devices bitmask field, per-action Controllers arrays do all gating)."
+      - "added: .claude/enhancements.md (new file) — 5 documentation gaps logged (SDK manifest Devices field, jsdom/vitest version pin, @elgato/streamdeck eager manifest read, bd ready triage filtering, bd label add multi-arg behavior)."

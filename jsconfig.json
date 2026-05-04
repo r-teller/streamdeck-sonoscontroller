@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@manifest": ["public/manifest.json"]
+    },
+    "module": "esnext",
+    "target": "es2022",
+    "moduleResolution": "bundler",
+    "checkJs": false
+  },
+  "exclude": ["node_modules", "com.r-teller.sonoscontroller.sdPlugin"]
+}

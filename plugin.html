@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Sonos Controller Plugin</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
+<script type="module" src="src/modules/common/timers.js"></script>
+<script type="module" src="src/plugin/main.js"></script>
+<script type="module">
+  import { StreamDeck } from "./src/modules/common/streamdeck.js";
+  window.connectElgatoStreamDeckSocket = (port, uuid, registerEvent, info, actionInfo) => {
+    window.$SD = new StreamDeck(port, uuid, registerEvent, info, actionInfo);
+    return window.$SD;
+  };
+</script>

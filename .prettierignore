@@ -1,0 +1,9 @@
+node_modules/
+dist/
+com.r-teller.sonoscontroller.sdPlugin/
+com.r-teller.sonoscontroller.streamDeckPlugin
+material-design-icons/
+.archive/
+.dolt/
+*.db
+*.log
