@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:GetZoneGroupStateResponse xmlns:u="urn:schemas-upnp-org:service:ZoneGroupTopology:1">
+      <ZoneGroupState>&lt;ZoneGroupState&gt;&lt;ZoneGroups&gt;&lt;ZoneGroup Coordinator="RINCON_OFFICE01400" ID="RINCON_OFFICE01400:1001"&gt;&lt;ZoneGroupMember UUID="RINCON_OFFICE01400" Location="http://192.168.1.42:1400/xml/device_description.xml" ZoneName="Office" Configuration="1" /&gt;&lt;/ZoneGroup&gt;&lt;ZoneGroup Coordinator="RINCON_KITCHEN01400" ID="RINCON_KITCHEN01400:2001"&gt;&lt;ZoneGroupMember UUID="RINCON_KITCHEN01400" Location="http://192.168.1.43:1400/xml/device_description.xml" ZoneName="Kitchen" Configuration="1" /&gt;&lt;ZoneGroupMember UUID="RINCON_DININGROOM01400" Location="http://192.168.1.44:1400/xml/device_description.xml" ZoneName="Dining Room" Configuration="1" /&gt;&lt;/ZoneGroup&gt;&lt;ZoneGroup Coordinator="RINCON_PATIO01400" ID="RINCON_PATIO01400:3001"&gt;&lt;ZoneGroupMember UUID="RINCON_PATIO01400" Location="http://192.168.1.45:1400/xml/device_description.xml" ZoneName="Patio" Configuration="1" /&gt;&lt;/ZoneGroup&gt;&lt;/ZoneGroups&gt;&lt;/ZoneGroupState&gt;</ZoneGroupState>
+    </u:GetZoneGroupStateResponse>
+  </s:Body>
+</s:Envelope>
