@@ -641,7 +641,7 @@ Three JSON layouts are required. All conform to Elgato's `layout.json` schema:
 - **No long-press behavior.** The plugin does not differentiate between short and long key press. Pressing and holding a key does not trigger an alternate action. (`keyUp` is intentionally not consumed.)
 - **No dial-press behavior on the Audio Equalizer encoder.** Pressing the dial is a no-op in MVP. Future scope might bind dial press to "switch equalizer target Volume → Bass → Treble".
 - **No internationalization.** English only.
-- **No Sonos S1 special-casing.** Targets S2 protocol. Older Sonos S1 households may work but are not certified.
+- **No Sonos S1 special-casing.** Targets the S2 protocol. The rebuild has been tested only against S2 firmware (86.6-75110 and 94.1-76070, ZPS9 platform). S1 households are **not tested**; users running S1 should expect failures and have no first-class support path. The plugin does not detect S1 vs S2 at discovery, so an S1 user will see generic Sonos errors rather than a tailored "S1 not supported" message — accepted as low-effort for the rebuild's current goals.
 - **No persistence of the plugin's runtime cache across restarts.** The discovered devices and favorites lists are persisted via Stream Deck global settings, but the live state cache (current track, current volume) is rebuilt from polling on every plugin start.
 
 ### 11.3 Future considerations to scope but not implement

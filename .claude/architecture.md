@@ -50,7 +50,7 @@ Sonos's official mobile and desktop apps are great for browsing music but heavy 
 | Long-press behavior | `keyUp` is intentionally not consumed | Deferred |
 | Dial-press on Audio Equalizer | No-op in MVP; future scope might cycle Volume → Bass → Treble | Deferred |
 | Internationalization | English only in v1 | Deferred |
-| Sonos S1 special-casing | Targets S2 protocol; S1 households best-effort, not certified | Permanent |
+| Sonos S1 special-casing | Targets S2 protocol; tested only on S2 firmware (86.6-75110, 94.1-76070, ZPS9 platform). S1 households are not tested and have no first-class support path. | Permanent |
 | Persisted runtime cache across restarts | Live state (current track, volume) is rebuilt from polling on every plugin start | Permanent |
 
 ### Target Personas
