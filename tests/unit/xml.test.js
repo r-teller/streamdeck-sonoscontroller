@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { convertXmlToJson, asArray } from "@/modules/common/xml.js";
+import { convertXmlToJson, asArray, XmlParseError } from "@/modules/common/xml.js";
 
 describe("convertXmlToJson — single-child vs sibling shape", () => {
   it("returns single child as a string, not a one-element array", () => {
@@ -62,6 +62,22 @@ describe("convertXmlToJson — Sonos GetZoneGroupState shape", () => {
     const result = convertXmlToJson(xml);
     expect(Array.isArray(result.ZoneGroupState.ZoneGroups.ZoneGroup)).toBe(true);
     expect(result.ZoneGroupState.ZoneGroups.ZoneGroup).toHaveLength(3);
+  });
+});
+
+describe("convertXmlToJson — error handling", () => {
+  it("throws XmlParseError on malformed XML", () => {
+    expect(() => convertXmlToJson("<not closed")).toThrow(XmlParseError);
+  });
+
+  it("error message is non-empty so callers can surface it", () => {
+    try {
+      convertXmlToJson("<a><b></a>");
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(XmlParseError);
+      expect(err.message.length).toBeGreaterThan(0);
+    }
   });
 });
 

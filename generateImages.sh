@@ -91,7 +91,7 @@ overlay_icon_above() {
 	rm base_tmp.png overlay_tmp.png overlay_tmp_adjusted.png
 }
 
-mkdir -p $OUT
+mkdir -p "$OUT/actions" "$OUT/keys" "$OUT/plugin"
 mask
 
 action volume_off muted

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { streamDeckReady } from "@/modules/common/sdConnect.js";
 
 const CONNECTION_STATE = Object.freeze({
   UNINITIALIZED: "UNINITIALIZED",
@@ -13,24 +14,44 @@ const settings = ref({});
 const globalSettings = ref({});
 const connectionState = ref(CONNECTION_STATE.UNINITIALIZED);
 
-// Stub dispatchers — bead orw.11 (saveSettings) and orw.12 (saveGlobalSettings)
+// Stub dispatchers — orw.11 (saveSettings) and orw.12 (saveGlobalSettings)
 // fill in the per-context and global-scope schema/round-trip logic.
-function saveSettings() {}
-function saveGlobalSettings() {}
+function saveSettings() {
+  console.warn("PiComponent.saveSettings: not yet wired (orw.11 lands the implementation).");
+}
+function saveGlobalSettings() {
+  console.warn("PiComponent.saveGlobalSettings: not yet wired (orw.12 lands the implementation).");
+}
 
 defineExpose({ saveSettings, saveGlobalSettings, connectionState, actionUUID, settings, globalSettings });
 
 const isConnected = computed(() => connectionState.value === CONNECTION_STATE.CONNECTED);
 
 onMounted(() => {
-  if (window.$SD) bindStreamDeck(window.$SD);
+  connectionState.value = CONNECTION_STATE.CONNECTING;
+  streamDeckReady.then(bindStreamDeck).catch((err) => {
+    console.warn("StreamDeck bridge never resolved:", err);
+    connectionState.value = CONNECTION_STATE.DISCONNECTED;
+  });
 });
 
 function bindStreamDeck(sd) {
-  connectionState.value = CONNECTION_STATE.CONNECTING;
+  // The client may have already received `connected` between bridge install
+  // and this Promise callback. Read the cached actionInfo so we don't miss it.
+  if (sd.connected) {
+    actionUUID.value = sd.actionInfo?.action ?? null;
+    connectionState.value = CONNECTION_STATE.CONNECTED;
+  }
   sd.on("connected", (actionInfo) => {
     actionUUID.value = actionInfo?.action ?? null;
     connectionState.value = CONNECTION_STATE.CONNECTED;
+  });
+  sd.on("disconnected", () => {
+    connectionState.value = CONNECTION_STATE.DISCONNECTED;
+  });
+  sd.on("error", (err) => {
+    console.error("StreamDeck WebSocket error:", err);
+    connectionState.value = CONNECTION_STATE.DISCONNECTED;
   });
   sd.on("didReceiveSettings", (msg) => {
     settings.value = msg?.payload?.settings ?? {};

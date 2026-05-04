@@ -1,108 +1,116 @@
-/* eslint-disable no-unused-vars */
 /* eslint-env browser */
 
 // Web Worker–backed timer shim for plugin.html. Stream Deck's embedded webview
 // throttles setTimeout/setInterval when the host app loses focus; polling stalls
-// without this shim. Per prd-what.md §8.3 and backend.md §Conventions.
+// without this shim. Per prd-what.md §8.3.
 //
-// The worker scope is wrapped from `timerFn`'s string body and constructed via
-// a Blob URL — no external worker file required.
+// The worker scope is wrapped from `workerBody`'s string body and constructed
+// via a Blob URL — no external worker file needed.
 //
 // Vitest fallback: if `Worker` isn't defined (Node test env), keep platform
 // timers untouched. Production code path always runs in the Stream Deck webview
 // where Worker is available.
 
 if (typeof Worker !== "undefined") {
-  const ESDTimerWorker = new Worker(
-    URL.createObjectURL(
-      new Blob(
-        [
-          timerFn
-            .toString()
-            .replace(/^[^{]*{\s*/, "")
-            .replace(/\s*}[^}]*$/, ""),
-        ],
-        { type: "text/javascript" },
-      ),
-    ),
-  );
-  ESDTimerWorker.timerId = 1;
-  ESDTimerWorker.timers = {};
+  installWorkerTimers();
+}
 
-  const ESDDefaultTimeouts = Object.freeze({
-    timeout: 0,
-    interval: 10,
+function installWorkerTimers() {
+  const worker = new Worker(URL.createObjectURL(new Blob([extractBody(workerBody)], { type: "text/javascript" })));
+
+  // id → registered callback + params. Worker fires by id; main thread looks
+  // up the callback and invokes it. IDs are generated on the main thread so
+  // clearTimeout/clearInterval can cancel before the worker's fire arrives.
+  const timers = new Map();
+  let nextId = 1;
+
+  worker.addEventListener("message", (e) => {
+    const { type, id } = e.data;
+    if (type === "clearTimer") {
+      timers.delete(id);
+      return;
+    }
+    // Worker fired a timer. Look up callback; invoke if still registered.
+    const entry = timers.get(id);
+    if (entry) entry.callback(...entry.params);
   });
 
-  const _setTimer = (callback, delay, type, params) => {
-    const id = ESDTimerWorker.timerId++;
-    ESDTimerWorker.timers[id] = { callback, params };
-    ESDTimerWorker.onmessage = (e) => {
-      if (ESDTimerWorker.timers[e.data.id]) {
-        if (e.data.type === "clearTimer") {
-          delete ESDTimerWorker.timers[e.data.id];
-        } else {
-          const cb = ESDTimerWorker.timers[e.data.id].callback;
-          if (cb && typeof cb === "function") cb(...ESDTimerWorker.timers[e.data.id].params);
-        }
-      }
-    };
-    ESDTimerWorker.postMessage({ type, id, delay });
+  const schedule = (callback, delay, type, params) => {
+    const id = nextId++;
+    timers.set(id, { callback, params });
+    worker.postMessage({ type, id, delay });
     return id;
   };
 
-  const _setTimeoutESD = (...args) => {
-    const [callback, delay = 0, ...params] = args;
-    return _setTimer(callback, delay, "setTimeout", params);
+  const cancel = (id) => {
+    if (id == null) return;
+    worker.postMessage({ type: "clearTimeout", id });
+    timers.delete(id);
   };
 
-  const _setIntervalESD = (...args) => {
-    const [callback, delay = 0, ...params] = args;
-    return _setTimer(callback, delay, "setInterval", params);
-  };
+  window.setTimeout = (callback, delay = 0, ...params) => schedule(callback, delay, "setTimeout", params);
+  window.setInterval = (callback, delay = 0, ...params) => schedule(callback, delay, "setInterval", params);
+  window.clearTimeout = cancel;
+  window.clearInterval = cancel;
 
-  const _clearTimerESD = (id) => {
-    ESDTimerWorker.postMessage({ type: "clearTimeout", id });
-    delete ESDTimerWorker.timers[id];
+  // Expose teardown for tests / hot reload. Plugin reload terminates the
+  // webview anyway, but explicit cleanup prevents leaks during dev.
+  window.__teardownWorkerTimers = () => {
+    worker.terminate();
+    timers.clear();
   };
+}
 
-  window.setTimeout = _setTimeoutESD;
-  window.setInterval = _setIntervalESD;
-  window.clearTimeout = _clearTimerESD;
-  window.clearInterval = _clearTimerESD;
+// Strips the outer `function name() { ... }` wrapper to extract the body for
+// Blob/Worker construction. Resilient to minification (single-line function
+// definitions still match because `[^{]*` is greedy-matching everything before
+// the first `{`).
+function extractBody(fn) {
+  return fn
+    .toString()
+    .replace(/^[^{]*\{\s*/, "")
+    .replace(/\s*\}[^}]*$/, "");
 }
 
 // Worker scope. Body is stringified and used as the Blob source above.
-function timerFn() {
-  let timers = {};
-  const supportedCommands = ["setTimeout", "setInterval", "clearTimeout", "clearInterval"];
+// Inside the worker, setTimeout/setInterval are the platform's REAL ones —
+// workers are not throttled by the embedding webview's focus state, which is
+// the entire point of this shim.
+function workerBody() {
+  const timers = new Map();
+  const supportedCommands = new Set(["setTimeout", "setInterval", "clearTimeout", "clearInterval"]);
 
   function clearTimerAndRemove(id) {
-    if (timers[id]) {
-      clearTimeout(timers[id]);
-      delete timers[id];
-      postMessage({ type: "clearTimer", id });
-    }
+    const handle = timers.get(id);
+    if (handle == null) return;
+    clearTimeout(handle); // works for both setTimeout and setInterval
+    timers.delete(id);
+    postMessage({ type: "clearTimer", id });
   }
 
-  onmessage = function (e) {
-    if (supportedCommands.includes(e.data.type) && timers[e.data.id]) {
-      clearTimerAndRemove(e.data.id);
-    }
-    if (e.data.type === "setTimeout") {
-      timers[e.data.id] = setTimeout(
-        () => {
-          postMessage({ id: e.data.id });
-          clearTimerAndRemove(e.data.id);
-        },
-        Math.max(e.data.delay || 0),
+  onmessage = (e) => {
+    const { type, id, delay } = e.data;
+    if (!supportedCommands.has(type)) return;
+
+    if (timers.has(id)) clearTimerAndRemove(id);
+
+    const safeDelay = Math.max(0, delay || 0);
+
+    if (type === "setTimeout") {
+      timers.set(
+        id,
+        setTimeout(() => {
+          postMessage({ id });
+          clearTimerAndRemove(id);
+        }, safeDelay),
       );
-    } else if (e.data.type === "setInterval") {
-      timers[e.data.id] = setInterval(
-        () => {
-          postMessage({ id: e.data.id });
-        },
-        Math.max(e.data.delay || 10),
+    } else if (type === "setInterval") {
+      const intervalDelay = Math.max(10, safeDelay);
+      timers.set(
+        id,
+        setInterval(() => {
+          postMessage({ id });
+        }, intervalDelay),
       );
     }
   };

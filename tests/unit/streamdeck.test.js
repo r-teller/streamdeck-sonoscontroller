@@ -6,19 +6,35 @@ import { EventEmitter as NodeEventEmitter } from "node:events";
 vi.mock("@elgato/streamdeck", () => ({ EventEmitter: NodeEventEmitter }));
 
 class MockWebSocket {
+  static CLOSED = 3;
   constructor(url) {
     this.url = url;
+    this.readyState = 0;
     this.sent = [];
+    this.listeners = { open: [], message: [], close: [], error: [] };
     MockWebSocket.last = this;
+  }
+  addEventListener(type, fn) {
+    this.listeners[type].push(fn);
   }
   send(data) {
     this.sent.push(JSON.parse(data));
   }
+  close() {
+    this.readyState = MockWebSocket.CLOSED;
+  }
   triggerOpen() {
-    this.onopen?.();
+    this.listeners.open.forEach((fn) => fn());
   }
   triggerMessage(obj) {
-    this.onmessage?.({ data: JSON.stringify(obj) });
+    const data = typeof obj === "string" ? obj : JSON.stringify(obj);
+    this.listeners.message.forEach((fn) => fn({ data }));
+  }
+  triggerClose(code = 1000, reason = "normal") {
+    this.listeners.close.forEach((fn) => fn({ code, reason }));
+  }
+  triggerError(err) {
+    this.listeners.error.forEach((fn) => fn(err));
   }
 }
 
@@ -28,9 +44,18 @@ beforeEach(() => {
 
 const { StreamDeck } = await import("@/modules/common/streamdeck.js");
 
+const newClient = (overrides = {}) =>
+  new StreamDeck({
+    port: 28196,
+    uuid: "ctx-uuid-abc",
+    registerEvent: "registerPropertyInspector",
+    actionInfo: JSON.stringify({ action: "com.example.action" }),
+    ...overrides,
+  });
+
 describe("StreamDeck — registration handshake", () => {
-  it("opens ws://localhost:<port> and sends {event, uuid} on onopen", () => {
-    const sd = new StreamDeck(28196, "ctx-uuid-abc", "registerPropertyInspector", "{}", "{}");
+  it("opens ws://localhost:<port> and sends {event, uuid} on socket open", () => {
+    const sd = newClient();
     expect(MockWebSocket.last.url).toBe("ws://localhost:28196");
     MockWebSocket.last.triggerOpen();
     expect(MockWebSocket.last.sent[0]).toEqual({
@@ -39,11 +64,75 @@ describe("StreamDeck — registration handshake", () => {
     });
     expect(sd).toBeInstanceOf(StreamDeck);
   });
+
+  it("parses actionInfo and exposes it as a property for late subscribers", () => {
+    const sd = newClient();
+    expect(sd.actionInfo).toEqual({ action: "com.example.action" });
+  });
+
+  it("handles missing actionInfo (plugin side) without throwing", () => {
+    const sd = new StreamDeck({ port: 1, uuid: "u", registerEvent: "registerPlugin" });
+    expect(sd.actionInfo).toBe(null);
+  });
+
+  it("emits 'connected' with parsed actionInfo on socket open", () => {
+    const sd = newClient();
+    const handler = vi.fn();
+    sd.on("connected", handler);
+    MockWebSocket.last.triggerOpen();
+    expect(handler).toHaveBeenCalledWith({ action: "com.example.action" });
+  });
+
+  it("flips connected flag after socket open", () => {
+    const sd = newClient();
+    expect(sd.connected).toBe(false);
+    MockWebSocket.last.triggerOpen();
+    expect(sd.connected).toBe(true);
+  });
+});
+
+describe("StreamDeck — close / error / malformed handling", () => {
+  it("emits 'disconnected' with {code, reason} on socket close", () => {
+    const sd = newClient();
+    const handler = vi.fn();
+    sd.on("disconnected", handler);
+    MockWebSocket.last.triggerOpen();
+    MockWebSocket.last.triggerClose(1006, "abnormal closure");
+    expect(handler).toHaveBeenCalledWith({ code: 1006, reason: "abnormal closure" });
+    expect(sd.connected).toBe(false);
+  });
+
+  it("emits 'error' on socket error event", () => {
+    const sd = newClient();
+    const handler = vi.fn();
+    sd.on("error", handler);
+    const errEvt = { message: "boom" };
+    MockWebSocket.last.triggerError(errEvt);
+    expect(handler).toHaveBeenCalledWith(errEvt);
+  });
+
+  it("drops malformed (non-JSON) incoming messages with a warn, no throw", () => {
+    const sd = newClient();
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(() => MockWebSocket.last.triggerMessage("{not json")).not.toThrow();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+    expect(sd).toBeDefined();
+  });
+
+  it("drops messages without an event field", () => {
+    const sd = newClient();
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(() => MockWebSocket.last.triggerMessage({ payload: { foo: 1 } })).not.toThrow();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+    expect(sd).toBeDefined();
+  });
 });
 
 describe("StreamDeck — incoming event re-emission", () => {
   it("renames didReceiveGlobalSettings → globalsettings and forwards payload.settings only", () => {
-    const sd = new StreamDeck(1, "u", "registerPlugin", "{}", "{}");
+    const sd = newClient();
     const handler = vi.fn();
     sd.on("globalsettings", handler);
     MockWebSocket.last.triggerMessage({
@@ -53,8 +142,8 @@ describe("StreamDeck — incoming event re-emission", () => {
     expect(handler).toHaveBeenCalledWith({ theKey: "theValue" });
   });
 
-  it("re-emits keyDown / dialRotate / touchTap with the full incoming object", () => {
-    const sd = new StreamDeck(1, "u", "registerPlugin", "{}", "{}");
+  it("re-emits keyDown / dialRotate / touchTap / willAppear / systemDidWakeUp", () => {
+    const sd = newClient();
     const events = ["keyDown", "dialRotate", "touchTap", "willAppear", "systemDidWakeUp"];
     for (const evt of events) {
       const handler = vi.fn();
@@ -66,7 +155,7 @@ describe("StreamDeck — incoming event re-emission", () => {
   });
 
   it("logs and drops unknown events without throwing", () => {
-    const sd = new StreamDeck(1, "u", "registerPlugin", "{}", "{}");
+    const sd = newClient();
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     MockWebSocket.last.triggerMessage({ event: "totallyMadeUpEvent" });
     expect(spy).toHaveBeenCalledWith("Unhandled Event: totallyMadeUpEvent");
@@ -78,7 +167,7 @@ describe("StreamDeck — incoming event re-emission", () => {
 describe("StreamDeck — outgoing helpers", () => {
   let sd;
   beforeEach(() => {
-    sd = new StreamDeck(1, "pi-uuid", "registerPropertyInspector", "{}", "{}");
+    sd = newClient({ uuid: "pi-uuid" });
     MockWebSocket.last.triggerOpen();
     MockWebSocket.last.sent.length = 0;
   });
@@ -95,7 +184,7 @@ describe("StreamDeck — outgoing helpers", () => {
     expect(lastSent()).toEqual({ event: "setGlobalSettings", context: "pi-uuid", payload: { foo: "bar" } });
   });
 
-  it("getSettings defaults context to propertyInspectorUUID", () => {
+  it("getSettings defaults context to the client's uuid", () => {
     sd.getSettings();
     expect(lastSent()).toEqual({ event: "getSettings", context: "pi-uuid" });
   });
@@ -110,7 +199,7 @@ describe("StreamDeck — outgoing helpers", () => {
     expect(lastSent()).toEqual({ event: "setTitle", context: "ctx-1", payload: { title: "OFFICE", target: 0 } });
   });
 
-  it("setImage payload omits target field (per AC) and includes state", () => {
+  it("setImage payload omits target and includes state", () => {
     sd.setImage({ context: "ctx", image: "data:image/png;base64,xxx", state: 1 });
     const sent = lastSent();
     expect(sent.event).toBe("setImage");
@@ -138,8 +227,8 @@ describe("StreamDeck — outgoing helpers", () => {
     expect(lastSent()).toEqual({ event: "showOk", context: "ctx" });
   });
 
-  it("logMessage wraps in payload.message", () => {
-    sd.logMessage({ messageText: "hello" });
+  it("logMessage takes a positional string and wraps in payload.message", () => {
+    sd.logMessage("hello");
     expect(lastSent()).toEqual({ event: "logMessage", payload: { message: "hello" } });
   });
 
@@ -149,8 +238,7 @@ describe("StreamDeck — outgoing helpers", () => {
   });
 
   // REGRESSION: main's bug used propertyInspectorUUID as the action field.
-  // The rebuild takes action as a parameter so it gets the action UUID.
-  it("sendToPlugin uses the passed-in action UUID, NOT propertyInspectorUUID", () => {
+  it("sendToPlugin uses the passed-in action UUID, NOT the client's uuid", () => {
     sd.sendToPlugin({
       action: "com.r-teller.sonoscontroller.toggle-mute-unmute",
       context: "ctx-3",
@@ -163,5 +251,14 @@ describe("StreamDeck — outgoing helpers", () => {
       payload: { request: "refresh" },
     });
     expect(lastSent().action).not.toBe("pi-uuid");
+  });
+});
+
+describe("StreamDeck — close()", () => {
+  it("close() is idempotent on an already-closed socket", () => {
+    const sd = newClient();
+    sd.close();
+    expect(MockWebSocket.last.readyState).toBe(MockWebSocket.CLOSED);
+    expect(() => sd.close()).not.toThrow();
   });
 });
