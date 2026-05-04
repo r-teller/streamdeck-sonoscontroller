@@ -21,6 +21,30 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - date: "2026-05-04 06:10 UTC"
+    branch: "rebuild-from-prd"
+    focus: [feature, refactor]
+    completed:
+      - "h75.1: SonosService SOAP transport — categorized SonosError on every failure path; AbortController-based timeout; 21 tests"
+      - "h75.2: SonosController class — wraps 6 service endpoints per host, memoizes ZoneGroupState; 17 tests"
+      - "h75.7: Boundary error translation — SonosError class + translateSonosError({op, host, port, timeoutSec}) helper covering timeout/network/fault/http/parse + the PR #3 safety net (TypeError 'is not iterable'); 20 tests"
+      - "h75.3: Discovery walker — getDevices({setAsPrimary}) walks ZoneGroupState topology with asArray at every iteration site (ZoneGroup → ZoneGroupMember → Satellite). Returns DeviceRecord[] per data-model.md. 13 tests across 4 fixtures (single-group regression, stereo pair, home theater, multi-group)"
+      - "code-review pass on Phase 1: 8 critical bugs fixed in seeded modules — PiComponent never-binds-to-$SD (Promise-based bridge via new sdConnect.js), missing WS onerror/onclose handlers, late-subscriber miss, Math.max(x) no-op, Worker.onmessage reassignment, XML parser silent failure, generateImages.sh mkdir gap, HTML scripts below </html>. Plus 4 cohesion cleanups (Hungarian prefix dropped, IE/iOS meta dropped, etc.)"
+    blockers:
+      - "bd dolt push still fails — no dolt remote configured. Beads data is local-only."
+    next_steps:
+      - "h75.4: Favorites browse (Browse FV:2) — small, follows h75.3's shape (uses asArray, translateSonosError({op: 'get favorites'}))"
+      - "h75.5: URI taxonomy + getInputSourceMappings — independent of h75.4, can interleave"
+      - "cel: Multi-group coordinator resolution spike — required before h75.6 (per-action SOAP commands like play/pause/setVolume); cynefin:complex"
+      - "40y: still triage:triaged — promote to ready before claiming (S1 vs S2 protocol spike, lower priority)"
+      - "After h75.4 + h75.5 + cel land, h75.6 (per-action SOAP commands, the public Sonos API consumed by Phase 5 actions) becomes the longest pole"
+    epic_progress: "h75 0% → 40% (4/10 children closed); 4kb 100%; orw 15% (unchanged)"
+    commits: ["d4d3e5d", "86bf2da", "59f91d2", "493c1d8"]
+    notes: |
+      All gates green: lint, format:check, build, validate, 114/114 vitest tests pass (was 32 at session start).
+      All Phase 2 work authored CLEANROOM from prd-what.md / backend.md / data-model.md — no main seeding per the post-Phase-1 retrospective.
+      Discovered bead description typo in h75.1: spec said baseUrl URL pattern includes a trailing /Control append, but backend.md table shows baseUrl already includes /Control. Used backend.md as the normative source.
+
   - date: "2026-05-04 05:30 UTC"
     branch: "rebuild-from-prd"
     focus: [feature, infrastructure, documentation]

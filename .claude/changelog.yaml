@@ -31,6 +31,33 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - version: "0.2.0"
+    date: "2026-05-04"
+    branch: "rebuild-from-prd"
+    focus: [feature, refactor]
+    summary: "Phase 2 critical path (40% of Sonos Integration Layer) + cleanroom code review pass on Phase 1 modules. SOAP transport, controller, error translation, discovery walker — all authored from PRD/backend.md, no main seeding."
+    beads:
+      - streamdeck-sonoscontroller-h75.1
+      - streamdeck-sonoscontroller-h75.2
+      - streamdeck-sonoscontroller-h75.7
+      - streamdeck-sonoscontroller-h75.3
+    epic_progress: "h75 0% → 40%"
+    backend:
+      - "added: src/modules/common/sonosService.js — UPnP SOAP transport. SonosService.execute(action, args, {timeoutMs}) builds SOAP 1.1 envelope, POSTs to http://<host>:1400/<baseUrl>, parses response into {nodeName: textContent}. AbortController-based timeout (no socket leak). Throws categorized SonosError instances by failure type."
+      - "added: src/modules/common/sonosController.js — wraps a single host with the six UPnP service endpoints (audioIn/avTransport/deviceProperties/renderingControl/zoneGroupTopology/contentDirectory) verbatim per backend.md. Memoizes ZoneGroupState. Threads timeoutSec into all service calls."
+      - "added: SonosController.getDevices({setAsPrimary}) — walks ZoneGroupState topology returning DeviceRecord[]. Uses asArray at every iteration site (ZoneGroup → ZoneGroupMember → Satellite). Wraps with translateSonosError for boundary translation."
+      - "added: src/modules/common/sonosErrors.js — SonosError class (category + context) + translateSonosError({op, host, port, timeoutSec}) helper. Translation rules cover timeout/network/fault/http/parse + the PR #3 safety net (TypeError 'is not iterable' / 'Cannot read prop')."
+      - "changed: refactored Phase 1 modules from code review pass — streamdeck.js now uses addEventListener pattern with onerror/onclose handlers + cached actionInfo for late subscribers; constructor takes options object (drops Hungarian inX prefix); defensive JSON.parse via safeJsonParse. timers.js Worker.onmessage attached once (was reassigned per call); Math.max(0, delay) properly clamps; Map/Set replace plain object/array. xml.js throws XmlParseError on malformed input (was returning garbage); numeric nodeType literals → named constants."
+    frontend:
+      - "added: src/modules/common/sdConnect.js — Promise-based SDK bridge (installStreamDeckBridge() + streamDeckReady Promise). Replaces inline scripts in pi.html/plugin.html. Fixes critical PiComponent bug where onMounted ran BEFORE Stream Deck called connectElgatoStreamDeckSocket — component never bound to $SD."
+      - "changed: PiComponent.vue now awaits streamDeckReady; subscribes to disconnected/error events to drive CONNECTION_STATE.DISCONNECTED (was unreachable). Stub saveSettings/saveGlobalSettings now warn on call to surface they're not yet wired."
+      - "fixed: pi.html / plugin.html scripts moved inside <body> (were below </html>, invalid markup); dropped IE compat meta (Stream Deck webview is Chromium); dropped iOS Safari mobile-app meta from pi.html (wrong context)."
+    infra:
+      - "fixed: generateImages.sh mkdir now creates all required subdirs (actions/keys/plugin); script previously failed on a clean checkout."
+    tests: "82 new (32 → 114 total). 4 new test files: sonosService.test.js (21), sonosController.test.js (17), sonosController.discovery.test.js (13), sonosErrors.test.js (20). 4 new fixtures: zonegroupstate-stereo-pair / -home-theater / -multi-group, soap-fault-401."
+    docs:
+      - "added: 3 new enhancements.md entries (h75 development surfaced no new gaps yet); previous 5 documented gaps from Phase 1 marked [RESOLVED] for the architecture.md edits."
+    commits: ["d4d3e5d", "86bf2da", "59f91d2", "493c1d8"]
   - version: "0.1.0"
     date: "2026-05-03"
     branch: "rebuild-from-prd"
