@@ -2,9 +2,12 @@
 // (host, service) pair; SonosController (h75.2) constructs six per speaker.
 //
 // Every higher-level Sonos call funnels through `execute()`. This module owns
-// the wire format, the timeout/abort lifecycle, and the user-facing error
-// translation — programmer artifacts ("u is not iterable", "fetch failed",
-// `TypeError`) must never escape past this boundary (per prd-what.md §7.7).
+// the wire format and the timeout/abort lifecycle. Failures throw categorized
+// `SonosError` instances; the boundary translator (sonosErrors.js) turns those
+// into per-op user-facing messages. Programmer artifacts (TypeError,
+// "fetch failed", "is not iterable") never bubble past `execute()`.
+
+import { SonosError } from "@/modules/common/sonosErrors.js";
 
 const SOAP_ENVELOPE_NS = "http://schemas.xmlsoap.org/soap/envelope/";
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -147,9 +150,17 @@ export class SonosService {
       });
     } catch (err) {
       if (err?.name === "AbortError") {
-        throw new Error(`Timeout while reaching ${this.host}:${this.port} after ${timeoutMs / 1000} seconds`);
+        throw new SonosError(`Timeout while reaching ${this.host}:${this.port} after ${timeoutMs / 1000} seconds`, "timeout", {
+          host: this.host,
+          port: this.port,
+          timeoutMs,
+        });
       }
-      throw new Error(`Could not reach ${this.host}:${this.port}: ${err?.message || err}`);
+      throw new SonosError(`Could not reach ${this.host}:${this.port}: ${err?.message || err}`, "network", {
+        host: this.host,
+        port: this.port,
+        cause: err?.message,
+      });
     } finally {
       clearTimeout(timer);
     }
@@ -159,15 +170,29 @@ export class SonosService {
     if (!response.ok) {
       const fault = parseFault(text);
       if (fault) {
-        throw new Error(`Sonos returned error ${fault.code}: ${fault.description}`);
+        throw new SonosError(`Sonos returned error ${fault.code}: ${fault.description}`, "fault", {
+          host: this.host,
+          port: this.port,
+          status: response.status,
+          faultCode: fault.code,
+          faultDescription: fault.description,
+        });
       }
-      throw new Error(`Sonos at ${this.host}:${this.port} returned HTTP ${response.status}`);
+      throw new SonosError(`Sonos at ${this.host}:${this.port} returned HTTP ${response.status}`, "http", {
+        host: this.host,
+        port: this.port,
+        status: response.status,
+      });
     }
 
     try {
       return parseResponseBody(text);
     } catch (err) {
-      throw new Error(`Sonos at ${this.host}:${this.port} returned malformed response: ${err.message}`);
+      throw new SonosError(`Sonos at ${this.host}:${this.port} returned malformed response: ${err.message}`, "parse", {
+        host: this.host,
+        port: this.port,
+        cause: err.message,
+      });
     }
   }
 }

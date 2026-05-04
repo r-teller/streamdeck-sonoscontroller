@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { SonosService, parseResponseBody, parseFault } from "@/modules/common/sonosService.js";
+import { SonosError } from "@/modules/common/sonosErrors.js";
 
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../fixtures/sonos");
 const fixture = (name) => readFileSync(resolve(FIXTURES, name), "utf8");
@@ -164,42 +165,57 @@ describe("SonosService — timeout + abort (AC#3)", () => {
   });
 });
 
-describe("SonosService — error translation (AC#5, prd-what.md §7.7)", () => {
-  it("translates a 5xx with a UPnP fault into the speaker's error code + description", async () => {
+describe("SonosService — categorized SonosError (AC#5, prd-what.md §7.7)", () => {
+  it("throws SonosError with category=fault on a 5xx with a UPnP fault body", async () => {
     vi.stubGlobal("fetch", vi.fn(() => failResponse(500, fixture("soap-fault-401.xml"))));
     const s = newService();
-    await expect(s.execute("Play")).rejects.toThrow("Sonos returned error 401: Invalid Action");
+    const err = await s.execute("Play").catch((e) => e);
+    expect(err).toBeInstanceOf(SonosError);
+    expect(err.category).toBe("fault");
+    expect(err.context.faultCode).toBe("401");
+    expect(err.context.faultDescription).toBe("Invalid Action");
+    expect(err.message).toMatch(/Sonos returned error 401: Invalid Action/);
   });
 
-  it("translates a non-fault 5xx into HTTP <status> message", async () => {
+  it("throws SonosError with category=http on a non-fault 5xx", async () => {
     vi.stubGlobal("fetch", vi.fn(() => failResponse(503, "Service Unavailable")));
     const s = newService();
-    await expect(s.execute("Play")).rejects.toThrow("Sonos at 192.168.1.42:1400 returned HTTP 503");
+    const err = await s.execute("Play").catch((e) => e);
+    expect(err).toBeInstanceOf(SonosError);
+    expect(err.category).toBe("http");
+    expect(err.context.status).toBe(503);
   });
 
-  it("translates a network failure into a Could-not-reach message", async () => {
+  it("throws SonosError with category=network on fetch rejection", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.reject(new TypeError("fetch failed"))),
     );
     const s = newService();
-    await expect(s.execute("Play")).rejects.toThrow(/Could not reach 192\.168\.1\.42:1400/);
+    const err = await s.execute("Play").catch((e) => e);
+    expect(err).toBeInstanceOf(SonosError);
+    expect(err.category).toBe("network");
+    expect(err.context.host).toBe("192.168.1.42");
+    expect(err.context.cause).toBe("fetch failed");
   });
 
-  it("never lets a programmer artifact escape (no 'fetch failed' / 'is not iterable' / TypeError leakage)", async () => {
+  it("throws SonosError with category=parse on malformed response", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => okResponse("<not closed")));
+    const s = newService();
+    const err = await s.execute("Play").catch((e) => e);
+    expect(err).toBeInstanceOf(SonosError);
+    expect(err.category).toBe("parse");
+  });
+
+  it("never lets a TypeError escape — always wrapped in SonosError", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.reject(new TypeError("fetch failed"))),
     );
     const s = newService();
-    try {
-      await s.execute("Play");
-      throw new Error("expected throw");
-    } catch (err) {
-      expect(err.message).not.toContain("TypeError");
-      // The cause is included for diagnostics, but wrapped in a translated message.
-      expect(err.message.startsWith("Could not reach")).toBe(true);
-    }
+    const err = await s.execute("Play").catch((e) => e);
+    expect(err).not.toBeInstanceOf(TypeError);
+    expect(err).toBeInstanceOf(SonosError);
   });
 });
 
