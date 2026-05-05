@@ -21,6 +21,35 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - date: "2026-05-04 21:30 UTC"
+    branch: "rebuild-from-prd"
+    focus: [feature]
+    completed:
+      - "etr.9: OPERATIONAL_STATUS frozen 7-key enum (UNINITIALIZED, UPDATING, UPDATED, CONNECTED, CONNECTING, DISCONNECTED, RATE_LIMITED). Each value equals key for log readability. JSDoc transition diagram. Consumed by Phase 3 speaker store + dispatcher + render layer when those land."
+      - "orw.2: BootstrapAccordeon + BootstrapAccordeonItem reusable primitives. forceExpanded prop drives initial show/collapse + aria-expanded; user clicks override via Bootstrap Collapse JS; reactive watcher syncs prop changes via .show()/.hide(). Also established the project's Vue component testing pattern (@vue/test-utils + jsdom)."
+      - "orw.3: SonosSelection.vue — speaker dropdown (size=5) with case-insensitive sort, grey hint line, free-text filter (label OR UUID, case-insensitive). v-model UUID + emits selection-saved."
+      - "orw.5: 4 presentation toggles in PiComponent (Display State Based Title / Marquee Title / Marquee Album Title / Album Art) gated on per-action allow-lists from actionSettingsSchema. Auto-save on change."
+      - "orw.6: 4 action-specific sections — Play Mode(s) / Input Source(s) / Equalizer Target / Sonos Favorite(s). Verbatim labels, defaults, auto-save."
+      - "orw.7: Volume Increment override input (volume-up / volume-down only). Verbatim labels and helper text. Placeholder reflects current global default. PR #4 ?? null preserves entered value 1."
+      - "orw.8: Global Settings accordion built on orw.2 primitive with forceExpanded={!isConnected}. 4 form fields with verbatim labels and hint text per prd-what.md §6. Reactive bindings."
+      - "orw.9: Save and Connect / Save and Reconnect button. Label flips on connectionState. Spinner during flight. Disabled when address empty or in flight. Click handler runs SonosController.connect → Promise.all(getDevices, getFavorites) sharing one controller, persists via saveGlobalSettings, builds speakers picker. Brand-new actions default to discovery seed primary. PR #3 tolerance covered for single-Move / stereo-pair / home-theater fixtures."
+      - "orw.10: errorMessage ref + Bootstrap alert-danger inside Global Settings accordion. Hidden when null (no empty shell). X dismisses. Verbatim message text — no scrubbing (boundary translation owns wrapping)."
+      - "orw.11: src/modules/pi/actionSettingsSchema.js — buildActionSettingsPayload owns the 16-field per-context schema with action-specific gating. PR #4 ?? null preserves value 1; base64-decode utility for favorite metadata round-trip. Allow-list constants exported."
+      - "orw.12: src/modules/pi/globalSettingsSchema.js — buildGlobalSettingsPayload with Math.max(1, value) clamp on adjustVolumeIncrement at write site (HTML min='1' is bypassable in webview)."
+      - "bg9: ESM-friendly bin/bump-version.mjs replaces fragile inline node -e in package.json's build_dev_incr script."
+    epic_progress: "orw 15% → 92% (1 remaining: orw.4 selected-speaker alert box); etr 9% → 18% (etr.9 closed)"
+    next_steps:
+      - "orw.4: Selected-speaker alert box (always-visible binding) — small cynefin:clear feature. Closing this would close the orw epic. ~5-8 turns."
+      - "Test Phase 4 manually in Stream Deck app: npm run package, install, type IP, click Save and Connect, verify discovery / picker population / per-action toggles. This is the first session where end-to-end PI testing is feasible."
+      - "etr (Phase 3 Plugin Runtime, 18%): SonosSpeakers reactive store, polling supervisor, action dispatcher, render dedupe — 10 items. Required for keys to actually do something when pressed."
+      - "km1 (Phase 5 Actions Catalog, 8%): 11 action handlers. Blocked on etr.* infrastructure landing."
+    blockers: []
+    commits:
+      - "4d39884"
+      - "93a9650"
+      - "aa63c22"
+      - "caa71e4"
+
   - date: "2026-05-04 14:10 UTC"
     branch: "rebuild-from-prd"
     focus: [feature, documentation]
