@@ -403,6 +403,14 @@ function bindStreamDeck(sd) {
       <p v-else class="text-muted small mb-0">
         Set the Primary Device Address below and tap "Save and Connect" to discover your speakers.
       </p>
+      <div
+        v-if="settings.uuid"
+        class="alert alert-light mt-2 mb-0 py-1 px-2 small"
+        role="status"
+        data-pi-bound-speaker-alert
+      >
+        {{ settings.zoneName }} ({{ settings.hostAddress }})
+      </div>
     </section>
 
     <section

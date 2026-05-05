@@ -304,7 +304,7 @@
   "Name": "Sonos Controller",
   "Icon": "images/sonos",
   "URL": "https://github.com/r-teller/streamdeck-sonoscontroller",
-  "Version": "0.1.0.0",
+  "Version": "0.1.0.1",
   "Category": "Sonos Controller",
   "CategoryIcon": "images/category",
   "OS": [

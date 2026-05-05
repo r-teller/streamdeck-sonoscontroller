@@ -231,3 +231,27 @@ This is documented in `.archive/plans/2026-05-03-coordinator-resolution.md` (git
 The cleanest is #2 — isolate the unit under test. Reserve full pipeline runs for integration verification AFTER the unit test passes.
 
 **Discovered during:** bg9 (ESM build_dev_incr refactor), 2026-05-04.
+
+---
+
+### [OPEN] Test files that import sdConnect.js need the @elgato/streamdeck mock
+
+**Needed:** While building etr.7's renderDedupe.js, the new module pulled `getStreamDeckClient` from `sdConnect.js`, which transitively imports `@elgato/streamdeck`. This broke the existing `lifecycle.test.js` (etr.5) the moment lifecycle.js added `import { clearDedupeCache } from "./renderDedupe.js"` — the test file passed at write time but failed once an upstream import chain reached the SDK. The fix is the same `vi.mock("@elgato/streamdeck", () => ({ EventEmitter: NodeEventEmitter }))` already documented for the streamdeck-direct case, but it isn't obvious from the test file that the mock is needed because no test code references `@elgato/streamdeck` directly.
+
+**Where the gap is:** No formal doc captures this. The existing entry "@elgato/streamdeck eagerly reads manifest.json at module import" was written for direct importers; transitive importers fall into the same trap.
+
+**Suggested fix:** When writing a unit test for any `src/modules/plugin/*.js` module that touches the SDK indirectly (sdConnect, render path, action handlers, lifecycle), preemptively stub `@elgato/streamdeck` even if the test file doesn't reference it. Or add a vitest setup file that mocks it globally for unit tests.
+
+**Discovered during:** etr.7 (renderDedupe), 2026-05-05.
+
+---
+
+### [OPEN] Phase 5 (km1) was implemented as one consolidated module rather than 11 separate beads
+
+**Needed:** The km1.* beads were each scoped/sized as independent features (mostly `size:medium`, with km1.11 as `size:large`). In implementation, all 11 actions landed together in `src/modules/actions/sonosActions.js` because (a) every action follows the same template (race a SOAP call, return SUCCESS/ERROR + state projection), (b) the registry mutation is idempotent so all 11 register on a single import, and (c) test coverage scales better with one module + 22 sonosActions tests than with 11 small per-bead test files. This was a pragmatic call but it conflicts with the "fine-grained beads" principle in workflow-planning.md and complicates per-bead effort tracking.
+
+**Where the gap is:** `work-item-templates.md` size/cynefin guide doesn't address when "11 small features sharing a template" should be a single bead vs 11. `rules/workflow-planning.md` "Issue Granularity" leans toward many small beads but offers no escape hatch for templated batches.
+
+**Suggested fix:** Add a guidance note: when N>3 beads share the same template (same SOAP-call shape, same return-value shape, same registry surface), consider grouping them under a parent meta-bead with N child stubs that close together. Or, if the children are mature enough to merit individual bead descriptions, accept that they may all land in one commit and tag the implementation comment accordingly. Either way, the size guide should reflect the actual landed effort, not the per-feature theoretical effort, since pattern-application after the first bead is near-zero.
+
+**Discovered during:** km1.1–km1.11 (Phase 5: Actions Catalog), 2026-05-05.

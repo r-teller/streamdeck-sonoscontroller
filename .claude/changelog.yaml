@@ -31,6 +31,54 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - version: "0.5.0"
+    date: "2026-05-05"
+    branch: "rebuild-from-prd"
+    focus: [feature]
+    summary: "Phase 3 (Plugin Runtime — State, Polling, Dispatcher) and Phase 5 (Actions Catalog) closed at 100%. Phase 4 also closed (orw.4). Plugin runtime is now feature-complete in code: SonosSpeakers store + rate limiter + 500ms polling supervisor + action dispatcher + lifecycle wiring + dialRotate debounce + render dedupe + marquee/album-art layer + all 11 Sonos action handlers. End-to-end manual hardware verification still pending (Phase 6)."
+    beads:
+      - streamdeck-sonoscontroller-orw.4
+      - streamdeck-sonoscontroller-etr.1
+      - streamdeck-sonoscontroller-etr.2
+      - streamdeck-sonoscontroller-etr.3
+      - streamdeck-sonoscontroller-etr.4
+      - streamdeck-sonoscontroller-etr.5
+      - streamdeck-sonoscontroller-etr.6
+      - streamdeck-sonoscontroller-etr.7
+      - streamdeck-sonoscontroller-etr.8
+      - streamdeck-sonoscontroller-km1.1
+      - streamdeck-sonoscontroller-km1.2
+      - streamdeck-sonoscontroller-km1.3
+      - streamdeck-sonoscontroller-km1.4
+      - streamdeck-sonoscontroller-km1.5
+      - streamdeck-sonoscontroller-km1.6
+      - streamdeck-sonoscontroller-km1.7
+      - streamdeck-sonoscontroller-km1.8
+      - streamdeck-sonoscontroller-km1.9
+      - streamdeck-sonoscontroller-km1.10
+      - streamdeck-sonoscontroller-km1.11
+    epic_progress: "orw 92% → 100% (closed); etr 18% → 100% (closed); km1 8% → 100% (closed)"
+    backend:
+      - "added: src/modules/plugin/SonosSpeakers.js — Vue reactive({}) singleton keyed by UUID, with getSpeaker/addContext/removeContext/moveContext/updateSpeakerState/setOperationalStatus/getAllSpeakers methods. Deep-merges nested audioEqualizer; tracks lastChecked/lastUpdated; manages updateAttempts array for the rate limiter. (etr.1)"
+      - "added: rate limiter inside SonosSpeakers.setOperationalStatus — sliding-window of MAX_UPDATES=3 transitions in TIME_WINDOW_SECONDS=10. 4th UPDATING transition flips speaker to RATE_LIMITED; UPDATED resets the window. (etr.2)"
+      - "added: src/modules/plugin/pollingSupervisor.js — 500ms tick walks every speaker, fires the 7-call SOAP fan-out (getTransportSettings/Info/Mute/Volume/Bass/Treble/PositionInfo) for due speakers, races each fetch against deviceTimeoutDuration (5s for polling), updates store on success and fires showAlert + DISCONNECTED on failure. Skips UPDATING / RATE_LIMITED speakers. Dependency-injected SonosController factory + showAlert + refreshStateAndTitle for testability. (etr.3)"
+      - "added: src/modules/plugin/actionDispatcher.js — actionFunctionMap registry skeleton (11 entries, slots: keyDown/dialRotate/dialDown/touchTap/state{default,keypad,encoder}). callAction extracts short-name via action.split('.').pop(), gates on UPDATING/RATE_LIMITED, awaits the registered handler, applies optimistic state projection on SUCCESS, and emits showAlert to every bound context on ERROR. (etr.4)"
+      - "added: src/modules/plugin/actionSettings.js — reactive per-context settings map + setActionSettings/getActionSettings/deleteActionSettings helpers. Lifecycle handlers (etr.5) write here; dispatcher reads. (etr.4)"
+      - "added: src/modules/plugin/globalSettings.js — globalSettings ref mirroring didReceiveGlobalSettings payload. Polling supervisor and action handlers consume it on each tick. (etr.5)"
+      - "added: src/modules/plugin/lifecycle.js — wireLifecycleHandlers({sd}) attaches all SDK listeners (willAppear, willDisappear, didReceiveSettings, globalsettings, systemDidWakeUp, keyDown, dialDown, touchTap, dialRotate). UUID change in didReceiveSettings triggers moveContext + clearDedupeCache. Returns a teardown function (no listener stacking on hot reload). keyUp/dialUp deliberately not subscribed. (etr.5)"
+      - "added: src/modules/plugin/dialRotateDebouncer.js — handleDialRotate accumulates signed ticks per context, schedules a 300ms flush that calls callAction with the summed inRotation. cleanupDialRotate cancels pending flush on willDisappear. (etr.6)"
+      - "added: src/modules/plugin/renderDedupe.js — refreshStateAndTitle resolves the action's state function via actionFunctionMap[name].state[controller||default], compares per-field render intent against actionSettings[ctx].status cache, emits SDK calls only on diff. Marquee carve-out: when titleSource is set, dedupe on titleSource and let per-frame title substrings flow through. force=true bypasses dedupe (used by currently-playing keyDown). clearDedupeCache resets the cache on UUID rebind. (etr.7)"
+      - "added: src/modules/plugin/marquee.js — buildMarqueeRenderIntent owns input-source detection (TV / Line-In / Queue), album-art fetch + base64 cache (one fetch per URI; ensureAlbumArtCached deduplicates concurrent fetches), and the 1-char-per-cycle marquee window with 4-char wrap padding. Resets marqueePosition{Top,Bottom} on track change (albumArtURI delta). Uses playing.albumArtURI consistently (legacy playing.albumArt name not referenced). (etr.8)"
+      - "added: src/modules/actions/sonosActions.js — registers all 11 action handlers in one file. Toggle Mute (km1.2), Toggle Play/Pause (km1.3), Toggle Play Mode with selectable subset cycling (km1.4), Toggle Input Source via setLocalTransport (km1.5), Play Next/Previous (km1.6/7), Volume Up/Down with `??` null preserving 1 (km1.8/9), Play Sonos Favorite via setServiceURI (km1.10), Currently Playing 6-call refresh (km1.1), Audio Equalizer encoder dialRotate with VOLUME [0,100] / BASS,TREBLE [-10,10] clamping + feedback layout swap + touchTap refresh (km1.11). All handlers race their SOAP calls against deviceTimeoutDuration (10s for actions). (km1.*)"
+      - "added: src/modules/actions/helpers.js — makeController, raceWithTimeout, resolveVolumeIncrement (?? null preserves 1), PLAY_MODES + INPUT_SOURCES enums."
+    frontend:
+      - "changed: src/components/PiComponent.vue — added Bootstrap alert-light below the Sonos Speakers accordion bound to settings.uuid; shows '<ZoneName> (<HostAddress>)' whenever a speaker is bound, regardless of accordion open/collapse state. (orw.4)"
+      - "added: src/components/PluginComponent.vue — plugin background runtime that awaits streamDeckReady, calls wireLifecycleHandlers + startPollingSupervisor + side-effect-imports sonosActions on mount. onBeforeUnmount tears down both. Replaces the placeholder mount in src/plugin/main.js."
+    docs:
+      - "added: 2 enhancements.md [OPEN] entries — transitive @elgato/streamdeck mock requirement; Phase 5 consolidated bead implementation pattern note."
+      - "added: 3 effort comparison comments on etr.4 / etr.8 / km1.11 — actuals vs forecasts."
+    tests: "+128 new (397 → 527 total). 9 new test files: PiComponent.boundSpeakerAlert.test.js (7), SonosSpeakers.test.js (20), SonosSpeakers.rateLimit.test.js (9), pollingSupervisor.test.js (12), actionDispatcher.test.js (13), dialRotateDebouncer.test.js (8), lifecycle.test.js (14), renderDedupe.test.js (12), marquee.test.js (20), sonosActions.test.js (22). Build (npm run build_dev_incr) and validate (npm run validate) both green."
+    commits: []
   - version: "0.4.0"
     date: "2026-05-04"
     branch: "rebuild-from-prd"

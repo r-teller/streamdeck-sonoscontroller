@@ -305,7 +305,16 @@ This is a soft local guard against tight retry loops during a sustained outage �
 |--------|---------|-----------|
 | Stream Deck client | Hand-rolled WebSocket wrapper + outgoing helpers | `src/modules/common/streamdeck.js` |
 | Sonos client | SOAP-over-HTTP service endpoints + XML→JSON + topology enumeration | `src/modules/common/sonosController.js` |
-| Action handlers | All keyDown/dialRotate/state functions for the 11 actions | `src/modules/actions/sonosController.js` |
-| Speaker store | Reactive per-UUID speaker state, rate limiting, context tracking | `src/modules/plugin/SonosSpeakers.js` |
+| Action handlers | All keyDown/dialRotate/state functions for the 11 actions; side-effect-imported by PluginComponent to register on actionFunctionMap | `src/modules/actions/sonosActions.js`, `src/modules/actions/helpers.js` |
+| Speaker store | Reactive per-UUID speaker state, rate limiter (3-in-10s window), context tracking | `src/modules/plugin/SonosSpeakers.js` |
+| Operational status enum | Frozen 7-key OPERATIONAL_STATUS enum consumed by store / dispatcher / render | `src/modules/plugin/operationalStatus.js` |
+| Polling supervisor | 500ms interval, 7-call SOAP fan-out, race-with-timeout, DISCONNECTED + showAlert on failure | `src/modules/plugin/pollingSupervisor.js` |
+| Action dispatcher | actionFunctionMap registry + callAction; soft-drops on RATE_LIMITED; optimistic state projection on SUCCESS | `src/modules/plugin/actionDispatcher.js` |
+| Per-context action settings | Reactive map keyed by Stream Deck context; populated by lifecycle handlers | `src/modules/plugin/actionSettings.js` |
+| Global settings ref | Reactive ref mirroring didReceiveGlobalSettings payload | `src/modules/plugin/globalSettings.js` |
+| Lifecycle wiring | wireLifecycleHandlers attaches all SDK listeners (willAppear/Disappear/didReceiveSettings/globalsettings/systemDidWakeUp/keyDown/dialDown/touchTap/dialRotate); returns teardown | `src/modules/plugin/lifecycle.js` |
+| dialRotate debouncer | 300ms-window tick accumulation, signed delta, per-context cleanup | `src/modules/plugin/dialRotateDebouncer.js` |
+| Render dedupe | refreshStateAndTitle resolves state fn, per-field SDK call gating with marquee carve-out, force-refresh hook | `src/modules/plugin/renderDedupe.js` |
+| Marquee + album art | buildMarqueeRenderIntent owns input-source detection, 1-char-per-cycle marquee window, album-art fetch+base64 cache | `src/modules/plugin/marquee.js` |
 | Timer shim | Web Worker–backed `setTimeout` / `setInterval` to defeat webview throttling | `src/modules/common/timers.js` |
 | Plugin entry | Vue mount + SDK wiring + dispatcher + polling | `plugin.html`, `src/plugin/main.js`, `src/components/PluginComponent.vue` |

@@ -198,8 +198,8 @@ streamdeck-sonoscontroller/
 │   │   └── accordeon/{BootstrapAccordeon,BootstrapAccordeonItem}.vue
 │   ├── modules/
 │   │   ├── common/{streamdeck.js, sonosController.js, sonosService.js, sonosErrors.js, sdConnect.js, coordinatorResolver.js, uriTaxonomy.js, xml.js, timers.js}
-│   │   ├── actions/sonosController.js   # All action + state handlers (Phase 5)
-│   │   ├── plugin/operationalStatus.js  # OPERATIONAL_STATUS frozen enum (etr.9)
+│   │   ├── actions/{sonosActions.js, helpers.js}  # All 11 action handlers + state functions (Phase 5)
+│   │   ├── plugin/{operationalStatus.js, SonosSpeakers.js, pollingSupervisor.js, actionDispatcher.js, actionSettings.js, globalSettings.js, lifecycle.js, dialRotateDebouncer.js, renderDedupe.js, marquee.js}  # Phase 3 runtime
 │   │   └── pi/{globalSettingsSchema.js, actionSettingsSchema.js}  # Pure PI persistence builders
 │   └── scss/styles.scss            # @import "bootstrap/scss/bootstrap";
 ├── bin/bump-version.mjs            # ESM manifest version bumper (used by build_dev_incr)
