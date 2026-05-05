@@ -211,3 +211,58 @@ The PI saves; the plugin background's `didReceiveSettings` / `didReceiveGlobalSe
 | `SonosSelection` | `<select size=5>` with text filter, v-model UUID, emits `selection-saved` | `src/components/SonosSelection.vue` |
 | `BootstrapAccordeon` | Slot wrapper around `.accordion` | `src/components/accordeon/BootstrapAccordeon.vue` |
 | `BootstrapAccordeonItem` | Header + collapse item; supports `forceExpanded` prop for first-run auto-open | `src/components/accordeon/BootstrapAccordeonItem.vue` |
+
+---
+
+## Component Testing
+
+Vue components are tested with `@vue/test-utils` against the jsdom environment. The standard pattern for any test that mounts `PiComponent` (or another component that consumes `sdConnect`):
+
+```js
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from "vitest";
+import { mount } from "@vue/test-utils";
+
+// Stub the SDK bridge so the component never reaches a real WebSocket.
+// streamDeckReady is left pending forever — bindStreamDeck is bypassed.
+vi.mock("@/modules/common/sdConnect.js", () => ({
+  streamDeckReady: new Promise(() => {}),
+  installStreamDeckBridge: vi.fn(),
+  getStreamDeckClient: vi.fn(() => null),
+}));
+
+import PiComponent from "@/components/PiComponent.vue";
+
+const wrapper = mount(PiComponent);
+wrapper.vm.sdClient = {
+  uuid: "context-abc",
+  actionInfo: { action: "...", controller: "Keypad", states: [] },
+  saveSettings: vi.fn(),
+  saveGlobalSettings: vi.fn(),
+};
+```
+
+For tests that exercise the discovery flow (Save and Connect), also mock `SonosController`:
+
+```js
+const sonosImpl = {
+  getDevices: vi.fn(),
+  getFavorites: vi.fn(),
+  connect: vi.fn(),
+};
+vi.mock("@/modules/common/sonosController.js", () => ({
+  SonosController: vi.fn().mockImplementation(() => sonosImpl),
+}));
+```
+
+Pure builder modules (`src/modules/pi/*Schema.js`) are tested as plain functions without mounting. Persistence helpers are extracted from `.vue` components precisely so the schema logic can be unit-tested independently of Vue.
+
+Useful selectors used throughout the suite (kept stable as the test-only contract):
+- `[data-pi-section="..."]` — top-level section gating
+- `[data-pi-toggle-...]` — per-toggle wrappers (`state-based-title`, `marquee-title`, `marquee-album-title`, `album-art`)
+- `[data-pi-play-mode="..."]` / `[data-pi-input-source="..."]` — per-option switches
+- `[data-pi-eq-target-select]` / `[data-pi-favorite-select]`
+- `[data-pi-volume-increment-override]` / `[data-pi-volume-increment]` (per-action override vs global)
+- `[data-pi-primary-device-address]` / `[data-pi-device-timeout-duration]` / `[data-pi-device-check-interval]`
+- `[data-pi-save-and-connect]` / `[data-pi-save-and-connect-spinner]`
+- `[data-pi-error-alert]` / `[data-pi-satellite-hint]` / `[data-pi-speaker-picker]` / `[data-pi-speaker-filter]`

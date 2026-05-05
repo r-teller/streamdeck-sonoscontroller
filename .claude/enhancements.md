@@ -166,3 +166,34 @@ This is documented in `.archive/plans/2026-05-03-coordinator-resolution.md` (git
 **Suggested fix:** Add a one-paragraph "Future optimization opportunities" callout to backend.md noting `GetZoneGroupAttributes` as a backup coord-resolution endpoint, with the satellite-absence caveat. Helps a future session reaching for "make polling cheaper" find the existing investigation rather than redoing the SCPD scan.
 
 **Discovered during:** `cel` spike (live capture from S2 firmware 86.6-75110), 2026-05-04.
+
+---
+
+### [RESOLVED] Vue component testing pattern was undocumented
+
+> Resolved 2026-05-04 — added §"Component Testing" subsection to `frontend.md` with the @vue/test-utils + vi.mock(sdConnect) + sdClient injection pattern.
+
+
+**Needed:** While implementing orw.2 (BootstrapAccordeonItem), the project had no installed Vue component testing library and no documented pattern for testing `.vue` files. Existing tests covered pure modules only. The session had to pause to decide whether to install `@vue/test-utils` or hand-roll mounts via `createApp` + jsdom queries. Same blocker would surface in every Phase 4 PI bead going forward.
+
+**Where the gap is:** `frontend.md` had no §"Testing" section. `architecture.md` Technology Decisions listed Vitest but no Vue component testing companion.
+
+**Suggested fix:** Add a §"Component Testing" subsection to `frontend.md` documenting:
+- `@vue/test-utils` is the canonical Vue component testing library
+- Standard pattern: `vi.mock("@/modules/common/sdConnect.js", () => ({ streamDeckReady: new Promise(() => {}), ... }))` to bypass the SDK bridge in tests
+- Mount with `mount(PiComponent)`, then inject `wrapper.vm.sdClient = mockSd` to test save paths
+- Mock the `SonosController` import for discovery-flow tests via `vi.mock("@/modules/common/sonosController.js")`
+
+**Discovered during:** orw.2 (BootstrapAccordeonItem), 2026-05-04.
+
+---
+
+### [OPEN] Bead specs that mention HTML-attribute-encoding workarounds should specify the option carrier explicitly
+
+**Needed:** orw.6 (action-specific sections) and orw.11 (saveSettings schema) both mention that favorite metadata is "base64-encoded when held in dropdown options to avoid HTML attribute encoding issues." But the spec didn't explicitly say which option carrier (option `value` attribute, `data-*` attribute, or just an internal lookup keyed by URI). Three reasonable implementations exist; I picked URI-as-value-with-favorite-lookup, which sidesteps the encoding entirely. The orw.11 base64-decode test path remained valid as defensive code but doesn't run in the production flow.
+
+**Where the gap is:** Bead specs that mention HTML-encoding workarounds should specify the carrier (e.g., "option value attribute holds base64-encoded metadata; change handler decodes on save").
+
+**Suggested fix:** When a bead's spec describes a workaround like "X is base64-encoded to avoid HTML attribute encoding issues", the spec should also state explicitly: "the carrier is the option's `value` attribute" (or whatever the chosen carrier is). Otherwise the implementer faces 2-3 reasonable design choices and may sidestep the workaround entirely without realizing the test path becomes dead code.
+
+**Discovered during:** orw.6 (action-specific sections, favorites dropdown), 2026-05-04.

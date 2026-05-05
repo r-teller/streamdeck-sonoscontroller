@@ -31,6 +31,41 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - version: "0.4.0"
+    date: "2026-05-04"
+    branch: "rebuild-from-prd"
+    focus: [feature]
+    summary: "Phase 4 (Property Inspector) advanced from 8% → 92% in two batches. PI persistence layer + 3 reusable primitives + the full action-specific UI surface + the Save and Connect discovery flow. Plugin is now manually testable end-to-end against a real Sonos household — type IP, click Save and Connect, see speakers populate, bind a key to a speaker, configure per-action toggles."
+    beads:
+      - streamdeck-sonoscontroller-etr.9
+      - streamdeck-sonoscontroller-orw.2
+      - streamdeck-sonoscontroller-orw.3
+      - streamdeck-sonoscontroller-orw.5
+      - streamdeck-sonoscontroller-orw.6
+      - streamdeck-sonoscontroller-orw.7
+      - streamdeck-sonoscontroller-orw.8
+      - streamdeck-sonoscontroller-orw.9
+      - streamdeck-sonoscontroller-orw.10
+      - streamdeck-sonoscontroller-orw.11
+      - streamdeck-sonoscontroller-orw.12
+      - streamdeck-sonoscontroller-bg9
+    epic_progress: "orw 15% → 92% (1 remaining: orw.4 selected-speaker alert box); etr 9% → 18% (etr.9 closed)"
+    backend:
+      - "added: src/modules/plugin/operationalStatus.js — frozen 7-key OPERATIONAL_STATUS enum (UNINITIALIZED, UPDATING, UPDATED, CONNECTED, CONNECTING, DISCONNECTED, RATE_LIMITED). Each value is its own key for log readability. JSDoc transition diagram. Consumed by Phase 3 speaker store + dispatcher + render layer (etr.9)."
+    frontend:
+      - "added: src/modules/pi/globalSettingsSchema.js — buildGlobalSettingsPayload pure builder with Math.max(1, value) clamp on adjustVolumeIncrement at write site. clampVolumeIncrement export reusable from form watchers. (orw.12)"
+      - "added: src/modules/pi/actionSettingsSchema.js — buildActionSettingsPayload owns the 16-field per-context schema with action-specific gating (4 display toggles + selectedPlayModes/InputSources/EQ/Favorites/adjustVolumeIncrement gating); exports allow-list constants (DISPLAY_STATE_TITLE_ACTIONS etc.) consumed by PiComponent for visibility gating. ?? null semantics preserve value 1 (PR #4 regression locked); base64-decode metadata utility (idempotent — XML pass-through) for favorite metadata round-trip. (orw.11)"
+      - "added: src/components/accordeon/BootstrapAccordeon.vue + BootstrapAccordeonItem.vue — reusable Bootstrap 5 accordion primitives. provide/inject for accordeonId. forceExpanded prop drives initial show/collapse + aria-expanded; user clicks override via Bootstrap Collapse JS; reactive watcher syncs prop changes via collapseInstance.show()/.hide(). Listens to shown.bs.collapse / hidden.bs.collapse to track user-driven state. (orw.2)"
+      - "added: src/components/SonosSelection.vue — speaker dropdown (size=5) with case-insensitive sort by '<zoneName> (<host>) [🛰️]' label, grey hint line, free-text filter (label OR UUID, case-insensitive). v-model UUID + emits selection-saved on change. (orw.3)"
+      - "changed: src/components/PiComponent.vue — wired the entire PI surface: saveSettings + saveGlobalSettings invoke schema builders and call sd APIs (orw.11/12); errorMessage ref + Bootstrap alert-danger inside Global Settings accordion (orw.10); 4 presentation toggles with allow-list-driven visibility (orw.5); 4 action-specific sections — Play Mode(s) / Input Source(s) / Equalizer Target / Sonos Favorite(s) — with auto-save on every change (orw.6); Volume Increment override with PR #4 ?? null preserves 1 (orw.7); Global Settings accordion (4 form fields + verbatim labels + hints + auto-expand on !isConnected) wraps the existing alert + Save and Connect button (orw.8); Save and Connect orchestrator runs SonosController.connect → Promise.all(getDevices, getFavorites) sharing one controller (so zoneGroupState memoizes), persists via saveGlobalSettings, builds speakers picker, defaults brand-new actions to discovery seed primary (orw.9); Sonos Speakers accordion with embedded SonosSelection bound to settings.uuid via @selection-saved → saveSettings (orw.3 integration)."
+    infra:
+      - "added: bin/bump-version.mjs — ESM-friendly manifest version bumper (replaces fragile inline node -e script in package.json). Type-module compatible. (bg9)"
+      - "added: @vue/test-utils as devDependency — establishes Vue component testing pattern for the project. Standard mount + vi.mock(sdConnect) + sdClient injection idiom now reused across 7 test files."
+    docs:
+      - "added: 1 enhancements.md [RESOLVED] entry — Vue component testing pattern documented in frontend.md."
+      - "added: 1 enhancements.md [OPEN] entry — bead specs that mention HTML-attribute-encoding workarounds should specify the option carrier explicitly (orw.6 favorite metadata ambiguity)."
+    tests: "+180 new (210 → 390 total). 11 new test files: operationalStatus.test.js (5), BootstrapAccordeonItem.test.js (11), globalSettingsSchema.test.js (15), actionSettingsSchema.test.js (30), PiComponent.saveGlobalSettings.test.js (6), PiComponent.saveSettings.test.js (7), PiComponent.errorAlert.test.js (9), SonosSelection.test.js (12), PiComponent.presentationToggles.test.js (11), PiComponent.volumeIncrementOverride.test.js (16), PiComponent.actionSpecificSections.test.js (25), PiComponent.globalSettingsForm.test.js (17), PiComponent.saveAndConnect.test.js (21)."
+    commits: []
   - version: "0.3.0"
     date: "2026-05-04"
     branch: "rebuild-from-prd"

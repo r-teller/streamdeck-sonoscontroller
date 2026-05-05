@@ -80,6 +80,7 @@ Before adding a new library, check this table — the problem may already be sol
 | **Linter** | ESLint + `eslint-plugin-vue` + Prettier passthrough | latest | `vue/vue3-essential` + `eslint:recommended` |
 | **Formatter** | Prettier | ^3.0.3 | Print width 128 |
 | **Test runner** | Vitest | ^1.0.0 | jsdom environment for DOM-touching tests; pin `jsdom@22.x` (jsdom 24+ is incompatible with vitest 1.x due to a CJS/ESM mismatch in `html-encoding-sniffer`). |
+| **Vue component testing** | `@vue/test-utils` | ^2.4.10 | Standard `mount(Component, { props })` API. Pattern for components that consume the SDK bridge: `vi.mock("@/modules/common/sdConnect.js", () => ({ streamDeckReady: new Promise(() => {}), installStreamDeckBridge: vi.fn(), getStreamDeckClient: vi.fn(() => null) }))` then inject mock client via `wrapper.vm.sdClient = mockSd`. See `frontend.md` §Component Testing. |
 | **Icon source** | `material-design-icons` (git submodule, `outlined` variant) | n/a | Rasterized to PNG by `generateImages.sh` (ImageMagick) |
 | **Stream Deck app** | host application | ≥ 6.5 | Minimum version that supports `Encoder` / `setFeedback` (Stream Deck +) — confirmed by spike `streamdeck-sonoscontroller-8ss` (see `.archive/plans/2026-05-03-streamdeck-sdk-compat.md`) |
 | **Supported OS** | macOS / Windows | macOS 10.11+, Windows 10+ | Per `manifest.json` `OS` block |
@@ -196,12 +197,13 @@ streamdeck-sonoscontroller/
 │   │   ├── SonosSelection.vue      # <select size=5> with text filter
 │   │   └── accordeon/{BootstrapAccordeon,BootstrapAccordeonItem}.vue
 │   ├── modules/
-│   │   ├── common/{streamdeck.js, sonosController.js, timers.js}
-│   │   ├── actions/sonosController.js   # All action + state handlers
-│   │   ├── plugin/SonosSpeakers.js      # Reactive speaker store
-│   │   └── pi/SonosSpeaker.js           # PI dropdown POJO
+│   │   ├── common/{streamdeck.js, sonosController.js, sonosService.js, sonosErrors.js, sdConnect.js, coordinatorResolver.js, uriTaxonomy.js, xml.js, timers.js}
+│   │   ├── actions/sonosController.js   # All action + state handlers (Phase 5)
+│   │   ├── plugin/operationalStatus.js  # OPERATIONAL_STATUS frozen enum (etr.9)
+│   │   └── pi/{globalSettingsSchema.js, actionSettingsSchema.js}  # Pure PI persistence builders
 │   └── scss/styles.scss            # @import "bootstrap/scss/bootstrap";
-├── tests/                          # (to be added — see tests.md)
+├── bin/bump-version.mjs            # ESM manifest version bumper (used by build_dev_incr)
+├── tests/unit/                     # Vitest specs alongside source structure
 ├── .github/workflows/{main,brainch,releases}.yml
 └── .claude/                        # Claude Code context (this directory)
 ```
