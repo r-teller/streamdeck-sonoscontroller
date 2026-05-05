@@ -156,6 +156,8 @@ Heredoc bodies survive paste reliably (no embedded escaping); the curl command i
 
 **Discovered during:** `h75.6`, 2026-05-04.
 
+**2026-05-04 update (Phase 4 PI batch — second data point):** The same pattern holds for `medium` and `small` beads, not just `large`. Across orw.2/3/5/6/7/8/9/10/11/12 (all in Phase 4), every bead under-ran by 12-33%, with the largest under-runs on the medium beads landing AFTER their foundations (orw.7 at -33%, orw.8 at -28%). Once orw.11 (action-settings schema) and orw.12 (global-settings schema) closed, every subsequent UI bead consumed those builders + the `buildSaveInput` helper without inventing new patterns. Recommend extending the sizing modifier to apply to ALL size tiers, not just `large`: when a bead's foundations are closed AND a comparable pattern exists in the same epic, scale the upper bound down by ~25%.
+
 
 **Needed:** The cel spike's Q5 ("is there a cheaper-to-poll endpoint than `GetZoneGroupState`?") landed an answer: `ContentDirectory.Browse` is not relevant, but `ZoneGroupTopology#GetZoneGroupAttributes` returns `CurrentZoneGroupID` formatted as `<COORD_UUID>:<seq>` (~600 bytes vs ~5KB). Splitting on `:` gives the coordinator UUID directly without walking topology. **Caveat:** `CurrentZonePlayerUUIDsInGroup` lists only PRIMARY members — satellites (sub, surrounds) are absent. So this is a viable optimization for primary-member binds but cannot resolve a satellite's coordinator.
 
@@ -197,3 +199,35 @@ This is documented in `.archive/plans/2026-05-03-coordinator-resolution.md` (git
 **Suggested fix:** When a bead's spec describes a workaround like "X is base64-encoded to avoid HTML attribute encoding issues", the spec should also state explicitly: "the carrier is the option's `value` attribute" (or whatever the chosen carrier is). Otherwise the implementer faces 2-3 reasonable design choices and may sidestep the workaround entirely without realizing the test path becomes dead code.
 
 **Discovered during:** orw.6 (action-specific sections, favorites dropdown), 2026-05-04.
+
+---
+
+### [OPEN] PI auto-save dispatch shape (the buildSaveInput pattern) is not in any bead
+
+**Needed:** orw.5 (presentation toggles), orw.6 (action-specific sections), orw.7 (volume override), and the speaker selection in orw.9 all need to call `saveSettings` with the full 16-field per-context schema after a single field changes. None of those beads documented HOW to construct the full input — each implies "auto-save the change" without specifying that all 16 fields must be re-supplied. The `buildSaveInput(overrides)` helper that merges actionInfo + current settings.value + the changed field was an implementation invention.
+
+**Where the gap is:** Either a parent bead (orw, the epic) or a shared "PI auto-save semantics" subsection in `frontend.md`.
+
+**Suggested fix:** Add a §"Auto-save dispatch" subsection to `frontend.md` documenting:
+- All change handlers in PiComponent must produce the full 16-field per-context schema, not just the changed field
+- The `buildSaveInput(overrides = {})` helper merges actionInfo + settings.value + overrides for this purpose
+- Schema gaps in any field land as `null` per `actionSettingsSchema.buildActionSettingsPayload` and are tolerated by the action handlers via `?? <default>`
+
+**Discovered during:** orw.5/orw.6/orw.7 — every bead in the per-action UI surface invented a piece of this pattern, 2026-05-04.
+
+---
+
+### [OPEN] Don't smoke-test file-mutating scripts via the full npm script
+
+**Needed:** During bg9 implementation, I ran `npm run build_dev_incr` to verify the new `bin/bump-version.mjs` worked. The script bumped the version (which I needed to revert) AND ran `vite build`, which had nothing to do with verifying the bumper. Worse, `bin/bump-version.mjs` does `JSON.stringify(manifest, null, 2)` — which reformatted every previously-compact `Controllers: ["Keypad"]` array into a multi-line array. The reformatting was not part of bg9's intent but landed in the bg9 commit's diff anyway because reverting was non-trivial. Cost: ~30 lines of noise in the bg9 commit and a few minutes of "is this OK to commit?" deliberation.
+
+**Where the gap is:** No project doc — this is a Claude self-discipline note.
+
+**Suggested fix:** When smoke-testing a script that mutates a tracked file, do one of:
+1. `git stash --keep-index` first, run the script, inspect, `git checkout <file>` to revert, `git stash pop`
+2. Run the script in isolation (e.g., `node bin/bump-version.mjs`) — NOT via its npm script when the npm script runs additional steps
+3. Test on a copy of the file: `cp public/manifest.json /tmp/m.json && MANIFEST_PATH=/tmp/m.json node bin/bump-version.mjs` (requires the script to honor an env override)
+
+The cleanest is #2 — isolate the unit under test. Reserve full pipeline runs for integration verification AFTER the unit test passes.
+
+**Discovered during:** bg9 (ESM build_dev_incr refactor), 2026-05-04.
