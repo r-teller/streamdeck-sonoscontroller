@@ -21,6 +21,34 @@ template_entry:
   commits: ["abc1234", "def5678"]
 
 entries:
+  - date: "2026-05-05 09:55 UTC"
+    branch: "rebuild-from-prd"
+    focus: [feature]
+    completed:
+      - "orw.4: Selected-speaker alert box. Bootstrap alert-light below the picker accordion in PiComponent.vue, bound to settings.uuid; shows '<ZoneName> (<HostAddress>)' regardless of accordion state. 7 tests in PiComponent.boundSpeakerAlert.test.js. Closes the orw epic."
+      - "etr.1: SonosSpeakers reactive store (Vue reactive({}) singleton). 7 methods: getSpeaker / addContext / removeContext / moveContext / updateSpeakerState (deep-merges nested audioEqualizer) / setOperationalStatus / getAllSpeakers. 20 tests."
+      - "etr.2: Sliding-window rate limiter inside setOperationalStatus. MAX_UPDATES=3, TIME_WINDOW_SECONDS=10. 4th UPDATING in window flips RATE_LIMITED; UPDATED resets. 9 tests with fake timers."
+      - "etr.3: 500ms polling supervisor in src/modules/plugin/pollingSupervisor.js. Walks store, fans out 7-call SOAP via Promise.all (getTransportSettings/Info/Mute/Volume/Bass/Treble/PositionInfo), races each fetch against 5s polling timeout. UPDATED success / DISCONNECTED + showAlert on failure. 12 tests with injected controller factory."
+      - "etr.4: Action dispatcher in actionDispatcher.js + per-context settings store in actionSettings.js. actionFunctionMap registry skeleton with 11 entries (slots: keyDown/dialRotate/dialDown/touchTap/state{default,keypad,encoder}). callAction extracts short-name via action.split('.').pop(), gates on RATE_LIMITED, applies optimistic state projection on SUCCESS, emits showAlert on every bound context on ERROR. 13 tests."
+      - "etr.5: Lifecycle handlers in lifecycle.js + globalSettings.js ref. wireLifecycleHandlers attaches all SDK listeners (willAppear/Disappear/didReceiveSettings/globalsettings/systemDidWakeUp/keyDown/dialDown/touchTap/dialRotate). UUID change in didReceiveSettings triggers moveContext + clearDedupeCache. Returns teardown. keyUp/dialUp deliberately not subscribed. 14 tests."
+      - "etr.6: dialRotate 300ms debounce in dialRotateDebouncer.js. Per-context tick accumulation, signed delta. cleanupDialRotate cancels pending flush on willDisappear. 8 tests."
+      - "etr.7: Render dedupe in renderDedupe.js. Per-field SDK call gating (setImage/setState/setTitle/setFeedback/setFeedbackLayout). Marquee carve-out: when titleSource is set, dedupe on titleSource and let per-frame title substrings flow through. force=true bypasses cache. 12 tests."
+      - "etr.8: Marquee + album-art layer in marquee.js. Input-source detection (TV / Line-In / Queue). Album-art fetch + base64 cache (one fetch per URI; ensureAlbumArtCached deduplicates concurrent fetches). 1-char-per-cycle marquee window with 4-char wrap padding. Resets marqueePosition{Top,Bottom} on track change. 20 tests."
+      - "km1.1–11: All 11 action handlers consolidated in src/modules/actions/sonosActions.js. Toggle Mute / Play-Pause / Play Mode (selectable subset cycling) / Input Source / Next / Previous / Volume Up / Volume Down (?? null preserves 1) / Play Sonos Favorite / Currently Playing (6-call refresh on keyDown) / Audio Equalizer encoder (VOLUME [0,100] / BASS,TREBLE [-10,10] clamping + feedback layout swap + touchTap refresh). 22 tests in sonosActions.test.js."
+      - "Created src/components/PluginComponent.vue: plugin background runtime that awaits streamDeckReady, calls wireLifecycleHandlers + startPollingSupervisor + side-effect-imports sonosActions. Replaces the placeholder mount in src/plugin/main.js."
+    epic_progress: "orw 92% → 100% (closed); etr 18% → 100% (closed); km1 8% → 100% (closed). Only Phase 6 (2ut) remains open at 6%."
+    next_steps:
+      - "Phase 6 (2ut, 14 items): Testing & Release. E2E test scaffolding, hardware acceptance test plan, CI/release packaging refinements, GitHub release automation."
+      - "Manual end-to-end hardware verification: npm run package → install side-loaded plugin → bind a key to a real Sonos speaker → exercise toggle-mute, toggle-play-pause, volume up/down, play-sonos-favorite, audio-equalizer encoder — verify polling renders state, action presses fire SOAP, render dedupe holds (no flashing)."
+      - "c91 spike still triage:backlog: UPnP NOTIFY subscriptions to replace 500ms polling. Optional optimization for after MVP ships."
+    blockers: []
+    discovered:
+      - "enhancements.md [OPEN] entry: tests for any module that transitively imports sdConnect.js need the @elgato/streamdeck mock (the existing 'eagerly reads manifest.json' note covered direct importers but not transitive)."
+      - "enhancements.md [OPEN] entry: 11 km1 actions sharing a template were implemented as one consolidated module (src/modules/actions/sonosActions.js) rather than 11 separate beads — pragmatic but conflicts with fine-grained-beads guidance. Suggested adding a 'when N>3 beads share a template' grouping rule to work-item-templates.md."
+      - "Effort comparison comments on etr.4 / etr.8 / km1.11 — actuals came in 2-3x lower than forecasts because foundations were already in place (consistent with the 'phase-end size:large under-runs' enhancements.md entry)."
+    commits:
+      - "f5851c7"
+
   - date: "2026-05-04 21:30 UTC"
     branch: "rebuild-from-prd"
     focus: [feature]
