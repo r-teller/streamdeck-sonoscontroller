@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "build_dev": "vite build --sourcemap inline --minify false",
-    "build_dev_incr": "node -e \"const fs=require('fs');const m=JSON.parse(fs.readFileSync('public/manifest.json'));m.Version=m.Version.split('.').map((n,i)=>i===3?parseInt(n)+1:n).join('.');fs.writeFileSync('public/manifest.json',JSON.stringify(m,null,2));\" && vite build --sourcemap inline --minify false",
+    "build_dev_incr": "node bin/bump-version.mjs && vite build --sourcemap inline --minify false",
     "validate": "streamdeck validate --no-update-check ./com.r-teller.sonoscontroller.sdPlugin",
     "package": "streamdeck pack --no-update-check -f ./com.r-teller.sonoscontroller.sdPlugin",
     "lint": "eslint ./src --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
