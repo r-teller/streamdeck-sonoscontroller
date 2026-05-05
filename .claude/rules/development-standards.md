@@ -153,19 +153,32 @@ Migrations, queries, and schema evolution.
 
 How tests are structured, named, and what they cover.
 
-### 6.1 [Pattern Name]
+### 6.1 Mock `@elgato/streamdeck` in any test that imports a plugin module
 
-**Standard: [Rule.]**
+**Standard: Any test file that imports — directly OR transitively — from `src/modules/common/sdConnect.js`, `src/modules/common/streamdeck.js`, or any `src/modules/plugin/*.js` MUST stub `@elgato/streamdeck` with `vi.mock` BEFORE the first import that could reach the SDK.**
 
-```python
-# CORRECT — test name reflects behavior
-def test_create_item_sets_created_by_user_id():
-    ...
+The `@elgato/streamdeck` package eagerly reads `manifest.json` from `process.cwd()` at module evaluation time. Vitest runs from repo root (cwd ≠ bundle dir), so the read fails and the test file fails to load with `Failed to read manifest.json as the file does not exist.` The error message does NOT name the offending import — track it via the stack trace.
 
-# WRONG — vague test name
-def test_create_item():
-    ...
+Transitive imports are easy to miss. A test file that doesn't reference `@elgato/streamdeck` directly can still hit the trap if any module in its import graph reaches `sdConnect.js`. This bit me twice in Phase 3: once writing `lifecycle.test.js`, and again when `renderDedupe.js` (a new dependency of `lifecycle.js`) added a transitive `sdConnect` import — the lifecycle test passed at write time and broke a session later.
+
+```js
+// CORRECT — stub before importing modules that may reach the SDK
+import { describe, it, expect, vi } from "vitest";
+import { EventEmitter } from "node:events";
+
+vi.mock("@elgato/streamdeck", () => ({ EventEmitter }));
+
+import { wireLifecycleHandlers } from "@/modules/plugin/lifecycle.js";
+
+// WRONG — no stub; import chain reaches @elgato/streamdeck and fails at load
+import { describe, it, expect, vi } from "vitest";
+import { wireLifecycleHandlers } from "@/modules/plugin/lifecycle.js";
+// Error: Failed to read manifest.json as the file does not exist.
 ```
+
+**Reference implementation:** `tests/unit/streamdeck.test.js:1-6` (canonical pattern); `tests/unit/lifecycle.test.js:1-7`, `tests/unit/renderDedupe.test.js:1-8`, `tests/unit/sonosActions.test.js:1-7` (reuse).
+
+**Future improvement:** A vitest `setupFiles` entry that mocks `@elgato/streamdeck` globally for unit tests would eliminate the per-file ceremony. Filed in `enhancements.md`.
 
 ---
 

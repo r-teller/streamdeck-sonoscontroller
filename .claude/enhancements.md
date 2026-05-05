@@ -255,3 +255,38 @@ The cleanest is #2 — isolate the unit under test. Reserve full pipeline runs f
 **Suggested fix:** Add a guidance note: when N>3 beads share the same template (same SOAP-call shape, same return-value shape, same registry surface), consider grouping them under a parent meta-bead with N child stubs that close together. Or, if the children are mature enough to merit individual bead descriptions, accept that they may all land in one commit and tag the implementation comment accordingly. Either way, the size guide should reflect the actual landed effort, not the per-feature theoretical effort, since pattern-application after the first bead is near-zero.
 
 **Discovered during:** km1.1–km1.11 (Phase 5: Actions Catalog), 2026-05-05.
+
+---
+
+### [OPEN] Bead specs that say "module-scope in PluginComponent.vue" don't anticipate cross-module sharing
+
+**Needed:** Multiple etr beads (etr.4 actionSettings, etr.5 globalSettings, etr.5 actionSettings consumers) described their state as living "at module scope in PluginComponent.vue." But etr.3 (polling supervisor), etr.4 (dispatcher), and etr.7 (render dedupe) all need to read those same maps. The cleanest solution was to extract each into a dedicated module (`actionSettings.js`, `globalSettings.js`) so all consumers can import them as singletons. The bead specs implied the colocation but didn't specify the export contract.
+
+**Where the gap is:** Bead descriptions for etr.4/etr.5. The "module scope in PluginComponent.vue" phrasing made the storage location concrete but invisible to other modules.
+
+**Suggested fix:** When a bead's data is consumed by 2+ modules, the bead spec should:
+1. Name the module file that owns the state (e.g., `src/modules/plugin/actionSettings.js`).
+2. Specify the named exports (e.g., `actionSettings`, `setActionSettings`, `getActionSettings`, `deleteActionSettings`).
+3. Note which consumers will import from it (e.g., "consumed by etr.4 dispatcher and etr.7 render dedupe").
+
+This avoids the implementation-time decision "where do I put this so other modules can reach it?" — the answer is in the bead.
+
+**Discovered during:** etr.4 + etr.5 implementation, 2026-05-05.
+
+---
+
+### [OPEN] Vitest setup file could mock @elgato/streamdeck globally
+
+**Needed:** Per-test `vi.mock("@elgato/streamdeck", () => ({ EventEmitter: NodeEventEmitter }))` boilerplate now appears at the top of 4+ test files (streamdeck.test.js, lifecycle.test.js, renderDedupe.test.js, sonosActions.test.js). Every new unit test that touches a plugin module needs to remember to add it. Easy to forget; the failure mode (manifest.json read error during test load) is non-obvious.
+
+**Where the gap is:** No project-wide vitest setup file. Could live at `tests/setup.js` and be referenced from `vite.config.js` `test.setupFiles`.
+
+**Suggested fix:** Add `tests/setup.js`:
+```js
+import { vi } from "vitest";
+import { EventEmitter } from "node:events";
+vi.mock("@elgato/streamdeck", () => ({ EventEmitter }));
+```
+Then update `vite.config.js`: `test: { setupFiles: ["tests/setup.js"] }`. Per-file `vi.mock` calls become unnecessary. Caveat: if a test ever needs to assert against the REAL `@elgato/streamdeck` import, it can override per-file. For unit tests, that case doesn't exist in this project.
+
+**Discovered during:** etr.5 + etr.7 (transitive mock failure mid-session), 2026-05-05.
