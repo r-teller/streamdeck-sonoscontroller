@@ -4,6 +4,7 @@ let client = null;
 let resolveReady = null;
 let rejectReady = null;
 export let streamDeckReady = null;
+let installed = false;
 
 function createReadyPromise() {
   return new Promise((resolve, reject) => {
@@ -17,9 +18,10 @@ function getStreamDeckClient() {
 }
 
 function installStreamDeckBridge() {
-  if (window.connectElgatoStreamDeckSocket) {
+  if (installed) {
     return;
   }
+  installed = true;
 
   window.connectElgatoStreamDeckSocket = (port, uuid, registerEvent, info, actionInfo) => {
     client = new StreamDeck({ port, uuid, registerEvent, actionInfo });
@@ -56,6 +58,7 @@ function teardownStreamDeckBridge() {
     rejectReady = null;
   }
 
+  installed = false;
   streamDeckReady = createReadyPromise();
 }
 

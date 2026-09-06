@@ -6,7 +6,7 @@ export function startPollingSupervisor({
   intervalMs = 500,
   getDeviceCheckIntervalSeconds = () => 10,
   getDeviceTimeoutDurationSeconds = () => 5,
-  controllerFactory = (host) => new SonosController().connect(host),
+  controllerFactory = (host, uuid) => new SonosController().connect(host, { uuid }),
   showAlert = () => {},
   refreshStateAndTitle = () => {},
 } = {}) {
@@ -21,7 +21,7 @@ export function startPollingSupervisor({
         return;
       }
 
-      const controller = controllerFactory(speaker.hostAddress);
+      const controller = controllerFactory(speaker.hostAddress, UUID);
       const seconds = getDeviceTimeoutDurationSeconds();
       let timeoutId;
 

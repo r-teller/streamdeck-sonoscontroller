@@ -77,7 +77,7 @@ describe("pollingSupervisor", () => {
     await vi.advanceTimersByTimeAsync(500); // first tick
 
     expect(controllerFactory).toHaveBeenCalledTimes(1);
-    expect(controllerFactory).toHaveBeenCalledWith("host1");
+    expect(controllerFactory).toHaveBeenCalledWith("host1", "uuid-1");
     expect(controllerFactory).not.toHaveBeenCalledWith("host2");
   });
 

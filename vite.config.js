@@ -17,7 +17,8 @@ export default defineConfig({
       input: {
         pi: 'pi.html',
         plugin: 'plugin.html',
-        probe: 'harness/sonos-probe.html'
+        probe: 'harness/sonos-probe.html',
+        preview: 'harness/key-preview.html'
       }
     }
   },

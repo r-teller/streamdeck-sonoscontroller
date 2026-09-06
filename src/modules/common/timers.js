@@ -45,7 +45,7 @@ const workerScript = function () {
       }
     };
 
-    const timer = setTimeout(timerFn, effectiveDelay);
+    const timer = type === "timeout" ? setTimeout(timerFn, effectiveDelay) : setInterval(timerFn, effectiveDelay);
 
     if (type === "timeout") {
       timeouts.set(timerId, timer);
