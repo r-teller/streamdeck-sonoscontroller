@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@manifest": ["public/manifest.json"]
+    },
+    "target": "es2022",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src/**/*", "public/**/*", "vite.config.js"]
+}

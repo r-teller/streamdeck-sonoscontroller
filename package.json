@@ -1,0 +1,39 @@
+{
+  "name": "com.r-teller.sonoscontroller",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "build_dev": "vite build --sourcemap inline --minify false",
+    "build_dev_incr": "node bin/bump-version.mjs && vite build --sourcemap inline --minify false",
+    "validate": "streamdeck validate --no-update-check ./com.r-teller.sonoscontroller.sdPlugin",
+    "package": "streamdeck pack --no-update-check -f ./com.r-teller.sonoscontroller.sdPlugin",
+    "lint": "eslint ./src --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
+    "format": "prettier --write ./src/ public/manifest.json",
+    "format:check": "prettier --check ./src/ public/manifest.json",
+    "clean": "shx rm -rf com.r-teller.sonoscontroller.sdPlugin com.r-teller.sonoscontroller.streamDeckPlugin",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^1.2.0",
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.2",
+    "buffer": "^6.0.3",
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "@elgato/cli": "^1.0.1",
+    "@vitejs/plugin-vue": "^4.0.0",
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/test-utils": "^2.4.0",
+    "eslint": "^8.0.0",
+    "eslint-plugin-vue": "^9.0.0",
+    "jsdom": "^22.1.0",
+    "prettier": "^3.0.0",
+    "sass": "^1.69.0",
+    "shx": "^0.3.4",
+    "vite": "^4.4.0",
+    "vitest": "^1.0.0"
+  }
+}

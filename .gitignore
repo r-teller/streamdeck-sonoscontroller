@@ -1,0 +1,6 @@
+node_modules/
+com.r-teller.sonoscontroller.sdPlugin/
+com.r-teller.sonoscontroller.streamDeckPlugin
+.fleet/logs/
+test-results/
+.playwright-mcp/
