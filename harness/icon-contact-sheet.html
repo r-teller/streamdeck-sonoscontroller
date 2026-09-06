@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plugin Icon Contact Sheet</title>
+  <style>
+    body {
+      background-color: #222;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .item img {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .label {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #ddd;
+      text-align: center;
+      word-break: break-word;
+      max-width: 100px;
+    }
+
+    .brand-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-right: 24px;
+    }
+
+    .brand-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: flex-start;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Plugin Icon Contact Sheet</h1>
+
+    <!-- Keys Section (72x72) -->
+    <div class="section">
+      <div class="section-title">Keys (72x72)</div>
+      <div class="grid">
+        <div class="item">
+          <img src="../public/images/keys/currently_playing.png" width="72" height="72" alt="currently_playing">
+          <div class="label">currently_playing</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/equalizer.png" width="72" height="72" alt="equalizer">
+          <div class="label">equalizer</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/input_line_in.png" width="72" height="72" alt="input_line_in">
+          <div class="label">input_line_in</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/input_sonos_queue.png" width="72" height="72" alt="input_sonos_queue">
+          <div class="label">input_sonos_queue</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/input_tv.png" width="72" height="72" alt="input_tv">
+          <div class="label">input_tv</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/muted.png" width="72" height="72" alt="muted">
+          <div class="label">muted</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/next_track.png" width="72" height="72" alt="next_track">
+          <div class="label">next_track</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/paused.png" width="72" height="72" alt="paused">
+          <div class="label">paused</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/play_favorite.png" width="72" height="72" alt="play_favorite">
+          <div class="label">play_favorite</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/play_normal.png" width="72" height="72" alt="play_normal">
+          <div class="label">play_normal</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/playing.png" width="72" height="72" alt="playing">
+          <div class="label">playing</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/previous_track.png" width="72" height="72" alt="previous_track">
+          <div class="label">previous_track</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/repeat_all.png" width="72" height="72" alt="repeat_all">
+          <div class="label">repeat_all</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/repeat_one.png" width="72" height="72" alt="repeat_one">
+          <div class="label">repeat_one</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/shuffle_no_repeat.png" width="72" height="72" alt="shuffle_no_repeat">
+          <div class="label">shuffle_no_repeat</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/shuffle_on.png" width="72" height="72" alt="shuffle_on">
+          <div class="label">shuffle_on</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/shuffle_one.png" width="72" height="72" alt="shuffle_one">
+          <div class="label">shuffle_one</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/stopped.png" width="72" height="72" alt="stopped">
+          <div class="label">stopped</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/unmuted.png" width="72" height="72" alt="unmuted">
+          <div class="label">unmuted</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/volume_down.png" width="72" height="72" alt="volume_down">
+          <div class="label">volume_down</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/keys/volume_up.png" width="72" height="72" alt="volume_up">
+          <div class="label">volume_up</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Section (40px shown) -->
+    <div class="section">
+      <div class="section-title">Actions (40px shown)</div>
+      <div class="grid">
+        <div class="item">
+          <img src="../public/images/actions/currently_playing@2x.png" width="40" height="40" alt="currently_playing">
+          <div class="label">currently_playing</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/equalizer@2x.png" width="40" height="40" alt="equalizer">
+          <div class="label">equalizer</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/input_source@2x.png" width="40" height="40" alt="input_source">
+          <div class="label">input_source</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/muted@2x.png" width="40" height="40" alt="muted">
+          <div class="label">muted</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/next_track@2x.png" width="40" height="40" alt="next_track">
+          <div class="label">next_track</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/paused@2x.png" width="40" height="40" alt="paused">
+          <div class="label">paused</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/play_favorite@2x.png" width="40" height="40" alt="play_favorite">
+          <div class="label">play_favorite</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/previous_track@2x.png" width="40" height="40" alt="previous_track">
+          <div class="label">previous_track</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/shuffle@2x.png" width="40" height="40" alt="shuffle">
+          <div class="label">shuffle</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/volume_down@2x.png" width="40" height="40" alt="volume_down">
+          <div class="label">volume_down</div>
+        </div>
+        <div class="item">
+          <img src="../public/images/actions/volume_up@2x.png" width="40" height="40" alt="volume_up">
+          <div class="label">volume_up</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brand Section -->
+    <div class="section">
+      <div class="section-title">Brand</div>
+      <div class="brand-grid">
+        <div class="brand-item">
+          <img src="../public/images/sonos.png" width="72" height="72" alt="sonos">
+          <div class="label">sonos.png (72)</div>
+        </div>
+        <div class="brand-item">
+          <img src="../public/images/category@2x.png" width="56" height="56" alt="category">
+          <div class="label">category@2x.png (56)</div>
+        </div>
+        <div class="brand-item">
+          <img src="../public/images/plugin/plugin.png" width="288" height="200" alt="plugin">
+          <div class="label">plugin/plugin.png (288x200)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
