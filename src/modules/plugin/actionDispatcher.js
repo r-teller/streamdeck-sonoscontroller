@@ -36,7 +36,10 @@ export function _resetActionFunctionMap() {
   }
 }
 
-export async function callAction({ inContext, inEvent, inRotation }, { actionSettings, showAlert }) {
+export async function callAction(
+  { inContext, inEvent, inRotation },
+  { actionSettings, showAlert, refreshStateAndTitle = () => {} },
+) {
   const settings = actionSettings[inContext];
   if (!settings) {
     console.warn(`[actionDispatcher] No settings for context: ${inContext}`);
@@ -91,6 +94,17 @@ export async function callAction({ inContext, inEvent, inRotation }, { actionSet
     }
 
     setOperationalStatus({ UUID: uuid, operationalStatus: OPERATIONAL_STATUS.UPDATED });
+
+    // Optimistic projection: re-read speaker and refresh all contexts
+    const updatedSpeaker = getSpeaker({ UUID: uuid });
+    if (updatedSpeaker?.contexts) {
+      for (const context of updatedSpeaker.contexts) {
+        refreshStateAndTitle({
+          inContext: context,
+          inSonosSpeakerState: updatedSpeaker.state,
+        });
+      }
+    }
   } catch (err) {
     setOperationalStatus({ UUID: uuid, operationalStatus: OPERATIONAL_STATUS.DISCONNECTED });
     if (speaker?.contexts) {

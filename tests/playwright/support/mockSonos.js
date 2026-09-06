@@ -10,11 +10,14 @@ export async function installMockSonos(page, options = {}) {
     topologyFixture = "zonegroupstate-multi-group.xml",
     favoritesFixture = "browse-fv2-mixed.xml",
     queueFixture = "browse-q0-five-tracks.xml",
-    failures = {}
+    failures = {},
+    actionFixtures = {}
   } = options;
 
   const calls = [];
   const failureModes = { ...failures };
+  const actionFixtureState = { ...actionFixtures };
+  const fixtureFileCache = {};
 
   const fixtures = {
     topology: readFileSync(join(process.cwd(), "tests/fixtures/sonos", topologyFixture), "utf8"),
@@ -53,6 +56,14 @@ export async function installMockSonos(page, options = {}) {
 
   function clearCalls() {
     calls.length = 0;
+  }
+
+  function setActionFixture(action, fixtureFile) {
+    if (fixtureFile == null) {
+      delete actionFixtureState[action];
+    } else {
+      actionFixtureState[action] = fixtureFile;
+    }
   }
 
   const handleRoute = async (route) => {
@@ -124,7 +135,14 @@ export async function installMockSonos(page, options = {}) {
     let responseXml = "";
     let status = 200;
 
-    if (serviceKey === "topology" && action === "GetZoneGroupState") {
+    // Check for action fixture first
+    if (actionFixtureState[action]) {
+      const filename = actionFixtureState[action];
+      if (!fixtureFileCache[filename]) {
+        fixtureFileCache[filename] = readFileSync(join(process.cwd(), "tests/fixtures/sonos", filename), "utf8");
+      }
+      responseXml = fixtureFileCache[filename];
+    } else if (serviceKey === "topology" && action === "GetZoneGroupState") {
       responseXml = fixtures.topology;
     } else if (serviceKey === "contentDirectory" && action === "Browse") {
       const { ObjectID } = parseBodyArgs(body);
@@ -157,6 +175,7 @@ export async function installMockSonos(page, options = {}) {
   return {
     calls,
     setFailure,
-    clearCalls
+    clearCalls,
+    setActionFixture
   };
 }

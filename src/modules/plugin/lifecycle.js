@@ -1,6 +1,9 @@
 import { callAction as defaultCallAction } from "./actionDispatcher.js";
 import { handleDialRotate as defaultHandleDialRotate } from "./dialRotateDebouncer.js";
-import { clearDedupeCache as defaultClearDedupeCache } from "./renderDedupe.js";
+import {
+  clearDedupeCache as defaultClearDedupeCache,
+  refreshStateAndTitle as defaultRefreshStateAndTitle,
+} from "./renderDedupe.js";
 import { actionSettings, setActionSettings, getActionSettings, deleteActionSettings } from "./actionSettings.js";
 import { setGlobalSettings } from "./globalSettings.js";
 import { addContext, removeContext, moveContext } from "./SonosSpeakers.js";
@@ -20,11 +23,13 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     callAction = defaultCallAction,
     handleDialRotate = defaultHandleDialRotate,
     clearDedupeCache = defaultClearDedupeCache,
+    refreshStateAndTitle = defaultRefreshStateAndTitle,
   } = deps;
 
   const dispatchDeps = {
     actionSettings,
     showAlert: ({ context }) => sd.showAlert({ context }),
+    refreshStateAndTitle,
   };
 
   // Named handlers for teardown

@@ -129,7 +129,7 @@ export function createMockHost(page) {
         await page.evaluate((ctx) => window.sd.inject.keyDown(ctx), ctx);
       },
       dialRotate: async (ctx, ticks = 1) => {
-        await page.evaluate((ctx) => window.sd.inject.dialRotate(ctx, ticks), ctx);
+        await page.evaluate(({ ctx, ticks }) => window.sd.inject.dialRotate(ctx, ticks), { ctx, ticks });
       },
       touchTap: async (ctx) => {
         await page.evaluate((ctx) => window.sd.inject.touchTap(ctx), ctx);

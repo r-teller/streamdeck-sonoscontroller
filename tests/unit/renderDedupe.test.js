@@ -126,8 +126,8 @@ describe("renderDedupe", () => {
     refreshStateAndTitle({ inContext: "ctx4", inSonosSpeakerState: {} });
 
     expect(mockSd.setFeedbackLayout).toHaveBeenCalledTimes(2);
-    expect(mockSd.setFeedbackLayout.mock.calls[0][0].payload).toBe("./layouts/encoder-bar-0-100.json");
-    expect(mockSd.setFeedbackLayout.mock.calls[1][0].payload).toBe("./layouts/encoder-gbar-10-10.json");
+    expect(mockSd.setFeedbackLayout.mock.calls[0][0].payload).toEqual({ layout: "./layouts/encoder-bar-0-100.json" });
+    expect(mockSd.setFeedbackLayout.mock.calls[1][0].payload).toEqual({ layout: "./layouts/encoder-gbar-10-10.json" });
   });
 
   test("force flag bypasses dedupe", () => {

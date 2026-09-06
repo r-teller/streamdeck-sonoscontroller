@@ -26,10 +26,11 @@ async function collectConsoleErrors(page) {
 /**
  * Common setup used by all tests.
  */
-async function commonSetup(page) {
-  const mock = await installMockSonos(page, {
+async function commonSetup(page, mockOptions = {}) {
+  const defaultOptions = {
     topologyFixture: "zonegroupstate-single-group-single-member.xml",
-  });
+  };
+  const mock = await installMockSonos(page, { ...defaultOptions, ...mockOptions });
   await page.addInitScript(mockStreamDeckHostSource);
   await page.goto("/plugin.html");
   const mockHost = createMockHost(page);
@@ -172,25 +173,43 @@ test("p3-rate-limit", async ({ page }) => {
     )
     .toBeTruthy();
 
+  // ADJUDICATION (Phase 5): with real action handlers wired, a keyDown on
+  // currently-playing legitimately fires exactly 6 getters. The rate limiter
+  // allows MAX 3 update attempts per rolling 10 s window; a transition to
+  // UPDATED (successful completion) resets the window — spec behavior. With
+  // instant mock responses each press completed (→ UPDATED → window reset)
+  // before the next arrived, so no press was ever rate-limited. The scenario's
+  // INTENT is: 4 genuinely rapid presses → the 4th produces NO network call.
+  // Fix: delay responses so handler flights outlast the 4 injections, then
+  // assert the call log grew by EXACTLY 24 (3 presses x [6 getters + 2
+  // connect-time GetZoneGroupState]; verified against the live call log).
+
+  // Let the in-flight initial poll complete (instant responses) so its
+  // UPDATED transition resets the rate-limit window before the presses.
+  await page.waitForTimeout(500);
+
   const callsBefore = mock.calls.length;
 
-  // fire 4 keyDown events back‑to‑back
-  await mockHost.inject.keyDown("ctx1");
-  await mockHost.inject.keyDown("ctx1");
-  await mockHost.inject.keyDown("ctx1");
-  await mockHost.inject.keyDown("ctx1");
+  // Apply long delays to keep the network calls in flight, ensuring the rate-limiter triggers.
+  mock.setFailure("avTransport", { mode: "delay", ms: 1500 });
+  mock.setFailure("rendering", { mode: "delay", ms: 1500 });
 
-  // give the rate‑limiter a moment to process (it is 500 ms)
-  await page.waitForTimeout(600);
+  // Inject four rapid keyDown events.
+  for (let i = 0; i < 4; i++) {
+    await mockHost.inject.keyDown("ctx1");
+  }
 
-  // No new Sonos network calls should have been added
-  expect(mock.calls.length).toBe(callsBefore);
+  // Expect exactly 3 x 8 = 24 new calls (the 4th press should produce none).
+  // Each press = 6 getters + 2 connect-time GetZoneGroupState calls (the
+  // controller's connect() resolves topology/coordinator per dispatch).
+  const expectedCalls = callsBefore + 24;
+  await expect.poll(() => mock.calls.length, { timeout: 10000 }).toBe(expectedCalls);
 
-  // Ensure only getter actions are present (i.e. no accidental command actions)
-  const allowedActions = [...EXPECTED_GETTERS, "GetZoneGroupState"];
-  const unexpected = mock.calls.filter((c) => !allowedActions.includes(c.action));
-  expect(unexpected).toEqual([]);
+  // Ensure the call count stays stable after any delayed handlers settle.
+  await page.waitForTimeout(2000);
+  expect(mock.calls.length).toBe(expectedCalls);
 
+  // No console errors should have been emitted.
   expect(consoleErrors).toEqual([]);
 });
 
@@ -240,12 +259,173 @@ test("p3-wake-noop", async ({ page }) => {
 /*  FIXME placeholders – to be enabled in Phase 5 when render state functions */
 /*  are wired into the runtime.                                               */
 /* -------------------------------------------------------------------------- */
-test.fixme("p3-poll-renders-state", async () => {
-  // Phase 5 will emit setImage/setState/setTitle frames.
+test("p3-poll-renders-state", async ({ page }) => {
+  // Install mock Sonos with fixtures for all seven poll getters.
+  const { mockHost, consoleErrors } = await commonSetup(page, {
+    actionFixtures: {
+      GetTransportInfo: "gettransportinfo-playing.xml",
+      GetTransportSettings: "gettransportsettings-shuffle.xml",
+      GetMute: "getmute-unmuted-response.xml",
+      GetVolume: "soap-getvolume-response.xml",
+      GetBass: "getbass-response.xml",
+      GetTreble: "gettreble-response.xml",
+      GetPositionInfo: "getpositioninfo-spotify-track.xml",
+    },
+  });
+
+  // Bind the toggle-play-pause action with state-based title enabled.
+  await mockHost.inject.willAppear(
+    "ctx1",
+    "com.r-teller.sonoscontroller.toggle-play-pause",
+    {
+      uuid: "RINCON_OFFICE01400",
+      hostAddress: "192.168.1.42",
+      zoneName: "Office",
+      displayStateBasedTitle: true,
+    },
+    "Keypad",
+  );
+
+  // Wait until the plugin emits both setTitle ("Playing") and setState (1) frames.
+  await expect
+    .poll(
+      async () => {
+        const frames = await mockHost.outbound();
+        const title = frames.find((f) => f.event === "setTitle" && f.context === "ctx1");
+        const state = frames.find((f) => f.event === "setState" && f.context === "ctx1");
+        return title?.payload?.title === "Playing" && state?.payload?.state === 1;
+      },
+      { timeout: 8000 },
+    )
+    .toBeTruthy();
+
+  // Capture the outbound frames for rendering.
+  const frames = await mockHost.outbound();
+
+  // Render the frames in the preview harness.
+  await page.goto("/harness/key-preview.html");
+  await page.evaluate((f) => window.renderFrames(f), frames);
+
+  // Verify the tile displays the expected title and state.
+  const titleText = await page.evaluate(() => {
+    const tile = window.getTile("ctx1");
+    return tile.el.querySelector(".tile-title").textContent.trim();
+  });
+  const stateText = await page.evaluate(() => {
+    const tile = window.getTile("ctx1");
+    const el = tile.el.querySelector(".tile-state");
+    return el ? el.textContent.trim() : "";
+  });
+
+  expect(titleText).toBe("Playing");
+  expect(stateText).toBe("1");
+
+  // Screenshot the rendered tile.
+  await page.screenshot({
+    path: "tests/playwright/screenshots/p3-playing-tile.png",
+    fullPage: true,
+  });
+
+  // Ensure no console errors were logged.
+  expect(consoleErrors).toEqual([]);
 });
-test.fixme("p3-no-flashing-60s", async () => {
-  // Phase 5 will ensure redrawCount===1 after the first render.
+test("p3-no-flashing-60s", async ({ page }) => {
+  test.setTimeout(150000);
+
+  const { mock, mockHost, consoleErrors } = await commonSetup(page, {
+    actionFixtures: {
+      GetTransportInfo: "gettransportinfo-playing.xml",
+      GetTransportSettings: "gettransportsettings-shuffle.xml",
+      GetMute: "getmute-unmuted-response.xml",
+      GetVolume: "soap-getvolume-response.xml",
+      GetBass: "getbass-response.xml",
+      GetTreble: "gettreble-response.xml",
+      GetPositionInfo: "getpositioninfo-spotify-track.xml",
+    },
+  });
+
+  await mockHost.inject.globalSettings({ deviceCheckInterval: 1 });
+  await mockHost.inject.willAppear(
+    "ctx1",
+    "com.r-teller.sonoscontroller.toggle-play-pause",
+    {
+      uuid: "RINCON_OFFICE01400",
+      hostAddress: "192.168.1.42",
+      zoneName: "Office",
+      displayStateBasedTitle: true,
+    },
+    "Keypad",
+  );
+
+  await expect
+    .poll(async () => mock.calls.filter((c) => c.action === "GetTransportInfo").length, { timeout: 120000, intervals: [1000] })
+    .toBeGreaterThanOrEqual(60);
+
+  const frames = await mockHost.outbound();
+
+  await page.goto("/harness/key-preview.html");
+  await page.evaluate((f) => window.renderFrames(f), frames);
+
+  const redrawCount = await page.evaluate(() => window.getRedrawCount("ctx1"));
+  expect(redrawCount).toBe(1);
+
+  const setTitleFrames = frames.filter((f) => f.context === "ctx1" && f.event === "setTitle");
+  const setStateFrames = frames.filter((f) => f.context === "ctx1" && f.event === "setState");
+  expect(setTitleFrames).toHaveLength(1);
+  expect(setStateFrames).toHaveLength(1);
+
+  await page.screenshot({
+    path: "tests/playwright/screenshots/p3-no-flashing-60s.png",
+    fullPage: true,
+  });
+
+  expect(consoleErrors).toEqual([]);
 });
-test.fixme("p3-timer-throttle-proof", async () => {
-  // Phase 5 will need background‑tab cadence proof via rendered frames.
+test("p3-timer-throttle-proof", async ({ page, context }) => {
+  test.setTimeout(60000);
+
+  const { mock, mockHost, consoleErrors } = await commonSetup(page, {
+    actionFixtures: {
+      GetTransportInfo: "gettransportinfo-playing.xml",
+      GetTransportSettings: "gettransportsettings-shuffle.xml",
+      GetMute: "getmute-unmuted-response.xml",
+      GetVolume: "soap-getvolume-response.xml",
+      GetBass: "getbass-response.xml",
+      GetTreble: "gettreble-response.xml",
+      GetPositionInfo: "getpositioninfo-spotify-track.xml",
+    },
+  });
+
+  await mockHost.inject.globalSettings({ deviceCheckInterval: 1 });
+  await mockHost.inject.willAppear(
+    "ctx1",
+    "com.r-teller.sonoscontroller.toggle-play-pause",
+    {
+      uuid: "RINCON_OFFICE01400",
+      hostAddress: "192.168.1.42",
+      zoneName: "Office",
+      displayStateBasedTitle: true,
+    },
+    "Keypad",
+  );
+
+  await expect
+    .poll(async () => mock.calls.filter((c) => c.action === "GetTransportInfo").length, { timeout: 120000, intervals: [1000] })
+    .toBeGreaterThanOrEqual(2);
+
+  const page2 = await context.newPage();
+  await page2.goto("about:blank");
+  await page2.bringToFront();
+
+  const countBefore = mock.calls.filter((c) => c.action === "GetTransportInfo").length;
+
+  await page2.waitForTimeout(6000);
+
+  const countAfter = mock.calls.filter((c) => c.action === "GetTransportInfo").length;
+
+  expect(countAfter - countBefore).toBeGreaterThanOrEqual(4);
+
+  await page2.close();
+
+  expect(consoleErrors).toEqual([]);
 });

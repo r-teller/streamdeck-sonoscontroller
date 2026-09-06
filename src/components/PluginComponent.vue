@@ -9,8 +9,7 @@ import { wireLifecycleHandlers } from "@/modules/plugin/lifecycle";
 import { globalSettings } from "@/modules/plugin/globalSettings";
 import { startPollingSupervisor } from "@/modules/plugin/pollingSupervisor";
 import { refreshStateAndTitle } from "@/modules/plugin/renderDedupe";
-
-// Phase 5: import sonosActions registers handlers (side-effect import added in Phase 5)
+import "@/modules/actions/sonosActions";
 
 let stopPolling = null;
 let teardownLifecycle = null;

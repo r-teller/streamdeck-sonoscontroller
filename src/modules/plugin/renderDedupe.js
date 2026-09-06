@@ -103,7 +103,7 @@ export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = f
   // feedbackLayout
   if (intent.feedbackLayout !== undefined) {
     if (force || intent.feedbackLayout !== status.lastAudioEqualizerLayout) {
-      sd.setFeedbackLayout({ context: inContext, payload: intent.feedbackLayout });
+      sd.setFeedbackLayout({ context: inContext, payload: { layout: intent.feedbackLayout } });
       status.lastAudioEqualizerLayout = intent.feedbackLayout;
     }
   }
