@@ -1,4 +1,4 @@
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import "bootstrap";
 import "@/scss/styles.scss";
 import { createApp } from "vue";
 import PiComponent from "@/components/PiComponent.vue";

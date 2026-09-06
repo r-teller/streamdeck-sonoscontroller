@@ -114,6 +114,10 @@ export async function installMockSonos(page, options = {}) {
         });
         return;
       }
+      if (mode.mode === "delay") {
+        await new Promise((resolve) => setTimeout(resolve, mode.ms ?? 1000));
+        // Fall through to normal dispatch
+      }
     }
 
     // Normal dispatch
