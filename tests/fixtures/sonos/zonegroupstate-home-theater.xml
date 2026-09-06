@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:GetZoneGroupStateResponse xmlns:u="urn:schemas-upnp-org:service:ZoneGroupTopology:1">
+      <ZoneGroupState>&lt;ZoneGroupState&gt;&lt;ZoneGroups&gt;&lt;ZoneGroup Coordinator="RINCON_LIVINGROOM01400" ID="RINCON_LIVINGROOM01400:9001"&gt;&lt;ZoneGroupMember UUID="RINCON_LIVINGROOM01400" Location="http://192.168.1.60:1400/xml/device_description.xml" ZoneName="Living Room" Configuration="1" SoftwareVersion="80.1-49060"&gt;&lt;Satellite UUID="RINCON_LIVINGROOM01401" Location="http://192.168.1.61:1400/xml/device_description.xml" ZoneName="Living Room" Configuration="1" Invisible="1" /&gt;&lt;Satellite UUID="RINCON_LIVINGROOM01402" Location="http://192.168.1.62:1400/xml/device_description.xml" ZoneName="Living Room" Configuration="1" Invisible="1" /&gt;&lt;Satellite UUID="RINCON_LIVINGROOM01403" Location="http://192.168.1.63:1400/xml/device_description.xml" ZoneName="Living Room" Configuration="1" Invisible="1" /&gt;&lt;/ZoneGroupMember&gt;&lt;/ZoneGroup&gt;&lt;/ZoneGroups&gt;&lt;/ZoneGroupState&gt;</ZoneGroupState>
+    </u:GetZoneGroupStateResponse>
+  </s:Body>
+</s:Envelope>
