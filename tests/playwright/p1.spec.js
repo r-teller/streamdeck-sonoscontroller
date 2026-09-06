@@ -107,10 +107,11 @@ test("p1-pi-registers", async ({ page }) => {
     uuid: "pi-uuid-1",
   });
 
-  // Placeholder UI verification
-  await expect(
-    page.getByText("Sonos Controller Property Inspector")
-  ).toBeVisible();
+  // Disconnected empty-state verification (PRD §7.1)
+  await expect(page.locator('[data-pi-disconnected-hint]')).toHaveText(
+    'Set the Primary Device Address below and tap "Save and Connect" to discover your speakers.'
+  );
+  await expect(page.locator('[data-pi-section="sonos-speakers"]')).toBeVisible();
 
   // Capture screenshot for later review
   await page.screenshot({
