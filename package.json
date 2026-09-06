@@ -30,6 +30,7 @@
     "@elgato/cli": "^1.0.1",
     "@playwright/test": "^1.63.0",
     "@vitejs/plugin-vue": "^4.0.0",
+    "@vitest/coverage-v8": "^1.6.1",
     "@vue/eslint-config-prettier": "^8.0.0",
     "@vue/test-utils": "^2.4.0",
     "eslint": "^8.0.0",

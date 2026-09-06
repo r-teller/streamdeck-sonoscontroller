@@ -4,6 +4,7 @@ com.r-teller.sonoscontroller.streamDeckPlugin
 .fleet/logs/
 test-results/
 .playwright-mcp/
+coverage/
 
 # Beads / Dolt files (added by bd init)
 .dolt/

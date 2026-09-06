@@ -1,0 +1,56 @@
+name: Releases
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set manifest version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          RUN: ${{ github.run_number }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = "public/manifest.json";
+            const m = JSON.parse(fs.readFileSync(p, "utf8"));
+            m.Version = process.env.TAG.replace(/^v/, "") + "." + process.env.RUN;
+            fs.writeFileSync(p, JSON.stringify(m, null, 2) + "\n");
+            console.log("Version =", m.Version);
+          '
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate
+        run: npm run validate
+
+      - name: Package
+        run: npm run package
+
+      - name: Upload artifact to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" ./com.r-teller.sonoscontroller.streamDeckPlugin --clobber
+
+      - name: Audit dependencies
+        run: npm audit
+        continue-on-error: true
