@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': './src',
-      '~bootstrap': 'node_modules/bootstrap',
-      '@manifest': './public/manifest.json'
+      '@': fileURLToPath(new URL("./src", import.meta.url)),
+      '~bootstrap': fileURLToPath(new URL("./node_modules/bootstrap", import.meta.url)),
+      '@manifest': fileURLToPath(new URL("./public/manifest.json", import.meta.url))
     }
   },
   build: {
@@ -19,5 +20,9 @@ export default defineConfig({
       }
     }
   },
-  base: './'
+  base: './',
+  test: {
+    setupFiles: ["tests/setup.js"],
+    include: ["tests/unit/**/*.test.js"]
+  }
 });

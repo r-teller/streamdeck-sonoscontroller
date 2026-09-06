@@ -13,7 +13,10 @@
     "format": "prettier --write ./src/ public/manifest.json",
     "format:check": "prettier --check ./src/ public/manifest.json",
     "clean": "shx rm -rf com.r-teller.sonoscontroller.sdPlugin com.r-teller.sonoscontroller.streamDeckPlugin",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:pw": "playwright test",
+    "test:pw:headed": "playwright test --headed",
+    "preview": "vite preview --port 4173 --strictPort"
   },
   "dependencies": {
     "@elgato/streamdeck": "^1.2.0",
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "@elgato/cli": "^1.0.1",
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-vue": "^4.0.0",
     "@vue/eslint-config-prettier": "^8.0.0",
     "@vue/test-utils": "^2.4.0",
