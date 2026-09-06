@@ -16,7 +16,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         pi: 'pi.html',
-        plugin: 'plugin.html'
+        plugin: 'plugin.html',
+        probe: 'harness/sonos-probe.html'
       }
     }
   },
