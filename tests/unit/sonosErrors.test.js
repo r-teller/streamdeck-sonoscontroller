@@ -12,9 +12,7 @@ describe("translateSonosError – SonosError categories", () => {
     expect(translated).toBeInstanceOf(Error);
     expect(translated).not.toBeInstanceOf(SonosError);
     expect(translated.cause).toBe(err);
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Timeout while reaching ${HOST}:${PORT} after 4.5 seconds`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Timeout while reaching ${HOST}:${PORT} after 4.5 seconds`);
   });
 
   test("timeout with fallback timeoutSec", () => {
@@ -25,25 +23,19 @@ describe("translateSonosError – SonosError categories", () => {
       port: PORT,
       timeoutSec: 7,
     });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Timeout while reaching ${HOST}:${PORT} after 7 seconds`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Timeout while reaching ${HOST}:${PORT} after 7 seconds`);
   });
 
   test("timeout with no timing info → ?", () => {
     const err = new SonosError("boom", "timeout", {});
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Timeout while reaching ${HOST}:${PORT} after ? seconds`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Timeout while reaching ${HOST}:${PORT} after ? seconds`);
   });
 
   test("network", () => {
     const err = new SonosError("boom", "network", {});
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Could not reach ${HOST}:${PORT}`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Could not reach ${HOST}:${PORT}`);
   });
 
   test("fault", () => {
@@ -52,25 +44,19 @@ describe("translateSonosError – SonosError categories", () => {
       faultDescription: "Bad thing",
     });
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Sonos returned error 123: Bad thing`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Sonos returned error 123: Bad thing`);
   });
 
   test("http", () => {
     const err = new SonosError("boom", "http", { status: 502 });
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Sonos returned HTTP 502`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Sonos returned HTTP 502`);
   });
 
   test("parse", () => {
     const err = new SonosError("boom", "parse", {});
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Could not parse response from ${HOST}:${PORT}`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Could not parse response from ${HOST}:${PORT}`);
   });
 
   test("unknown category falls back to safe detail", () => {
@@ -84,26 +70,20 @@ describe("translateSonosError – non‑SonosError handling", () => {
   test("TypeError matching safety‑net regex", () => {
     const err = new TypeError("x is not iterable");
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Unexpected response shape from ${HOST}:${PORT}`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Unexpected response shape from ${HOST}:${PORT}`);
     expect(translated.cause).toBe(err);
   });
 
   test("generic Error with forbidden substring is sanitized", () => {
     const err = new Error("fetch failed while contacting");
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: Unexpected response shape from ${HOST}:${PORT}`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: Unexpected response shape from ${HOST}:${PORT}`);
   });
 
   test("generic Error without message uses fallback", () => {
     const err = new Error();
     const translated = translateSonosError(err, { op: OP, host: HOST, port: PORT });
-    expect(translated.message).toBe(
-      `Failed to ${OP}: unexpected error`
-    );
+    expect(translated.message).toBe(`Failed to ${OP}: unexpected error`);
   });
 
   test("no forbidden substrings appear in any translated message", () => {

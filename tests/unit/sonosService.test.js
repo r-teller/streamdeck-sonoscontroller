@@ -39,12 +39,8 @@ describe("SonosService", () => {
       '<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:GetVolume xmlns:u="urn:schemas-upnp-org:service:RenderingControl:1"><InstanceID>0</InstanceID><Channel>Master</Channel></u:GetVolume></s:Body></s:Envelope>';
 
     expect(capturedOpts.body).toBe(expectedEnvelope);
-    expect(capturedOpts.headers.SOAPAction).toBe(
-      '"urn:schemas-upnp-org:service:RenderingControl:1#GetVolume"',
-    );
-    expect(capturedOpts.headers["Content-Type"]).toBe(
-      'text/xml; charset="utf-8"',
-    );
+    expect(capturedOpts.headers.SOAPAction).toBe('"urn:schemas-upnp-org:service:RenderingControl:1#GetVolume"');
+    expect(capturedOpts.headers["Content-Type"]).toBe('text/xml; charset="utf-8"');
   });
 
   test("empty args produce non‑self‑closed action element", async () => {
@@ -73,10 +69,8 @@ describe("SonosService", () => {
     await svc.execute("Play", {}); // no args
 
     // ensure there is a closing tag, not a self‑closing one
-    expect(body).toContain(
-      `<u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"></u:Play>`,
-    );
-    expect(body).not.toContain("<u:Play xmlns:u=\"urn:schemas-upnp-org:service:AVTransport:1\"/>");
+    expect(body).toContain(`<u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"></u:Play>`);
+    expect(body).not.toContain('<u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"/>');
   });
 
   test("xmlEscape performs a single pass on all five characters", async () => {
@@ -213,14 +207,10 @@ describe("SonosService", () => {
 
     const clearSpy = vi.spyOn(globalThis, "clearTimeout");
 
-    await expect(
-      svc.execute("Play", {}, { timeoutMs: 50 }),
-    ).rejects.toMatchObject({ category: "timeout" });
+    await expect(svc.execute("Play", {}, { timeoutMs: 50 })).rejects.toMatchObject({ category: "timeout" });
 
     // message should contain 0.05 seconds
-    await expect(
-      svc.execute("Play", {}, { timeoutMs: 50 }),
-    ).rejects.toThrow(/after 0\.05 seconds/);
+    await expect(svc.execute("Play", {}, { timeoutMs: 50 })).rejects.toThrow(/after 0\.05 seconds/);
 
     expect(clearSpy).toHaveBeenCalledTimes(2); // one for each call
   });

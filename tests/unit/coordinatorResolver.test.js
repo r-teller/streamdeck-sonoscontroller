@@ -16,7 +16,7 @@ function topologyFrom(name) {
   const body = soap["s:Body"] ?? soap.Body;
   const response = body?.["u:GetZoneGroupStateResponse"];
   const zgs = response?.ZoneGroupState;
-  const innerXml = typeof zgs === "string" ? zgs : zgs?._text ?? "";
+  const innerXml = typeof zgs === "string" ? zgs : (zgs?._text ?? "");
   return convertXmlToJson(innerXml);
 }
 
