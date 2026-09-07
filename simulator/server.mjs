@@ -25,7 +25,8 @@ createServer(async (req, res) => {
   // Same-origin proxy: POST /sonos/<host>/<control-path>  ->  http://<host>:1400/<control-path>
   const proxy = p.match(/^\/sonos\/([0-9a-zA-Z.\-]+)(\/.*)$/);
   if (proxy) {
-    const [_, host, path] = proxy;
+    const [_, host, basePath] = proxy;
+    const path = basePath + (url.search || "");
     const chunks = [];
     req.on("data", (c) => chunks.push(c));
     req.on("end", () => {
