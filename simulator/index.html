@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stream Deck Simulator — Sonos Controller</title>
+<style>
+:root{--bg:#141110;--panel:#201b17;--ink:#efe8dd;--muted:#9b8e7e;--accent:#d8a158;--line:#332c24;--deck:#0d0b09;--key:#1a1613}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:20px;margin:0 0 2px}h1 em{color:var(--accent);font-style:normal}
+p.sub{margin:0 0 18px;color:var(--muted);font-size:13px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+@media(max-width:980px){.cols{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin:0 0 10px}
+.modebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.modebar label{font-size:13px;color:var(--muted)}
+select,input[type=text],button{font:inherit;background:var(--key);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}button:hover{border-color:var(--accent);color:var(--accent)}
+button.primary{background:var(--accent);color:var(--deck);border-color:var(--accent);font-weight:600}
+.deck{background:var(--deck);border-radius:18px;padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.slot{display:flex;flex-direction:column;gap:6px}
+.tile{position:relative;aspect-ratio:1;background:#000;border:1px solid #2c251d;border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .1s}
+.tile:hover{box-shadow:0 0 0 2px var(--accent)}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.tile .title{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:4px;font-size:11px;font-weight:600;color:#fff;text-shadow:0 1px 2px #000;white-space:pre;text-align:center}
+.tile .title.bottom{align-items:flex-end}
+.tile.alert::after{content:"⚠";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;background:rgba(0,0,0,.55)}
+.slot select{width:100%;font-size:12px}
+.encoder-row{margin-top:14px;background:var(--deck);border-radius:14px;padding:14px;display:flex;gap:14px;align-items:center}
+.lcd{width:200px;height:100px;background:#000;border:1px solid #2c251d;border-radius:8px;position:relative;flex:none;font-family:ui-monospace,monospace}
+.lcd .t{position:absolute;top:8px;left:0;right:0;text-align:center;font-size:13px;font-weight:600;color:#fff}
+.lcd .v{position:absolute;top:36px;right:12px;font-size:22px;font-weight:600;color:#fff}
+.lcd .bar{position:absolute;left:74px;right:12px;bottom:12px;height:10px;background:#222;border-radius:3px;overflow:hidden}
+.lcd .bar i{display:block;height:100%;background:var(--accent);width:0%}
+.lcd .bar.gbar{background:linear-gradient(90deg,#ff0000,#ffff00,#00ff00)}
+.lcd .bar.gbar i{background:none;border-right:3px solid #fff;width:50%}
+.enc-controls{display:flex;gap:8px;flex-wrap:wrap}
+iframe#pi{width:100%;height:560px;border:1px solid var(--line);border-radius:8px;background:#1e1e1e}
+iframe#plugin{width:100%;height:34px;border:1px dashed var(--line);border-radius:6px;opacity:.5}
+.log{height:180px;overflow:auto;font:11px ui-monospace,monospace;background:var(--deck);border-radius:8px;padding:8px;margin-top:8px}
+.log div{padding:1px 0;border-bottom:1px solid #1c1712;color:var(--muted)}
+.log b{color:var(--accent)}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Stream Deck <em>Simulator</em> — Sonos Controller</h1>
+  <p class="sub">The real built plugin and Property Inspector, running live. Assign actions to keys, click them, watch the runtime poll and render. This is the Chrome-debug experience without the Stream Deck app.</p>
+
+  <div class="modebar panel" style="display:flex">
+    <label>Sonos backend:</label>
+    <select id="mode">
+      <option value="fixtures">Fixtures (stateful mock household)</option>
+      <option value="real">Real speakers (via local proxy)</option>
+    </select>
+    <span class="note" id="modeNote"></span>
+    <span style="flex:1"></span>
+    <button id="reset">Reset simulator</button>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h2>Deck — 8 keys</h2>
+        <div class="deck" id="deck"></div>
+        <div class="encoder-row">
+          <div class="lcd" id="lcd"><div class="t"></div><div class="v"></div><div class="bar"><i></i></div></div>
+          <div class="enc-controls">
+            <select id="encAction"><option value="">— place Audio Equalizer —</option></select>
+            <button data-ticks="-5">⟲ −5</button><button data-ticks="-1">⟲ −1</button>
+            <button data-ticks="1">⟳ +1</button><button data-ticks="5">⟳ +5</button>
+            <button id="touchTap">Touch tap</button>
+          </div>
+        </div>
+        <p class="note">Click a key = keyDown. Select an action under a key to place it (willAppear). In fixture mode the mock household is stateful: mute/volume/play state persist across polls.</p>
+        <h2 style="margin-top:16px">Frame log</h2>
+        <div class="log" id="log"></div>
+        <iframe id="plugin" title="plugin runtime"></iframe>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Property Inspector — <span id="piLabel">select a key</span></h2>
+      <iframe id="pi" title="property inspector"></iframe>
+      <p class="note">The PI drives real discovery. Fixture mode: enter any IP (e.g. 192.168.1.42) and Save &amp; Connect — the mock household answers. Real mode: enter an actual speaker IP; SOAP goes through the local proxy to your LAN.</p>
+    </div>
+  </div>
+</div>
+<script>
+const bus = new BroadcastChannel("sd-sim-bus");
+const $ = (s) => document.querySelector(s);
+const log = (msg) => { const d = document.createElement("div"); d.innerHTML = msg; $("#log").prepend(d); if ($("#log").children.length > 200) $("#log").lastChild.remove(); };
+const send = (pageId, frame) => bus.postMessage({ dir: "toPage", pageId, frame });
+
+// ---------- manifest ----------
+let manifest, actions = [];
+const ctxState = {};   // ctx -> {action, controller, settings, statusEls}
+const NKEYS = 8, ENC = "ctx-enc";
+
+async function init() {
+  manifest = await (await fetch("/dist/manifest.json")).json();
+  actions = manifest.Actions;
+  const keypad = actions.filter((a) => a.Controllers.includes("Keypad"));
+  const enc = actions.filter((a) => a.Controllers.includes("Encoder"));
+  const deck = $("#deck");
+  for (let i = 1; i <= NKEYS; i++) {
+    const ctx = "ctx-" + i;
+    const slot = document.createElement("div");
+    slot.className = "slot";
+    slot.innerHTML = `<div class="tile" data-ctx="${ctx}"><img alt="" style="display:none"><div class="title"></div></div>
+      <select data-ctx="${ctx}"><option value="">— empty —</option>${keypad.map((a) => `<option value="${a.UUID}">${a.Name}</option>`).join("")}</select>`;
+    deck.appendChild(slot);
+  }
+  $("#encAction").innerHTML += enc.map((a) => `<option value="${a.UUID}">${a.Name}</option>`).join("");
+  deck.addEventListener("change", (e) => { if (e.target.matches("select")) place(e.target.dataset.ctx, e.target.value, "Keypad"); });
+  deck.addEventListener("click", (e) => {
+    const tile = e.target.closest(".tile"); if (!tile) return;
+    const ctx = tile.dataset.ctx;
+    if (!ctxState[ctx]) return;
+    selectPi(ctx);
+    send("plugin", evFrame("keyDown", ctx));
+    log(`<b>keyDown</b> ${ctx}`);
+  });
+  $("#encAction").addEventListener("change", (e) => place(ENC, e.target.value, "Encoder"));
+  document.querySelectorAll(".enc-controls [data-ticks]").forEach((b) => b.addEventListener("click", () => {
+    if (!ctxState[ENC]) return;
+    const f = evFrame("dialRotate", ENC); f.payload.ticks = +b.dataset.ticks; f.payload.pressed = false;
+    send("plugin", f); log(`<b>dialRotate</b> ${b.dataset.ticks}`);
+  }));
+  $("#touchTap").addEventListener("click", () => {
+    if (!ctxState[ENC]) return;
+    const f = evFrame("touchTap", ENC); f.payload.tapPos = [100, 50]; f.payload.hold = false;
+    send("plugin", f); log("<b>touchTap</b>");
+  });
+  const mode = localStorage.getItem("simSonosMode") || "fixtures";
+  $("#mode").value = mode; modeNote();
+  $("#mode").addEventListener("change", () => { localStorage.setItem("simSonosMode", $("#mode").value); modeNote(); });
+  $("#reset").addEventListener("click", () => { localStorage.clear(); sessionStorage.clear(); location.reload(); });
+  $("#plugin").src = "/dist/plugin.html?simRole=plugin";
+}
+function modeNote(){ $("#modeNote").textContent = $("#mode").value === "real" ? "SOAP is proxied same-origin to port 1400 on your LAN." : "Mock household: Office/Kitchen/Dining/Patio; 12 favorites."; }
+
+function evFrame(event, ctx) {
+  const s = ctxState[ctx];
+  return { event, action: s.action, context: ctx, device: "sim-device",
+    payload: { settings: s.settings, coordinates: { column: 0, row: 0 }, state: 0, isInMultiAction: false, controller: s.controller } };
+}
+
+function place(ctx, uuid, controller) {
+  if (ctxState[ctx]) send("plugin", evFrame("willDisappear", ctx));
+  clearTile(ctx);
+  if (!uuid) { delete ctxState[ctx]; return; }
+  const stored = JSON.parse(sessionStorage.getItem("sim-settings-" + ctx) || "{}");
+  ctxState[ctx] = { action: uuid, controller, settings: stored };
+  const f = evFrame("willAppear", ctx);
+  send("plugin", f);
+  log(`<b>willAppear</b> ${ctx} ← ${uuid.split(".").pop()}`);
+  const def = actions.find((a) => a.UUID === uuid);
+  if (controller === "Keypad" && def?.States?.[0]?.Image) setTileImage(ctx, "/dist/" + def.States[0].Image + ".png");
+  selectPi(ctx);
+}
+
+function selectPi(ctx) {
+  const s = ctxState[ctx]; if (!s) return;
+  $("#piLabel").textContent = `${ctx} · ${s.action.split(".").pop()}`;
+  $("#pi").src = `/dist/pi.html?simRole=pi&simCtx=${ctx}&simAction=${encodeURIComponent(s.action)}&simController=${s.controller}`;
+}
+
+// ---------- tile rendering ----------
+function tileEl(ctx) { return document.querySelector(`.tile[data-ctx="${ctx}"]`); }
+function clearTile(ctx) { const t = tileEl(ctx); if (!t) return; t.classList.remove("alert"); t.querySelector("img").style.display = "none"; t.querySelector(".title").textContent = ""; }
+function setTileImage(ctx, src) { const t = tileEl(ctx); if (!t) return; const img = t.querySelector("img"); img.src = src; img.style.display = "block"; }
+
+function handleOutbound(pageId, f) {
+  const ctx = f.context;
+  switch (f.event) {
+    case "registerPlugin": log("<b>plugin registered</b>"); break;
+    case "registerPropertyInspector": log(`<b>PI registered</b> ${pageId}`); break;
+    case "setTitle": { const t = tileEl(ctx); if (t) { const el = t.querySelector(".title"); el.textContent = f.payload.title || ""; } log(`<b>setTitle</b> ${ctx} "${(f.payload.title || "").replace(/\n/g, "⏎")}"`); break; }
+    case "setImage": { let img = f.payload.image || ""; if (img.startsWith("./")) img = "/dist/" + img.slice(2); if (img) setTileImage(ctx, img); log(`<b>setImage</b> ${ctx} ${img.startsWith("data:") ? "(data url)" : img}`); break; }
+    case "setState": { const s = ctxState[ctx]; const def = actions.find((a) => a.UUID === s?.action); const st = def?.States?.[f.payload.state]; if (st?.Image) setTileImage(ctx, "/dist/" + st.Image + ".png"); log(`<b>setState</b> ${ctx} → ${f.payload.state} (${st?.Name || "?"})`); break; }
+    case "showAlert": { const t = tileEl(ctx); if (t) { t.classList.add("alert"); setTimeout(() => t.classList.remove("alert"), 1200); } log(`<b>showAlert</b> ${ctx}`); break; }
+    case "showOk": log(`<b>showOk</b> ${ctx}`); break;
+    case "setFeedbackLayout": { $("#lcd .bar").className = "bar" + (String(f.payload.layout || "").includes("gbar") ? " gbar" : ""); log(`<b>setFeedbackLayout</b> ${f.payload.layout}`); break; }
+    case "setFeedback": { const p = f.payload; if (p.title != null) $("#lcd .t").textContent = p.title; if (p.value != null) $("#lcd .v").textContent = p.value; if (p.indicator != null) { const bar = $("#lcd .bar"), i = $("#lcd .bar i"); if (bar.classList.contains("gbar")) i.style.width = (p.indicator / 20 * 100) + "%"; else i.style.width = p.indicator + "%"; } log(`<b>setFeedback</b> ${JSON.stringify(f.payload)}`); break; }
+    case "setSettings": { const target = pageId.startsWith("pi-") ? pageId.slice(3) : f.context; sessionStorage.setItem("sim-settings-" + target, JSON.stringify(f.payload)); if (ctxState[target]) { ctxState[target].settings = f.payload; const d = { event: "didReceiveSettings", action: ctxState[target].action, context: target, device: "sim-device", payload: { settings: f.payload, coordinates: { column: 0, row: 0 } } }; send("plugin", d); } log(`<b>setSettings</b> ${target}`); break; }
+    case "getSettings": { const target = pageId.startsWith("pi-") ? pageId.slice(3) : f.context; const settings = JSON.parse(sessionStorage.getItem("sim-settings-" + target) || "{}"); send(pageId, { event: "didReceiveSettings", action: ctxState[target]?.action, context: target, device: "sim-device", payload: { settings } }); break; }
+    case "setGlobalSettings": { localStorage.setItem("simGlobalSettings", JSON.stringify(f.payload)); send("*", { event: "didReceiveGlobalSettings", payload: { settings: f.payload } }); log("<b>setGlobalSettings</b> (broadcast)"); break; }
+    case "getGlobalSettings": { const gs = JSON.parse(localStorage.getItem("simGlobalSettings") || "{}"); send(pageId, { event: "didReceiveGlobalSettings", payload: { settings: gs } }); break; }
+    case "logMessage": log(`<span style="color:#6a8">log:</span> ${f.payload.message}`); break;
+    case "__simReady": break;
+    default: log(`<b>${f.event}</b> ${ctx || ""}`);
+  }
+}
+
+bus.addEventListener("message", (e) => {
+  const m = e.data;
+  if (m.dir === "toHost") handleOutbound(m.pageId, m.frame);
+  if (m.dir === "log" && m.soap) log(`<span style="color:#a86">SOAP</span> ${m.soap.action} <span style="opacity:.5">${m.soap.url}</span>`);
+});
+init();
+</script>
+</body>
+</html>

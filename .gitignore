@@ -10,3 +10,5 @@ coverage/
 .dolt/
 *.db
 .beads-credential-key
+
+simulator/dist/
