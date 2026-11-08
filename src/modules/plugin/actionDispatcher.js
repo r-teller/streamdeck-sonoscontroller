@@ -1,5 +1,19 @@
 import { getSpeaker, updateSpeakerState, setOperationalStatus } from "./SonosSpeakers.js";
 import { OPERATIONAL_STATUS } from "./operationalStatus.js";
+import { resolveSpeaker } from "../common/speakerResolver.js";
+import { globalSettings } from "./globalSettings.js";
+
+/**
+ * Settings handed to action handlers, with uuid/hostAddress pointed at the resolved speaker
+ * (new IP, replacement or same-room speaker). Returns the original object when nothing changed.
+ */
+export function withResolvedSpeaker(settings, globals = globalSettings) {
+  const resolved = resolveSpeaker(settings, globals);
+  if (resolved.uuid === settings.uuid && resolved.hostAddress === settings.hostAddress) {
+    return settings;
+  }
+  return { ...settings, uuid: resolved.uuid, hostAddress: resolved.hostAddress };
+}
 
 const ACTION_NAMES = [
   "currently-playing",
@@ -75,11 +89,13 @@ export async function callAction(
     return;
   }
 
+  const handlerSettings = withResolvedSpeaker(settings);
+
   try {
     for (const handler of handlers) {
       const result = await handler({
         inContext,
-        inActionSettings: settings,
+        inActionSettings: handlerSettings,
         inSonosSpeakerState: speaker.state,
         inRotation,
       });

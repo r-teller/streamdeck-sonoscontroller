@@ -6,7 +6,8 @@ import {
 } from "./renderDedupe.js";
 import { actionSettings, setActionSettings, getActionSettings, deleteActionSettings } from "./actionSettings.js";
 import { setGlobalSettings } from "./globalSettings.js";
-import { addContext, removeContext, moveContext } from "./SonosSpeakers.js";
+import { addContext, removeContext, moveContext, setSpeakerHost } from "./SonosSpeakers.js";
+import { reconcileBindings, summarizeBindings } from "./bindingReconciler.js";
 import { cleanupDialRotate, _resetDialRotateState } from "./dialRotateDebouncer.js";
 
 /**
@@ -35,6 +36,18 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
   // Named handlers for teardown
   const handlers = {};
 
+  // The PI currently open (if any), so binding summaries can be pushed to it.
+  let propertyInspector = null;
+
+  const pushBindings = () => {
+    if (!propertyInspector) return;
+    sd.sendToPropertyInspector?.({
+      action: propertyInspector.action,
+      context: propertyInspector.context,
+      payload: { type: "bindings", bindings: summarizeBindings() },
+    });
+  };
+
   handlers.willAppear = (msg) => {
     const { action, context, payload } = msg;
     setActionSettings(context, {
@@ -47,6 +60,7 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     const s = payload.settings ?? {};
     if (s.uuid) {
       addContext({ UUID: s.uuid, context, hostAddress: s.hostAddress, zoneName: s.zoneName });
+      reconcileBindings({ sd, contexts: [context], clearDedupeCache });
     }
   };
 
@@ -74,6 +88,9 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
         zoneName: incoming.zoneName,
       });
       clearDedupeCache(msg.context);
+    } else if (prev.uuid && incoming.uuid === prev.uuid && incoming.hostAddress) {
+      // Same speaker, possibly a new IP: polling must follow it (sonos-l07).
+      setSpeakerHost({ UUID: incoming.uuid, hostAddress: incoming.hostAddress });
     } else if (!prev.uuid && incoming.uuid) {
       addContext({
         UUID: incoming.uuid,
@@ -86,6 +103,24 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
 
   handlers.globalsettings = (settingsBlob) => {
     setGlobalSettings(settingsBlob);
+    reconcileBindings({ sd, clearDedupeCache });
+    pushBindings();
+  };
+
+  handlers.propertyInspectorDidAppear = (msg) => {
+    propertyInspector = { action: msg.action, context: msg.context };
+    pushBindings();
+  };
+
+  handlers.propertyInspectorDidDisappear = (msg) => {
+    if (propertyInspector?.context === msg.context) propertyInspector = null;
+  };
+
+  handlers.sendToPlugin = (msg) => {
+    if (msg.payload?.type === "getBindings") {
+      propertyInspector = { action: msg.action, context: msg.context };
+      pushBindings();
+    }
   };
 
   // deliberate no-op: lastChecked staleness makes polling re-converge naturally

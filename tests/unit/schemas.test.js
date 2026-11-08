@@ -276,6 +276,7 @@ describe("globalSettingsSchema", () => {
       deviceTimeoutDuration: GLOBAL_DEFAULTS.deviceTimeoutDuration,
       adjustVolumeIncrement: GLOBAL_DEFAULTS.adjustVolumeIncrement,
       favorites: [],
+      speakerReplacements: {},
     });
 
     const originalFavorites = [{ title: "A" }, { title: "B" }];

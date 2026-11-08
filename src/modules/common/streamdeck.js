@@ -116,8 +116,12 @@ class StreamDeck extends EventEmitter {
     this._send({ action, event: "sendToPlugin", context, payload });
   }
 
-  sendToPropertyInspector({ context, payload }) {
-    this._send({ event: "sendToPropertyInspector", context, payload });
+  sendToPropertyInspector({ action, context, payload }) {
+    this._send({ action, event: "sendToPropertyInspector", context, payload });
+  }
+
+  openUrl({ url }) {
+    this._send({ event: "openUrl", payload: { url } });
   }
 
   close() {

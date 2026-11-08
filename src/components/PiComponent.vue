@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { streamDeckReady } from "@/modules/common/sdConnect.js";
 import { OPERATIONAL_STATUS } from "@/modules/plugin/operationalStatus.js";
 import { buildActionSettingsPayload } from "@/modules/pi/actionSettingsSchema.js";
@@ -7,6 +7,8 @@ import { buildGlobalSettingsPayload } from "@/modules/pi/globalSettingsSchema.js
 import BootstrapAccordeon from "@/components/accordeon/BootstrapAccordeon.vue";
 import BootstrapAccordeonItem from "@/components/accordeon/BootstrapAccordeonItem.vue";
 import SonosSelection from "@/components/SonosSelection.vue";
+import SpeakerBindings from "@/components/SpeakerBindings.vue";
+import { isBindingMissing } from "@/modules/common/speakerResolver.js";
 import manifest from "@manifest";
 import { SonosController } from "@/modules/common/sonosController.js";
 import {
@@ -32,6 +34,17 @@ const speakers = ref([]);
 const deviceTimeoutDuration = ref(10);
 const deviceCheckInterval = ref(10);
 const adjustVolumeIncrement = ref(10);
+const bindings = ref([]);
+const forceGlobalsOpen = ref(false);
+const bindingsSection = ref(null);
+
+const currentSpeakerMissing = computed(() => isBindingMissing(settings.value, globalSettings.value));
+
+// The PI is served from <StreamDeck data>/Plugins/<plugin>.sdPlugin/pi.html; profiles live in <StreamDeck data>/ProfilesV2.
+const profilesFolderUrl = computed(() => {
+  if (typeof window === "undefined" || window.location.protocol !== "file:") return null;
+  return new URL("../../ProfilesV2/", window.location.href).href;
+});
 
 const isConnected = computed(() => connectionState.value === OPERATIONAL_STATUS.CONNECTED && speakers.value.length > 0);
 
@@ -65,6 +78,7 @@ function bindStreamDeck(client) {
     settings.value = client.actionInfo?.payload?.settings ?? {};
     connectionState.value = OPERATIONAL_STATUS.CONNECTED;
     client.requestGlobalSettings();
+    requestBindings();
   };
 
   if (client.connected) {
@@ -84,6 +98,44 @@ function bindStreamDeck(client) {
   client.on("globalsettings", (incoming) => {
     globalSettings.value = incoming ?? {};
   });
+  client.on("sendToPropertyInspector", (message) => {
+    const payload = message?.payload;
+    if (payload?.type === "bindings" && Array.isArray(payload.bindings)) {
+      bindings.value = payload.bindings;
+    }
+  });
+}
+
+function requestBindings() {
+  const client = sdClient.value;
+  client?.sendToPlugin?.({ action: actionUUID.value, context: client.uuid, payload: { type: "getBindings" } });
+}
+
+function setReplacements(next) {
+  saveGlobalSettings({ speakerReplacements: next });
+  // The plugin reconciles buttons and pushes fresh bindings on didReceiveGlobalSettings; ask again as a fallback.
+  setTimeout(requestBindings, 500);
+}
+
+function onReplaceSpeaker({ from, to }) {
+  if (!from || !to || from === to) return;
+  setReplacements({ ...(globalSettings.value?.speakerReplacements ?? {}), [from]: to });
+}
+
+function onUndoReplacement({ from }) {
+  const next = { ...(globalSettings.value?.speakerReplacements ?? {}) };
+  delete next[from];
+  setReplacements(next);
+}
+
+async function showSpeakerBindings() {
+  forceGlobalsOpen.value = true;
+  await nextTick();
+  bindingsSection.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+}
+
+function openProfilesFolder() {
+  if (profilesFolderUrl.value) sdClient.value?.openUrl?.({ url: profilesFolderUrl.value });
 }
 
 function buildSaveInput(overrides = {}) {
@@ -303,6 +355,13 @@ defineExpose({
   onInputSourceToggled,
   onEqualizerTargetChanged,
   onFavoriteSelected,
+  bindings,
+  currentSpeakerMissing,
+  requestBindings,
+  onReplaceSpeaker,
+  onUndoReplacement,
+  profilesFolderUrl,
+  openProfilesFolder,
 });
 </script>
 
@@ -318,7 +377,19 @@ defineExpose({
       <p v-else class="text-muted" data-pi-disconnected-hint>
         Set the Primary Device Address below and tap "Save and Connect" to discover your speakers.
       </p>
-      <div v-if="settings.uuid" class="alert alert-light" role="status" data-pi-bound-speaker-alert>
+      <div
+        v-if="settings.uuid && currentSpeakerMissing"
+        class="alert alert-warning d-flex justify-content-between align-items-center py-2"
+        role="status"
+        data-pi-bound-speaker-alert
+        data-pi-speaker-missing-alert
+      >
+        <small> {{ boundSpeakerLabel }}. <strong>Speaker not found in household.</strong> </small>
+        <button type="button" class="btn btn-sm btn-outline-warning" data-pi-speaker-missing-fix @click="showSpeakerBindings">
+          Fix
+        </button>
+      </div>
+      <div v-else-if="settings.uuid" class="alert alert-light" role="status" data-pi-bound-speaker-alert>
         <small>{{ boundSpeakerLabel }}</small>
       </div>
     </section>
@@ -462,7 +533,11 @@ defineExpose({
     <section data-pi-section="global-settings">
       <h1 class="h5">Global Settings</h1>
       <BootstrapAccordeon accordeon-id="global-settings-accordeon">
-        <BootstrapAccordeonItem item-id="GlobalSettings" title="Global Settings" :force-expanded="!isConnected">
+        <BootstrapAccordeonItem
+          item-id="GlobalSettings"
+          title="Global Settings"
+          :force-expanded="!isConnected || forceGlobalsOpen"
+        >
           <div v-if="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" data-pi-error-alert>
             {{ errorMessage }}
             <button
@@ -515,6 +590,29 @@ defineExpose({
               {{ isConnected ? "Save and Reconnect" : "Save and Connect" }}
             </button>
           </div>
+
+          <hr class="my-4" />
+          <div ref="bindingsSection">
+            <SpeakerBindings
+              :bindings="bindings"
+              :globals="globalSettings"
+              @replace="onReplaceSpeaker"
+              @undo="onUndoReplacement"
+            />
+          </div>
+
+          <template v-if="profilesFolderUrl">
+            <hr class="my-4" />
+            <div data-pi-advanced>
+              <h2 class="h6 mb-1">Advanced</h2>
+              <button type="button" class="btn btn-link btn-sm px-0" data-pi-open-profiles @click="openProfilesFolder">
+                Open Stream Deck profiles folder…
+              </button>
+              <div class="form-text text-warning">
+                Quit Stream Deck from the tray before editing profile files. It overwrites them while running.
+              </div>
+            </div>
+          </template>
         </BootstrapAccordeonItem>
       </BootstrapAccordeon>
     </section>

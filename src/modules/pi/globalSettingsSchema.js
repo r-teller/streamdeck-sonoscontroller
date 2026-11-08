@@ -32,6 +32,7 @@ export function coerceSeconds(value, fallback) {
  * @param {number} [params.deviceTimeoutDuration]
  * @param {number} [params.adjustVolumeIncrement]
  * @param {Array} [params.favorites]
+ * @param {Object} [params.speakerReplacements] - old speaker uuid -> new speaker uuid
  * @returns {Object}
  */
 export function buildGlobalSettingsPayload({
@@ -40,6 +41,7 @@ export function buildGlobalSettingsPayload({
   deviceTimeoutDuration,
   adjustVolumeIncrement,
   favorites,
+  speakerReplacements,
 }) {
   return {
     devices: devices ?? {},
@@ -47,5 +49,19 @@ export function buildGlobalSettingsPayload({
     deviceTimeoutDuration: coerceSeconds(deviceTimeoutDuration, GLOBAL_DEFAULTS.deviceTimeoutDuration),
     adjustVolumeIncrement: clampVolumeIncrement(adjustVolumeIncrement ?? GLOBAL_DEFAULTS.adjustVolumeIncrement),
     favorites: Array.isArray(favorites) ? [...favorites] : [],
+    speakerReplacements: cleanReplacements(speakerReplacements),
   };
+}
+
+/**
+ * Keeps only string -> string entries that do not map a speaker to itself.
+ * @param {Object} [map]
+ * @returns {Object}
+ */
+export function cleanReplacements(map) {
+  const out = {};
+  for (const [from, to] of Object.entries(map ?? {})) {
+    if (typeof from === "string" && typeof to === "string" && from && to && from !== to) out[from] = to;
+  }
+  return out;
 }

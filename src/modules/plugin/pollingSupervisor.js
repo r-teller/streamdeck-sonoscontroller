@@ -1,6 +1,8 @@
 import { SonosController } from "../common/sonosController.js";
 import { getAllSpeakers, getSpeaker, updateSpeakerState, setOperationalStatus } from "./SonosSpeakers.js";
 import { OPERATIONAL_STATUS } from "./operationalStatus.js";
+import { resolveSpeaker } from "../common/speakerResolver.js";
+import { globalSettings } from "./globalSettings.js";
 
 export function startPollingSupervisor({
   intervalMs = 500,
@@ -9,6 +11,7 @@ export function startPollingSupervisor({
   controllerFactory = (host, uuid) => new SonosController().connect(host, { uuid }),
   showAlert = () => {},
   refreshStateAndTitle = () => {},
+  getGlobals = () => globalSettings,
 } = {}) {
   let intervalId = null;
 
@@ -21,7 +24,9 @@ export function startPollingSupervisor({
         return;
       }
 
-      const controller = controllerFactory(speaker.hostAddress, UUID);
+      // Resolve per poll so IP changes / replacements in global settings take effect immediately.
+      const target = resolveSpeaker({ uuid: UUID, hostAddress: speaker.hostAddress, zoneName: speaker.zoneName }, getGlobals());
+      const controller = controllerFactory(target.hostAddress, target.uuid);
       const seconds = getDeviceTimeoutDurationSeconds();
       let timeoutId;
 

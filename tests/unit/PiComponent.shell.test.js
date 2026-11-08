@@ -93,7 +93,8 @@ describe("PiComponent shell", () => {
     });
     expect(wrapper.vm.connectionState).toBe(OPERATIONAL_STATUS.CONNECTED);
     expect(client.requestGlobalSettings).toHaveBeenCalledTimes(1);
-    expect(client.on).toHaveBeenCalledTimes(5);
+    expect(client.on).toHaveBeenCalledTimes(6);
+    expect(client.on).toHaveBeenCalledWith("sendToPropertyInspector", expect.any(Function));
     expect(client.on).toHaveBeenCalledWith("connected", expect.any(Function));
     expect(client.on).toHaveBeenCalledWith("disconnected", expect.any(Function));
     expect(client.on).toHaveBeenCalledWith("error", expect.any(Function));

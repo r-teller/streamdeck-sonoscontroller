@@ -55,6 +55,17 @@ function removeContext({ UUID, context }) {
   return true;
 }
 
+/**
+ * Overwrites the host a speaker entry polls (addContext is first-write-wins on purpose, so a later
+ * IP change for the same uuid needs an explicit update).
+ */
+function setSpeakerHost({ UUID, hostAddress }) {
+  const speaker = sonosSpeakers[UUID];
+  if (speaker && hostAddress) {
+    speaker.hostAddress = hostAddress;
+  }
+}
+
 function moveContext({ fromUUID, toUUID, context, hostAddress, zoneName }) {
   const removed = removeContext({ UUID: fromUUID, context });
   if (removed) {
@@ -119,6 +130,7 @@ export {
   addContext,
   removeContext,
   moveContext,
+  setSpeakerHost,
   updateSpeakerState,
   setOperationalStatus,
   getAllSpeakers,
