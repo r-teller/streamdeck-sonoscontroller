@@ -112,13 +112,14 @@ describe("encoder-audio-equalizer action", () => {
     });
   });
 
-  it("dialRotate missing state defaults to 0", async () => {
+  it("dialRotate with unknown state reads the current level first (sonos-63d)", async () => {
+    controller.getVolume.mockResolvedValueOnce(60);
     await dialRotate({
       inActionSettings: {},
       inSonosSpeakerState: {}, // no audioEqualizer
       inRotation: 4,
     });
-    expect(controller.setVolume).toHaveBeenCalledWith(4);
+    expect(controller.setVolume).toHaveBeenCalledWith(64);
   });
 
   it("touchTap performs three refresh calls", async () => {

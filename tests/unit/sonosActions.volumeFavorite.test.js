@@ -48,13 +48,25 @@ describe("volume-up action", () => {
     expect(controller.setVolume).toHaveBeenCalledWith(100);
   });
 
-  it("missing volume defaults to 0 → setVolume 10", async () => {
+  it("unknown volume (before first poll) is read from the speaker, not assumed 0 (sonos-63d)", async () => {
+    controller.getVolume = vi.fn().mockResolvedValue(70);
     const result = await actionFunctionMap[actionKey].keyDown[0]({
       inActionSettings: { hostAddress: "h", uuid: "u" },
       inSonosSpeakerState: {}, // no audioEqualizer
     });
-    expect(result.updatedSonosSpeakerState.audioEqualizer.volume).toBe(10);
-    expect(controller.setVolume).toHaveBeenCalledWith(10);
+    expect(controller.getVolume).toHaveBeenCalledOnce();
+    expect(controller.setVolume).toHaveBeenCalledWith(80); // 70 + default 10, not an absolute 10
+    expect(result.updatedSonosSpeakerState.audioEqualizer.volume).toBe(80);
+  });
+
+  it("unknown volume that cannot be read sends nothing", async () => {
+    controller.getVolume = vi.fn().mockRejectedValue(new Error("offline"));
+    const result = await actionFunctionMap[actionKey].keyDown[0]({
+      inActionSettings: { hostAddress: "h", uuid: "u" },
+      inSonosSpeakerState: {},
+    });
+    expect(result.status).toBe("ERROR");
+    expect(controller.setVolume).not.toHaveBeenCalled();
   });
 
   describe("increment resolution matrix", () => {

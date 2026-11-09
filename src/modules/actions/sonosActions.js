@@ -279,12 +279,26 @@ function playPreviousTrackState({ inActionSettings }) {
   return { title };
 }
 
+/**
+ * Current volume/bass/treble for a relative adjustment. Before the first poll the state has no
+ * value; treating it as 0 made Volume Up send an absolute SetVolume(increment), which could drop a
+ * loud speaker to ~10 (sonos-63d). Read it from the speaker instead.
+ */
+async function currentLevel(controller, inSonosSpeakerState, band) {
+  const known = inSonosSpeakerState?.audioEqualizer?.[band];
+  if (typeof known === "number" && Number.isFinite(known)) return known;
+  const getter = { volume: "getVolume", bass: "getBass", treble: "getTreble" }[band];
+  const value = Number(await raceWithTimeout(controller[getter](), getter));
+  if (!Number.isFinite(value)) throw new Error(`Unknown current ${band}`);
+  return value;
+}
+
 // Action 8: Volume Up
 async function volumeUpKeyDown({ inActionSettings, inSonosSpeakerState }) {
   try {
     const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
     const increment = resolveVolumeIncrement(inActionSettings);
-    const current = inSonosSpeakerState?.audioEqualizer?.volume ?? 0;
+    const current = await currentLevel(controller, inSonosSpeakerState, "volume");
     const next = Math.min(100, current + increment);
 
     await raceWithTimeout(controller.setVolume(next), "setVolume");
@@ -307,7 +321,7 @@ async function volumeDownKeyDown({ inActionSettings, inSonosSpeakerState }) {
   try {
     const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
     const increment = resolveVolumeIncrement(inActionSettings);
-    const current = inSonosSpeakerState?.audioEqualizer?.volume ?? 0;
+    const current = await currentLevel(controller, inSonosSpeakerState, "volume");
     const next = Math.max(0, current - increment);
 
     await raceWithTimeout(controller.setVolume(next), "setVolume");
@@ -385,7 +399,7 @@ async function encoderAudioEqualizerDialRotate({ inActionSettings, inSonosSpeake
     const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
     const target = inActionSettings.encoderAudioEqualizerTarget || "VOLUME";
     const band = target.toLowerCase();
-    const current = inSonosSpeakerState?.audioEqualizer?.[band] ?? 0;
+    const current = await currentLevel(controller, inSonosSpeakerState, band);
 
     let next;
     if (target === "VOLUME") {
