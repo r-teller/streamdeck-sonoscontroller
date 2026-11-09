@@ -25,7 +25,7 @@ export function isFavoriteSettings(settings) {
  * Active key: favorite name (top, truncated), track title (bottom, optional marquee), track art.
  * Inactive key: favorite name only, favorite artwork. Never shows another favorite's track or art.
  */
-export function buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerState }) {
+export function buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerState, advanceMarquee = false }) {
   const settings = inActionSettings ?? {};
   const state = inSonosSpeakerState ?? {};
   const favorite = settings.selectedSonosFavorite ?? {};
@@ -41,9 +41,13 @@ export function buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerStat
       settings.lastFavoriteTrackTitle = track;
     }
     if (settings.displayMarquee) {
-      const { window, nextPos } = computeMarqueeWindow(track, settings.marqueePositionBottom ?? 0, MARQUEE_WIDTH);
-      trackLine = window;
-      settings.marqueePositionBottom = nextPos;
+      // Advance only on render-ticker frames so poll redraws do not skip a character (sonos-9at).
+      let pos = settings.marqueePositionBottom ?? 0;
+      if (advanceMarquee) {
+        pos = computeMarqueeWindow(track, pos, MARQUEE_WIDTH).nextPos;
+        settings.marqueePositionBottom = pos;
+      }
+      trackLine = computeMarqueeWindow(track, pos, MARQUEE_WIDTH).window;
     } else {
       trackLine = truncateLine(track, truncateWidth());
     }

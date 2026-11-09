@@ -144,7 +144,7 @@ function albumArtImage(url) {
   return ensureAlbumArtCached(url) ?? undefined;
 }
 
-function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState }) {
+function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState, advanceMarquee = false }) {
   const state = inSonosSpeakerState ?? {};
   const playing = state.playing ?? {};
   const source = detectInputSource(state.currentURI);
@@ -178,34 +178,53 @@ function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState }) {
 
   const imageDataURL = settings.displayAlbumArt ? albumArtImage(currentAlbumArtURI) : null;
 
-  const lines = [];
   const sources = [];
+  let titleLine = "";
+  let albumLine = "";
 
-  const displayMarqueeTitle = settings.displayMarqueeTitle ?? false;
-  const displayMarqueeAlbumTitle = settings.displayMarqueeAlbumTitle ?? false;
-
-  if (displayMarqueeTitle) {
+  if (settings.displayMarqueeTitle ?? false) {
     const title = playing.title ?? "";
-    const pos = settings.marqueePositionTop ?? 0;
-    const { window, nextPos } = computeMarqueeWindow(title, pos, MARQUEE_WIDTH);
-    lines.push(window);
+    titleLine = marqueeLine(settings, "marqueePositionTop", title, advanceMarquee);
     sources.push(title);
-    settings.marqueePositionTop = nextPos;
   }
 
-  if (displayMarqueeAlbumTitle) {
+  if (settings.displayMarqueeAlbumTitle ?? false) {
     const album = playing.album ?? "";
-    const pos = settings.marqueePositionBottom ?? 0;
-    const { window, nextPos } = computeMarqueeWindow(album, pos, MARQUEE_WIDTH);
-    lines.push(window);
+    albumLine = marqueeLine(settings, "marqueePositionBottom", album, advanceMarquee);
     sources.push(album);
-    settings.marqueePositionBottom = nextPos;
   }
 
-  const title = lines.length > 0 ? lines.join("\n") : null;
+  // Track title on the top row, album on the bottom row (sonos-9at): joined with a single newline
+  // the two windows sat directly on top of each other and read as one crowded line.
+  const title = composeKeyTitle({ top: titleLine, bottom: albumLine });
   const titleSource = sources.length > 0 ? sources.join("\n") : null;
 
-  return { imageDataURL, title, titleSource };
+  return { imageDataURL, title, titleSource, titleLine, albumLine };
+}
+
+/**
+ * Current marquee window for one line. The position only moves when the render ticker asks
+ * (advanceMarquee); a redraw triggered by a poll, an action or a settings change shows the same
+ * frame, otherwise every poll made the text jump an extra character (sonos-9at).
+ */
+function marqueeLine(settings, positionKey, text, advanceMarquee) {
+  let pos = settings[positionKey] ?? 0;
+  if (advanceMarquee) {
+    pos = computeMarqueeWindow(text, pos, MARQUEE_WIDTH).nextPos;
+    settings[positionKey] = pos;
+  }
+  return computeMarqueeWindow(text, pos, MARQUEE_WIDTH).window;
+}
+
+/**
+ * Lays out up to three lines on a key whose title is top-aligned: top row, the row under it, and
+ * the bottom row (pushed down with blank lines). Returns null when there is nothing to show.
+ */
+function composeKeyTitle({ top = "", middle = "", bottom = "" }) {
+  if (!top && !middle && !bottom) return null;
+  if (!bottom) return middle ? `${top}\n${middle}` : top;
+  if (middle) return `${top}\n${middle}\n\n${bottom}`;
+  return `${top}\n\n\n${bottom}`;
 }
 
 export {
@@ -215,6 +234,7 @@ export {
   albumArtImage,
   onAlbumArtCached,
   buildMarqueeRenderIntent,
+  composeKeyTitle,
   _resetAlbumArtCache,
   _getAlbumArtCache,
 };

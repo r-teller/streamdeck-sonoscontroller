@@ -1,5 +1,5 @@
 import { actionFunctionMap } from "../plugin/actionDispatcher.js";
-import { buildMarqueeRenderIntent } from "../plugin/marquee.js";
+import { buildMarqueeRenderIntent, composeKeyTitle } from "../plugin/marquee.js";
 import { buildFavoriteRenderIntent } from "../plugin/favoriteKeys.js";
 import { isQueueFavorite } from "../common/favoriteSettings.js";
 import { getInputSourceMappings } from "../common/uriTaxonomy.js";
@@ -89,8 +89,8 @@ async function currentlyPlayingKeyDown({ inActionSettings }) {
   }
 }
 
-function currentlyPlayingState({ inActionSettings, inSonosSpeakerState }) {
-  return buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState });
+function currentlyPlayingState({ inActionSettings, inSonosSpeakerState, advanceMarquee }) {
+  return buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState, advanceMarquee });
 }
 
 // Action 2: Toggle Mute
@@ -138,10 +138,10 @@ async function togglePlayPauseKeyDown({ inActionSettings, inSonosSpeakerState })
   }
 }
 
-function togglePlayPauseState({ inActionSettings, inSonosSpeakerState }) {
+function togglePlayPauseState({ inActionSettings, inSonosSpeakerState, advanceMarquee }) {
   const raw = inSonosSpeakerState?.playbackState ?? "STOPPED";
   const playbackState = raw === "TRANSITIONING" ? "PLAYING" : raw;
-  const marquee = buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState });
+  const marquee = buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState, advanceMarquee });
 
   let stateIndex;
   let label;
@@ -158,11 +158,13 @@ function togglePlayPauseState({ inActionSettings, inSonosSpeakerState }) {
   }
 
   if (inActionSettings.displayStateBasedTitle === true) {
+    // State label on the top row, then the track title, album on the bottom row. The album marquee
+    // used to be dropped whenever the state label was on (sonos-9at).
     return {
       stateIndex,
       imageDataURL: marquee.imageDataURL,
-      title: label,
-      titleSource: null,
+      title: composeKeyTitle({ top: label, middle: marquee.titleLine ?? "", bottom: marquee.albumLine ?? "" }),
+      titleSource: marquee.titleSource ?? null,
     };
   } else {
     return {
@@ -391,8 +393,8 @@ async function playSonosFavoriteKeyDown({ inActionSettings }) {
   }
 }
 
-function playSonosFavoriteState({ inActionSettings, inSonosSpeakerState }) {
-  return buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerState });
+function playSonosFavoriteState({ inActionSettings, inSonosSpeakerState, advanceMarquee }) {
+  return buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerState, advanceMarquee });
 }
 
 // Action 11: Encoder Audio Equalizer

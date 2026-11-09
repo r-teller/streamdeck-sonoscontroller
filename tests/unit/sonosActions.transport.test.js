@@ -18,7 +18,8 @@ vi.mock("@/common/uriTaxonomy.js", () => ({
 }));
 
 // Mock marquee builder – used by several render functions
-vi.mock("@/modules/plugin/marquee.js", () => ({
+vi.mock("@/modules/plugin/marquee.js", async (importOriginal) => ({
+  composeKeyTitle: (await importOriginal()).composeKeyTitle,
   buildMarqueeRenderIntent: vi.fn(() => ({
     imageDataURL: "imgData",
     title: "MarqueeTitle",
@@ -28,6 +29,7 @@ vi.mock("@/modules/plugin/marquee.js", () => ({
 
 import { actionFunctionMap, _resetActionFunctionMap } from "@/modules/plugin/actionDispatcher.js";
 import { registerSonosActions } from "@/modules/actions/sonosActions.js";
+import { buildMarqueeRenderIntent } from "@/modules/plugin/marquee.js";
 import { makeController } from "@/modules/actions/helpers.js";
 import { setGlobalSettings } from "@/modules/plugin/globalSettings.js";
 
@@ -173,6 +175,22 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
     },
   );
 
+  it("toggle-play-pause with state label keeps the album on the bottom row (sonos-9at)", () => {
+    buildMarqueeRenderIntent.mockReturnValueOnce({
+      imageDataURL: "img",
+      title: "x",
+      titleSource: "Big Poppa\nReady to Die",
+      titleLine: "",
+      albumLine: "Ready to",
+    });
+    const r = actionFunctionMap["toggle-play-pause"].state.keypad({
+      inActionSettings: { displayStateBasedTitle: true, displayMarqueeAlbumTitle: true },
+      inSonosSpeakerState: { playbackState: "PLAYING" },
+    });
+    expect(r.title).toBe("Playing\n\n\nReady to");
+    expect(r.titleSource).toBe("Big Poppa\nReady to Die");
+  });
+
   // -------------------------------------------------------------------------
   // 5. toggle‑play‑pause – render state
   // -------------------------------------------------------------------------
@@ -192,7 +210,8 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
       expect(result).toMatchObject({
         stateIndex: expectedIdx,
         title: expectedTitle,
-        titleSource: null,
+        // the marquee source is carried so a scrolling album line keeps updating (sonos-9at)
+        titleSource: "source",
         imageDataURL: "imgData",
       });
     },

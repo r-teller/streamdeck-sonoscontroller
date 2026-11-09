@@ -258,42 +258,40 @@ describe("buildMarqueeRenderIntent", () => {
     expect(intentOff.titleSource).toBe("Line In");
   });
 
-  test("QUEUE branch renders marquee and advances cursors", () => {
-    const settings = {
-      displayMarqueeTitle: true,
-      displayMarqueeAlbumTitle: true,
-      displayAlbumArt: false,
-      marqueePositionTop: 0,
-      marqueePositionBottom: 0,
-    };
+  test("QUEUE branch: title on the top row, album on the bottom row; only ticks advance (sonos-9at)", () => {
+    const settings = { displayMarqueeTitle: true, displayMarqueeAlbumTitle: true, displayAlbumArt: false };
     const state = {
       currentURI: "x-rincon-queue:R#0",
-      playing: {
-        title: "A Very Long Song Title",
-        album: "A Very Long Album Name",
-        albumArtURI: "http://h/art.jpg",
-      },
+      playing: { title: "A Very Long Song Title", album: "A Very Long Album Name", albumArtURI: "http://h/art.jpg" },
     };
+    const win = (text, p) => computeMarqueeWindow(text, p, MARQUEE_WIDTH).window;
+    const render = (advanceMarquee) =>
+      buildMarqueeRenderIntent({ inActionSettings: settings, inSonosSpeakerState: state, advanceMarquee });
 
-    // first render
-    const intent1 = buildMarqueeRenderIntent({ inActionSettings: settings, inSonosSpeakerState: state });
-    const expectedTop1 = computeMarqueeWindow(state.playing.title, 0, MARQUEE_WIDTH).window;
-    const expectedBottom1 = computeMarqueeWindow(state.playing.album, 0, MARQUEE_WIDTH).window;
-    expect(intent1.title).toBe(`${expectedTop1}\n${expectedBottom1}`);
-    expect(intent1.titleSource).toBe(`${state.playing.title}\n${state.playing.album}`);
-    expect(intent1.imageDataURL).toBeNull();
+    const first = render(false);
+    expect(first.title).toBe(`${win(state.playing.title, 0)}\n\n\n${win(state.playing.album, 0)}`);
+    expect(first.titleSource).toBe(`${state.playing.title}\n${state.playing.album}`);
+    expect(first.imageDataURL).toBeNull();
 
-    // positions should have advanced by 1
-    expect(settings.marqueePositionTop).toBe(1);
-    expect(settings.marqueePositionBottom).toBe(1);
+    // a poll/action redraw does not move the text
+    expect(render(false).title).toBe(first.title);
+    // a ticker frame moves both lines one character
+    expect(render(true).title).toBe(`${win(state.playing.title, 1)}\n\n\n${win(state.playing.album, 1)}`);
+    expect(render(false).title).toBe(`${win(state.playing.title, 1)}\n\n\n${win(state.playing.album, 1)}`);
+  });
 
-    // second render – windows shifted by one character
-    const intent2 = buildMarqueeRenderIntent({ inActionSettings: settings, inSonosSpeakerState: state });
-    const expectedTop2 = computeMarqueeWindow(state.playing.title, 1, MARQUEE_WIDTH).window;
-    const expectedBottom2 = computeMarqueeWindow(state.playing.album, 1, MARQUEE_WIDTH).window;
-    expect(intent2.title).toBe(`${expectedTop2}\n${expectedBottom2}`);
-    expect(settings.marqueePositionTop).toBe(2);
-    expect(settings.marqueePositionBottom).toBe(2);
+  test("album-only marquee sits on the bottom row; title-only on the top row", () => {
+    const state = {
+      currentURI: "x-rincon-queue:R#0",
+      playing: { title: "Big Poppa", album: "Ready to Die", albumArtURI: "http://h/a.jpg" },
+    };
+    const albumOnly = buildMarqueeRenderIntent({
+      inActionSettings: { displayMarqueeAlbumTitle: true },
+      inSonosSpeakerState: state,
+    });
+    expect(albumOnly.title).toBe(`\n\n\n${computeMarqueeWindow("Ready to Die", 0, MARQUEE_WIDTH).window}`);
+    const titleOnly = buildMarqueeRenderIntent({ inActionSettings: { displayMarqueeTitle: true }, inSonosSpeakerState: state });
+    expect(titleOnly.title).toBe(computeMarqueeWindow("Big Poppa", 0, MARQUEE_WIDTH).window);
   });
 
   test("track change resets marquee positions", () => {
@@ -305,41 +303,21 @@ describe("buildMarqueeRenderIntent", () => {
       marqueePositionBottom: 7,
       lastTrackArtURI: "http://h/old.jpg",
     };
-    const state1 = {
-      currentURI: "x-rincon-queue:R#0",
-      playing: {
-        title: "First Title",
-        album: "First Album",
-        albumArtURI: "http://h/old.jpg",
-      },
-    };
-    // first call – no change, positions stay as they are (function only resets on change)
-    buildMarqueeRenderIntent({ inActionSettings: settings, inSonosSpeakerState: state1 });
+    const playing = (title, album, art) => ({ currentURI: "x-rincon-queue:R#0", playing: { title, album, albumArtURI: art } });
+
+    buildMarqueeRenderIntent({ inActionSettings: settings, inSonosSpeakerState: playing("First Title", "First Album", "http://h/old.jpg"), advanceMarquee: true });
     expect(settings.marqueePositionTop).toBe(6);
     expect(settings.marqueePositionBottom).toBe(8);
-    expect(settings.lastTrackArtURI).toBe("http://h/old.jpg");
 
-    // change albumArtURI
-    const state2 = {
-      currentURI: "x-rincon-queue:R#0",
-      playing: {
-        title: "Second Title",
-        album: "Second Album",
-        albumArtURI: "http://h/new.jpg",
-      },
-    };
-    buildMarqueeRenderIntent({ inActionSettings: settings, inSonosSpeakerState: state2 });
-    // positions were reset to 0 for this render, then advanced to 1
-    expect(settings.marqueePositionTop).toBe(1);
-    expect(settings.marqueePositionBottom).toBe(1);
+    const intent = buildMarqueeRenderIntent({
+      inActionSettings: settings,
+      inSonosSpeakerState: playing("Second Title", "Second Album", "http://h/new.jpg"),
+    });
+    expect(settings.marqueePositionTop).toBe(0);
+    expect(settings.marqueePositionBottom).toBe(0);
     expect(settings.lastTrackArtURI).toBe("http://h/new.jpg");
-
-    // subsequent call advances from 1 (same URI → no reset)
-    const intent = buildMarqueeRenderIntent({ inActionSettings: settings, inSonosSpeakerState: state2 });
-    const expectedTop = computeMarqueeWindow(state2.playing.title, 1, MARQUEE_WIDTH).window;
-    const expectedBottom = computeMarqueeWindow(state2.playing.album, 1, MARQUEE_WIDTH).window;
-    expect(intent.title).toBe(`${expectedTop}\n${expectedBottom}`);
-    expect(settings.marqueePositionTop).toBe(2);
-    expect(settings.marqueePositionBottom).toBe(2);
+    expect(intent.title).toBe(
+      `${computeMarqueeWindow("Second Title", 0, MARQUEE_WIDTH).window}\n\n\n${computeMarqueeWindow("Second Album", 0, MARQUEE_WIDTH).window}`,
+    );
   });
 });

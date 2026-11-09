@@ -18,14 +18,14 @@ export function wantsMarquee(settings, state) {
   );
 }
 
-function renderContexts(refreshStateAndTitle, filter) {
+function renderContexts(refreshStateAndTitle, filter, advanceMarquee = false) {
   const speakers = getAllSpeakers();
   for (const [context, settings] of Object.entries(actionSettings)) {
     const speaker = settings?.uuid ? speakers[settings.uuid] : null;
     if (!speaker) continue;
     if (filter && !filter(settings, speaker.state)) continue;
     try {
-      refreshStateAndTitle({ inContext: context, inSonosSpeakerState: speaker.state });
+      refreshStateAndTitle({ inContext: context, inSonosSpeakerState: speaker.state, advanceMarquee });
     } catch (e) {
       // one bad key must not stop the others
     }
@@ -39,7 +39,8 @@ function renderContexts(refreshStateAndTitle, filter) {
  * Returns a stop function.
  */
 export function startRenderTicker({ refreshStateAndTitle, intervalMs = 500 }) {
-  const id = setInterval(() => renderContexts(refreshStateAndTitle, wantsMarquee), intervalMs);
+  // Only these frames move scrolling text; art/poll/action redraws repeat the current frame (sonos-9at).
+  const id = setInterval(() => renderContexts(refreshStateAndTitle, wantsMarquee, true), intervalMs);
   const unsubscribe = onAlbumArtCached(() => renderContexts(refreshStateAndTitle));
   return () => {
     clearInterval(id);

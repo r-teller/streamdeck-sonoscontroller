@@ -142,8 +142,17 @@ describe("rendering: Kendrick -> Top Hits (agreed reference case)", () => {
   test("marquee scrolls only the active key's track; the name never scrolls (agreed Q4)", () => {
     const kendrick = key(KENDRICK, { favoriteSignature: SIG_K });
     const state = playingState(SIG_K);
-    const frames = [0, 1, 2].map(() => buildFavoriteRenderIntent({ inActionSettings: kendrick, inSonosSpeakerState: state }).title);
-    expect(frames).toEqual(["Kendri…\n\n\nluther (", "Kendri…\n\n\nuther (w", "Kendri…\n\n\nther (wi"]);
+    const render = (advanceMarquee) =>
+      buildFavoriteRenderIntent({ inActionSettings: kendrick, inSonosSpeakerState: state, advanceMarquee }).title;
+    // poll/action redraws repeat the frame; only ticker frames advance it (sonos-9at)
+    const frames = [render(false), render(false), render(true), render(false), render(true)];
+    expect(frames).toEqual([
+      "Kendri…\n\n\nluther (",
+      "Kendri…\n\n\nluther (",
+      "Kendri…\n\n\nuther (w",
+      "Kendri…\n\n\nuther (w",
+      "Kendri…\n\n\nther (wi",
+    ]);
     expect(wantsMarquee(kendrick, state)).toBe(true);
     expect(wantsMarquee(key(TOPHITS, { favoriteSignature: SIG_T }), state)).toBe(false);
   });
@@ -232,6 +241,8 @@ describe("render ticker (sonos-8lu) and art redraw (sonos-clg)", () => {
     expect(contexts.filter((c) => c === "k1")).toHaveLength(3);
     expect(contexts.filter((c) => c === "cp")).toHaveLength(3);
     expect(contexts).not.toContain("t1");
+    // ticker frames are the only renders that advance scrolling text (sonos-9at)
+    expect(refresh.mock.calls.every((c) => c[0].advanceMarquee === true)).toBe(true);
     stop();
     refresh.mockClear();
     vi.advanceTimersByTime(1000);

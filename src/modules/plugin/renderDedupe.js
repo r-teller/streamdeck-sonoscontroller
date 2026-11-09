@@ -26,8 +26,9 @@ function shallowEqual(a, b) {
  * @param {string} options.inContext
  * @param {Object} options.inSonosSpeakerState
  * @param {boolean} [options.force=false]
+ * @param {boolean} [options.advanceMarquee=false] - only the render ticker advances scrolling text
  */
-export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = false }) {
+export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = false, advanceMarquee = false }) {
   const settings = getActionSettings(inContext);
   if (!settings) return;
 
@@ -44,7 +45,7 @@ export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = f
   const sd = getStreamDeckClient();
   if (!sd) return;
 
-  const intent = stateFn({ inContext, inActionSettings: settings, inSonosSpeakerState });
+  const intent = stateFn({ inContext, inActionSettings: settings, inSonosSpeakerState, advanceMarquee });
   if (!intent) return;
 
   // Ensure status exists
