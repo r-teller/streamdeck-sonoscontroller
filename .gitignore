@@ -13,4 +13,3 @@ coverage/
 *.db
 .beads-credential-key
 
-simulator/dist/
