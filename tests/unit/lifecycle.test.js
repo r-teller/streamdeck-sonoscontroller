@@ -179,6 +179,71 @@ describe("wireLifecycleHandlers", () => {
     teardown();
   });
 
+  test("willAppear on an already-polled speaker draws the key immediately (sonos-ajj)", () => {
+    const sd = createSd();
+    const refreshStateAndTitle = vi.fn();
+    const teardown = wireLifecycleHandlers({ sd }, { clearDedupeCache: vi.fn(), refreshStateAndTitle });
+    addContext({ UUID: "uP", context: "existing", hostAddress: "h" });
+    const speaker = getAllSpeakers()["uP"];
+    speaker.state = { playbackState: "PLAYING" };
+    speaker.lastChecked = 123;
+
+    sd.emit("willAppear", {
+      action: "com.x.toggle-play-pause",
+      context: "new",
+      payload: { settings: { uuid: "uP", hostAddress: "h", zoneName: "Z" } },
+    });
+
+    expect(refreshStateAndTitle).toHaveBeenCalledWith({
+      inContext: "new",
+      inSonosSpeakerState: speaker.state,
+      force: true,
+    });
+    expect(speaker.lastChecked).toBe(123); // no extra poll needed
+    teardown();
+  });
+
+  test("willAppear on a speaker with no state yet schedules an immediate poll instead", () => {
+    const sd = createSd();
+    const refreshStateAndTitle = vi.fn();
+    const teardown = wireLifecycleHandlers({ sd }, { clearDedupeCache: vi.fn(), refreshStateAndTitle });
+    addContext({ UUID: "uQ", context: "existing", hostAddress: "h" });
+    getAllSpeakers()["uQ"].lastChecked = 999;
+
+    sd.emit("willAppear", {
+      action: "com.x.toggle-play-pause",
+      context: "new",
+      payload: { settings: { uuid: "uQ", hostAddress: "h", zoneName: "Z" } },
+    });
+
+    expect(refreshStateAndTitle).not.toHaveBeenCalled();
+    expect(getAllSpeakers()["uQ"].lastChecked).toBe(0);
+    teardown();
+  });
+
+  test("didReceiveSettings re-draws the key so PI changes apply at once (sonos-ajj)", () => {
+    const sd = createSd();
+    const refreshStateAndTitle = vi.fn();
+    const teardown = wireLifecycleHandlers({ sd }, { clearDedupeCache: vi.fn(), refreshStateAndTitle });
+    sd.emit("willAppear", {
+      action: "com.x.encoder-audio-equalizer",
+      context: "dial",
+      payload: { controller: "Encoder", settings: { uuid: "uR", hostAddress: "h", zoneName: "Z" } },
+    });
+    getAllSpeakers()["uR"].state = { audioEqualizer: { volume: 20, bass: 1, treble: 0 } };
+    refreshStateAndTitle.mockClear();
+
+    sd.emit("didReceiveSettings", {
+      context: "dial",
+      payload: { settings: { uuid: "uR", encoderAudioEqualizerTarget: "BASS" } },
+    });
+
+    expect(refreshStateAndTitle).toHaveBeenCalledTimes(1);
+    expect(refreshStateAndTitle.mock.calls[0][0]).toMatchObject({ inContext: "dial", force: true });
+    expect(getActionSettings("dial").encoderAudioEqualizerTarget).toBe("BASS");
+    teardown();
+  });
+
   test("didReceiveSettings with uuid change moves context and clears dedupe", () => {
     const sd = createSd();
     const deps = {

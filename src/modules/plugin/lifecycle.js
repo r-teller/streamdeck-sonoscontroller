@@ -6,7 +6,7 @@ import {
 } from "./renderDedupe.js";
 import { actionSettings, setActionSettings, getActionSettings, deleteActionSettings } from "./actionSettings.js";
 import { setGlobalSettings } from "./globalSettings.js";
-import { addContext, removeContext, moveContext, setSpeakerHost } from "./SonosSpeakers.js";
+import { addContext, removeContext, moveContext, setSpeakerHost, getAllSpeakers } from "./SonosSpeakers.js";
 import { reconcileBindings, summarizeBindings } from "./bindingReconciler.js";
 import { isFavoriteSettings, syncFavoriteKeys } from "./favoriteKeys.js";
 import { migrateFavoriteSettings, needsFavoriteMigration } from "../common/favoriteSettings.js";
@@ -39,6 +39,23 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
       // (callAction already schedules an immediate re-poll so the new track/art arrive right away.)
     },
   };
+
+  /**
+   * Draw a key from what is already known about its speaker. Without this a key that appears on an
+   * already-polled speaker (page switch, folder, second key) or whose settings changed in the PI
+   * kept the manifest default until the next poll, up to a full check interval (sonos-ajj).
+   * A speaker with no state yet is polled on the next tick instead.
+   */
+  function renderNow(context) {
+    const uuid = getActionSettings(context)?.uuid;
+    const speaker = uuid ? getAllSpeakers()[uuid] : undefined;
+    if (!speaker) return;
+    if (speaker.state && Object.keys(speaker.state).length > 0) {
+      refreshStateAndTitle({ inContext: context, inSonosSpeakerState: speaker.state, force: true });
+    } else {
+      speaker.lastChecked = 0;
+    }
+  }
 
   // Named handlers for teardown
   const handlers = {};
@@ -76,6 +93,7 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
       reconcileBindings({ sd, contexts: [context], clearDedupeCache });
       const bound = getActionSettings(context);
       if (isFavoriteSettings(bound)) syncFavoriteKeys({ UUID: bound.uuid, sd });
+      renderNow(context);
     }
   };
 
@@ -114,6 +132,7 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
         zoneName: incoming.zoneName,
       });
     }
+    renderNow(msg.context);
   };
 
   handlers.globalsettings = (settingsBlob) => {
