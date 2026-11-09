@@ -101,6 +101,12 @@ export function syncFavoriteKeys({ UUID, sd }) {
   const loaded = speaker.state.loadedFavorite;
   if (loaded?.uri && signaturesEqual(loaded.signature, current)) {
     ownerUri = loaded.uri;
+  } else if (loaded?.uri && loaded.signature?.firstTrackUri && loaded.signature.firstTrackUri === current.firstTrackUri) {
+    // Same queue, still filling (or edited) since keyDown read it: Sonos keeps appending a large
+    // playlist after AddURIToQueue returns, which bumps UpdateID/TotalMatches (sonos-dl6). Adopt the
+    // newer signature so the key stays active and survives a restart.
+    loaded.signature = { ...current };
+    ownerUri = loaded.uri;
   } else {
     const owner = favoriteContexts.map((c) => actionSettings[c]).find((s) => signaturesEqual(s.favoriteSignature, current));
     ownerUri = owner?.selectedSonosFavorite?.uri ?? null;

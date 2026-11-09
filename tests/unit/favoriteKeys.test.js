@@ -193,6 +193,18 @@ describe("syncFavoriteKeys: signature ownership", () => {
     expect(isFavoriteActive(actionSettings.k2, getSpeaker({ UUID: SPK }).state)).toBe(true);
   });
 
+  test("a queue still filling after keyDown keeps ownership and adopts the newer signature (sonos-dl6)", () => {
+    setActionSettings("k1", key(KENDRICK));
+    addContext({ UUID: SPK, context: "k1" });
+    const atKeyDown = { ...SIG_K, updateId: "3", total: 40 }; // read while Sonos was still appending
+    updateSpeakerState({ UUID: SPK, state: { ...playingState(SIG_K), loadedFavorite: { uri: KENDRICK.uri, signature: atKeyDown } } });
+
+    expect(syncFavoriteKeys({ UUID: SPK, sd: sd() })).toEqual(["k1"]);
+    expect(actionSettings.k1.favoriteSignature).toMatchObject(SIG_K);
+    expect(isFavoriteActive(actionSettings.k1, getSpeaker({ UUID: SPK }).state)).toBe(true);
+    expect(getSpeaker({ UUID: SPK }).state.loadedFavorite.signature).toEqual(SIG_K);
+  });
+
   test("a queue changed elsewhere (Sonos app) leaves every key inactive", () => {
     setActionSettings("k1", key(KENDRICK, { favoriteSignature: SIG_K }));
     addContext({ UUID: SPK, context: "k1" });
