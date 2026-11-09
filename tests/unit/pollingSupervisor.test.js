@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { startPollingSupervisor } from "@/modules/plugin/pollingSupervisor.js";
-import { addContext, getSpeaker, getAllSpeakers, setOperationalStatus } from "@/modules/plugin/SonosSpeakers.js";
+import { addContext, getSpeaker, getAllSpeakers, setOperationalStatus, bumpStateVersion } from "@/modules/plugin/SonosSpeakers.js";
 import { OPERATIONAL_STATUS } from "@/modules/plugin/operationalStatus.js";
 
 vi.useFakeTimers();
@@ -146,6 +146,36 @@ describe("pollingSupervisor", () => {
       inContext: "ctx2",
       inSonosSpeakerState: updatedSpeaker.state,
     });
+  });
+
+  test("a poll that overlaps an action discards its stale reading (sonos-e9y)", async () => {
+    const UUID = "uuid-1";
+    addContext({ UUID, context: "ctx1", hostAddress: "host1" });
+    const speaker = getSpeaker({ UUID });
+    speaker.lastChecked = null;
+    speaker.state = { playbackState: "PAUSED_PLAYBACK" };
+
+    // transport read is slow: the user presses play/pause while it is in flight
+    let resolveTransport;
+    controllerFactory.mockImplementation(() =>
+      fakeController({ getTransportInfo: vi.fn(() => new Promise((r) => (resolveTransport = r))) }),
+    );
+    start();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(resolveTransport).toBeTypeOf("function");
+
+    // the action projects PLAYING and bumps the version
+    bumpStateVersion({ UUID });
+    speaker.state.playbackState = "PLAYING";
+    speaker.lastChecked = 0;
+
+    // the poll's pre-press reading arrives afterwards
+    resolveTransport({ playbackState: "PAUSED_PLAYBACK" });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(getSpeaker({ UUID }).state.playbackState).toBe("PLAYING");
+    expect(getSpeaker({ UUID }).lastChecked).toBe(0); // next tick re-polls
+    expect(refreshStateAndTitle).not.toHaveBeenCalled();
   });
 
   test("failure when a getter rejects sets DISCONNECTED and alerts per context", async () => {

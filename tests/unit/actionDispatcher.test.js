@@ -124,7 +124,7 @@ describe("actionDispatcher", () => {
     expect(showAlert).toHaveBeenCalledTimes(1);
   });
 
-  test("successful handler with updatedSonosSpeakerState merges state, leaves timestamps untouched, status UPDATED", async () => {
+  test("successful handler with updatedSonosSpeakerState merges state, schedules an immediate re-poll, status UPDATED", async () => {
     const handler = vi.fn().mockResolvedValue({
       status: "OK",
       updatedSonosSpeakerState: { playMode: "NEW_MODE", muted: true },
@@ -139,8 +139,11 @@ describe("actionDispatcher", () => {
     const speakerAfter = getSpeaker({ UUID: uuid });
     expect(speakerAfter.state.playMode).toBe("NEW_MODE");
     expect(speakerAfter.state.muted).toBe(true);
-    // timestamps unchanged
-    expect(speakerAfter.lastChecked).toBeNull();
+    // lastChecked reset so the next tick confirms the projection; lastUpdated untouched (sonos-e9y)
+    expect(speakerAfter.lastChecked).toBe(0);
+    expect(speakerAfter.lastUpdated).toBeNull();
+    // the action bumps the state version so overlapping polls drop their results
+    expect(speakerAfter.stateVersion).toBe(2);
     expect(speakerAfter.operationalStatus).toBe(OPERATIONAL_STATUS.UPDATED);
   });
 

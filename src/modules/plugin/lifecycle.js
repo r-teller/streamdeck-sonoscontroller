@@ -10,7 +10,6 @@ import { addContext, removeContext, moveContext, setSpeakerHost } from "./SonosS
 import { reconcileBindings, summarizeBindings } from "./bindingReconciler.js";
 import { isFavoriteSettings, syncFavoriteKeys } from "./favoriteKeys.js";
 import { migrateFavoriteSettings, needsFavoriteMigration } from "../common/favoriteSettings.js";
-import { getSpeaker } from "./SonosSpeakers.js";
 import { cleanupDialRotate, _resetDialRotateState } from "./dialRotateDebouncer.js";
 
 /**
@@ -37,8 +36,7 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     afterAction: ({ UUID, inContext }) => {
       if (!isFavoriteSettings(actionSettings[inContext])) return;
       syncFavoriteKeys({ UUID, sd });
-      // Fetch the new favorite's track/art right away instead of waiting a full check interval.
-      getSpeaker({ UUID }).lastChecked = 0;
+      // (callAction already schedules an immediate re-poll so the new track/art arrive right away.)
     },
   };
 

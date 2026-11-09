@@ -1,4 +1,4 @@
-import { getSpeaker, updateSpeakerState, setOperationalStatus } from "./SonosSpeakers.js";
+import { getSpeaker, updateSpeakerState, setOperationalStatus, bumpStateVersion } from "./SonosSpeakers.js";
 import { OPERATIONAL_STATUS } from "./operationalStatus.js";
 import { resolveSpeaker } from "../common/speakerResolver.js";
 import { globalSettings } from "./globalSettings.js";
@@ -90,6 +90,8 @@ export async function callAction(
   }
 
   const handlerSettings = withResolvedSpeaker(settings);
+  // Any poll already in flight read the speaker before this action: drop its result (sonos-e9y).
+  bumpStateVersion({ UUID: uuid });
 
   try {
     for (const handler of handlers) {
@@ -109,7 +111,12 @@ export async function callAction(
       }
     }
 
+    // Polls that started while the handler ran may have read pre-action state too.
+    bumpStateVersion({ UUID: uuid });
     setOperationalStatus({ UUID: uuid, operationalStatus: OPERATIONAL_STATUS.UPDATED });
+    // Confirm the projection with a fresh read on the next tick.
+    const after = getSpeaker({ UUID: uuid });
+    if (after) after.lastChecked = 0;
     try {
       afterAction({ UUID: uuid, inContext });
     } catch (e) {

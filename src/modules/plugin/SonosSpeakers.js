@@ -15,6 +15,8 @@ function getSpeaker({ UUID }) {
       updateAttempts: [],
       lastChecked: null,
       lastUpdated: null,
+      // Bumped around every action; a poll that overlapped an action discards its (older) reading.
+      stateVersion: 0,
     };
   }
   return sonosSpeakers[UUID];
@@ -118,6 +120,12 @@ function setOperationalStatus({ UUID, operationalStatus }) {
   }
 }
 
+/** Marks the speaker's state as changed by an action so in-flight polls drop their results. */
+function bumpStateVersion({ UUID }) {
+  const speaker = sonosSpeakers[UUID];
+  if (speaker) speaker.stateVersion = (speaker.stateVersion ?? 0) + 1;
+}
+
 function getAllSpeakers() {
   return sonosSpeakers;
 }
@@ -133,5 +141,6 @@ export {
   setSpeakerHost,
   updateSpeakerState,
   setOperationalStatus,
+  bumpStateVersion,
   getAllSpeakers,
 };

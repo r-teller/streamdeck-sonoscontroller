@@ -21,6 +21,7 @@ export function startPollingSupervisor({
   async function pollSpeaker(UUID, speaker) {
     try {
       setOperationalStatus({ UUID, operationalStatus: OPERATIONAL_STATUS.UPDATING });
+      const startVersion = getSpeaker({ UUID }).stateVersion ?? 0;
 
       const reReadSpeaker = getSpeaker({ UUID });
       if (reReadSpeaker.operationalStatus === OPERATIONAL_STATUS.RATE_LIMITED) {
@@ -69,6 +70,9 @@ export function startPollingSupervisor({
 
         // Guard against in-flight poll resurrecting a speaker whose last context was removed
         if (!(UUID in getAllSpeakers())) return;
+        // An action ran while this poll was in flight: its reading predates the action, so applying it
+        // would undo the action's projection. Leave lastChecked alone so the next tick re-polls (sonos-e9y).
+        if ((getSpeaker({ UUID }).stateVersion ?? 0) !== startVersion) return;
 
         const state = {
           playMode: transportSettings.playMode,
