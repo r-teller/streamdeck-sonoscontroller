@@ -32,7 +32,7 @@ describe("actionSettingsSchema", () => {
     "com.r-teller.sonoscontroller.volume-up",
   ];
 
-  it("buildActionSettingsPayload returns exactly 22 keys for every action", () => {
+  it("buildActionSettingsPayload returns exactly 23 keys for every action", () => {
     const expectedKeys = [
       "action",
       "states",
@@ -44,6 +44,7 @@ describe("actionSettingsSchema", () => {
       "selectedPlayModes",
       "selectedInputSources",
       "encoderAudioEqualizerTarget",
+      "encoderPushAction",
       "displayStateBasedTitle",
       "displayAlbumArt",
       "displayMarqueeTitle",
@@ -73,6 +74,7 @@ describe("actionSettingsSchema", () => {
     expect(payload.selectedPlayModes).toBeNull();
     expect(payload.selectedInputSources).toBeNull();
     expect(payload.encoderAudioEqualizerTarget).toBeNull();
+    expect(payload.encoderPushAction).toBeNull();
     expect(payload.adjustVolumeIncrement).toBeNull();
     expect(payload.selectedSonosFavorite).toBeNull();
 
@@ -110,6 +112,14 @@ describe("actionSettingsSchema", () => {
     const payload = buildActionSettingsPayload({ ...baseParams, action });
 
     expect(payload.encoderAudioEqualizerTarget).toBe("VOLUME");
+    // dial push defaults to doing nothing; unknown values fall back too (sonos-6sp)
+    expect(payload.encoderPushAction).toBe("NONE");
+    expect(
+      buildActionSettingsPayload({ ...baseParams, action, current: { encoderPushAction: "TOGGLE_MUTE" } }).encoderPushAction,
+    ).toBe("TOGGLE_MUTE");
+    expect(
+      buildActionSettingsPayload({ ...baseParams, action, current: { encoderPushAction: "BOGUS" } }).encoderPushAction,
+    ).toBe("NONE");
     expect(payload.displayStateBasedTitle).toBeNull();
     expect(payload.displayAlbumArt).toBeNull();
     expect(payload.displayMarqueeTitle).toBeNull();

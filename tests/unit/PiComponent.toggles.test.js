@@ -191,14 +191,14 @@ describe("PiComponent presentation toggles", () => {
     }
   });
 
-  it("Toggle on saves full 22-field payload", async () => {
+  it("Toggle on saves full 23-field payload", async () => {
     const { wrapper, stubClient } = await mountForAction("toggle-play-pause");
     const albumArtToggle = wrapper.find("[data-pi-toggle-album-art]");
     await albumArtToggle.setValue(true);
     expect(stubClient.saveSettings).toHaveBeenCalledTimes(1);
     const payload = stubClient.saveSettings.mock.calls[0][0].actionSettings;
-    // Expect exactly 22 keys (the schema includes many fields; we assert length)
-    expect(Object.keys(payload).length).toBe(22);
+    // Expect exactly 23 keys (the schema includes many fields; we assert length)
+    expect(Object.keys(payload).length).toBe(23);
     expect(payload.displayAlbumArt).toBe(true);
     expect(payload.action).toBe("com.r-teller.sonoscontroller.toggle-play-pause");
     // other applicable toggles should be false

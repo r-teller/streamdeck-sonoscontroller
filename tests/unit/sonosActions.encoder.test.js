@@ -149,10 +149,60 @@ describe("encoder-audio-equalizer action", () => {
     expect(result).toEqual({ status: "ERROR" });
   });
 
-  it("dialDown slot is empty array", () => {
-    const dialDown = actionFunctionMap["encoder-audio-equalizer"].dialDown;
-    expect(dialDown).toBeInstanceOf(Array);
-    expect(dialDown).toHaveLength(0);
+  describe("dial push (sonos-6sp)", () => {
+    const push = (encoderPushAction, state = {}) =>
+      actionFunctionMap["encoder-audio-equalizer"].dialDown[0]({
+        inActionSettings: { hostAddress: "h", uuid: "u", encoderPushAction },
+        inSonosSpeakerState: state,
+      });
+
+    it("has one dialDown handler", () => {
+      expect(actionFunctionMap["encoder-audio-equalizer"].dialDown).toHaveLength(1);
+    });
+
+    it("NONE (default) does nothing", async () => {
+      controller.setMute = vi.fn();
+      expect(await push(undefined)).toEqual({ status: "SUCCESS" });
+      expect(await push("NONE")).toEqual({ status: "SUCCESS" });
+      expect(controller.setMute).not.toHaveBeenCalled();
+    });
+
+    it("TOGGLE_MUTE mutes an unmuted speaker and unmutes a muted one", async () => {
+      controller.setMute = vi.fn().mockResolvedValue(undefined);
+      expect(await push("TOGGLE_MUTE", { muted: false })).toEqual({
+        status: "SUCCESS",
+        updatedSonosSpeakerState: { muted: true },
+      });
+      expect(controller.setMute).toHaveBeenLastCalledWith(true);
+      await push("TOGGLE_MUTE", { muted: true });
+      expect(controller.setMute).toHaveBeenLastCalledWith(false);
+    });
+
+    it("TOGGLE_PLAY_PAUSE pauses when playing and plays when paused", async () => {
+      controller.pause = vi.fn().mockResolvedValue(undefined);
+      controller.play = vi.fn().mockResolvedValue(undefined);
+      await push("TOGGLE_PLAY_PAUSE", { playbackState: "PLAYING" });
+      expect(controller.pause).toHaveBeenCalledOnce();
+      await push("TOGGLE_PLAY_PAUSE", { playbackState: "PAUSED_PLAYBACK" });
+      expect(controller.play).toHaveBeenCalledOnce();
+    });
+
+    it("NEXT_TRACK skips to the next track", async () => {
+      controller.next = vi.fn().mockResolvedValue(undefined);
+      expect((await push("NEXT_TRACK")).status).toBe("SUCCESS");
+      expect(controller.next).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("strip title says Muted while the speaker is muted (volume target only)", () => {
+    const vol = stateEncoder({ inActionSettings: {}, inSonosSpeakerState: { muted: true, audioEqualizer: { volume: 30 } } });
+    expect(vol.feedback.title).toBe("Muted");
+    expect(vol.feedback.value).toBe(30);
+    const bass = stateEncoder({
+      inActionSettings: { encoderAudioEqualizerTarget: "BASS" },
+      inSonosSpeakerState: { muted: true, audioEqualizer: { bass: 2 } },
+    });
+    expect(bass.feedback.title).toBe("Bass");
   });
 
   it("state.encoder for VOLUME returns correct layout and feedback", () => {

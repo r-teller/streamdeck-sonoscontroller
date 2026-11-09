@@ -21,6 +21,9 @@ export const STATE_BASED_TITLE_ACTIONS = new Set([
 ]);
 // play-sonos-favorite uses its own five toggles (FAVORITE_TOGGLE_DEFAULTS), not these (sonos-gw5).
 export const MARQUEE_TITLE_ACTIONS = new Set(["currently-playing"]);
+/** What pushing the Audio Equalizer dial does (sonos-6sp). Rotation still adjusts the EQ target. */
+export const ENCODER_PUSH_ACTIONS = Object.freeze(["NONE", "TOGGLE_MUTE", "TOGGLE_PLAY_PAUSE", "NEXT_TRACK"]);
+
 export const MARQUEE_ALBUM_TITLE_ACTIONS = new Set(["toggle-play-pause", "currently-playing"]);
 export const ALBUM_ART_ACTIONS = new Set(["toggle-play-pause", "currently-playing"]);
 
@@ -117,7 +120,7 @@ function favoriteToggle(shortName, key, merged) {
 }
 
 /**
- * Builds a complete 22-field action settings payload.
+ * Builds a complete 23-field action settings payload.
  * @param {object} params - Parameters object.
  * @param {string} params.action - Full action UUID.
  * @param {array} params.states - States list snapshot.
@@ -142,6 +145,12 @@ export function buildActionSettingsPayload({ action, states, controller, current
     selectedInputSources: shortName === "toggle-input-source" ? (merged.selectedInputSources ?? [...INPUT_SOURCES]) : null,
     encoderAudioEqualizerTarget:
       shortName === "encoder-audio-equalizer" ? (merged.encoderAudioEqualizerTarget ?? "VOLUME") : null,
+    encoderPushAction:
+      shortName === "encoder-audio-equalizer"
+        ? ENCODER_PUSH_ACTIONS.includes(merged.encoderPushAction)
+          ? merged.encoderPushAction
+          : "NONE"
+        : null,
     displayStateBasedTitle: gateBool(STATE_BASED_TITLE_ACTIONS, shortName, merged.displayStateBasedTitle),
     displayAlbumArt: gateBool(ALBUM_ART_ACTIONS, shortName, merged.displayAlbumArt),
     displayMarqueeTitle: gateBool(MARQUEE_TITLE_ACTIONS, shortName, merged.displayMarqueeTitle),

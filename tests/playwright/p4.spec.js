@@ -136,7 +136,7 @@ test("p4-first-run", async ({ page }, testInfo) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   expect(setSettingsFrames[0].payload.uuid).toBe("RINCON_LIVINGROOMBAR01400");
-  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(22);
+  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(23);
 
   // Assert bound speaker alert
   const boundAlert = page.locator("[data-pi-bound-speaker-alert]");
@@ -449,7 +449,7 @@ test("p4-bind-speaker", async ({ page }) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   const payload = setSettingsFrames[0].payload;
-  expect(Object.keys(payload)).toHaveLength(22);
+  expect(Object.keys(payload)).toHaveLength(23);
   expect(payload.uuid).toBe("RINCON_OFFICE01400");
   expect(payload.title).toBe("Office (192.168.1.42)");
   expect(payload.hostAddress).toBe("192.168.1.42");

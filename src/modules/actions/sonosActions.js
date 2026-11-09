@@ -458,6 +458,18 @@ async function encoderAudioEqualizerTouchTap({ inActionSettings }) {
   }
 }
 
+/**
+ * Dial push (sonos-6sp): runs the same logic as the matching key so behaviour and the optimistic
+ * projection stay identical. "NONE" (the default) keeps the old no-op.
+ */
+async function encoderAudioEqualizerDialDown(args) {
+  const pushAction = args.inActionSettings?.encoderPushAction ?? "NONE";
+  if (pushAction === "TOGGLE_MUTE") return toggleMuteKeyDown(args);
+  if (pushAction === "TOGGLE_PLAY_PAUSE") return togglePlayPauseKeyDown(args);
+  if (pushAction === "NEXT_TRACK") return playNextTrackKeyDown(args);
+  return { status: "SUCCESS" };
+}
+
 function encoderAudioEqualizerState({ inActionSettings, inSonosSpeakerState }) {
   const target = inActionSettings.encoderAudioEqualizerTarget || "VOLUME";
   const band = target.toLowerCase();
@@ -467,7 +479,8 @@ function encoderAudioEqualizerState({ inActionSettings, inSonosSpeakerState }) {
   return {
     feedbackLayout: EQ_LAYOUTS[target],
     feedback: {
-      title: titleCase(target),
+      // Mute does not change the volume level, so say so on the strip (dial push can toggle it).
+      title: target === "VOLUME" && inSonosSpeakerState?.muted === true ? "Muted" : titleCase(target),
       value,
       indicator,
     },
@@ -519,6 +532,7 @@ export function registerSonosActions() {
   // Action 11: encoder-audio-equalizer
   actionFunctionMap["encoder-audio-equalizer"].dialRotate = [encoderAudioEqualizerDialRotate];
   actionFunctionMap["encoder-audio-equalizer"].touchTap = [encoderAudioEqualizerTouchTap];
+  actionFunctionMap["encoder-audio-equalizer"].dialDown = [encoderAudioEqualizerDialDown];
   actionFunctionMap["encoder-audio-equalizer"].state.encoder = encoderAudioEqualizerState;
 }
 

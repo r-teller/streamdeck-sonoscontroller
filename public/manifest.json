@@ -270,7 +270,8 @@
       "Encoder": {
         "layout": "layouts/encoder-bar-0-100.json",
         "TriggerDescription": {
-          "Rotate": "Equalizer"
+          "Rotate": "Equalizer",
+          "Push": "Mute, play/pause or next (set in settings)"
         }
       }
     }

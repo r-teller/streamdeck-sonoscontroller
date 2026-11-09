@@ -312,6 +312,10 @@ function onEqualizerTargetChanged(event) {
   saveSettings({ encoderAudioEqualizerTarget: event.target.value });
 }
 
+function onEncoderPushActionChanged(event) {
+  saveSettings({ encoderPushAction: event.target.value });
+}
+
 function onFavoriteSelected(event) {
   const option = event.target.selectedOptions[0];
   if (!option) return;
@@ -524,6 +528,21 @@ defineExpose({
         <option value="BASS">Bass</option>
         <option value="TREBLE">Treble</option>
       </select>
+      <div class="form-text text-muted mb-3">Turning the dial adjusts this.</div>
+
+      <h1 class="h5">Dial Push</h1>
+      <select
+        class="form-select"
+        :value="settings.encoderPushAction ?? 'NONE'"
+        data-pi-encoder-push-select
+        @change="onEncoderPushActionChanged"
+      >
+        <option value="NONE">Nothing</option>
+        <option value="TOGGLE_MUTE">Mute / Unmute</option>
+        <option value="TOGGLE_PLAY_PAUSE">Play / Pause</option>
+        <option value="NEXT_TRACK">Next Track</option>
+      </select>
+      <div class="form-text text-muted">Pressing the dial does this.</div>
     </section>
 
     <section v-if="shortName === 'play-sonos-favorite'" data-pi-section="sonos-favorites">

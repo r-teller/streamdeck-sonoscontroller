@@ -165,6 +165,29 @@ describe("PiComponent action sections", () => {
     expect(saved.selectedPlayModes).toBeNull();
   });
 
+  it("dial push defaults to Nothing and saves the chosen action (sonos-6sp)", async () => {
+    const { wrapper, stub } = await mountForAction("encoder-audio-equalizer", {});
+    const select = wrapper.find("[data-pi-encoder-push-select]");
+    expect(select.exists()).toBe(true);
+    expect(select.element.value).toBe("NONE");
+    expect(select.findAll("option").map((o) => o.element.value)).toEqual([
+      "NONE",
+      "TOGGLE_MUTE",
+      "TOGGLE_PLAY_PAUSE",
+      "NEXT_TRACK",
+    ]);
+    await select.setValue("TOGGLE_MUTE");
+    await nextTick();
+    const saved = getLastSaved(stub);
+    expect(saved.encoderPushAction).toBe("TOGGLE_MUTE");
+    expect(saved.encoderAudioEqualizerTarget).toBe("VOLUME");
+  });
+
+  it("dial push setting is only shown for the dial action", async () => {
+    const { wrapper } = await mountForAction("volume-up", {});
+    expect(wrapper.find("[data-pi-encoder-push-select]").exists()).toBe(false);
+  });
+
   it("favorites options render correctly", async () => {
     const { wrapper } = await mountForAction("play-sonos-favorite", {}, { favorites: FAVORITES });
     const select = wrapper.find("[data-pi-favorite-select]");
