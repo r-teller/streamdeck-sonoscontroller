@@ -1,7 +1,9 @@
 node_modules/
 com.r-teller.sonoscontroller.sdPlugin/
 com.r-teller.sonoscontroller.streamDeckPlugin
-.fleet/logs/
+# Agent tooling: local only (internal endpoints, prompts, specs)
+.fleet/
+.claude/v2/
 test-results/
 .playwright-mcp/
 coverage/
