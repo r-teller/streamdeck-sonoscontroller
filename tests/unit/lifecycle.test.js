@@ -389,20 +389,54 @@ describe("wireLifecycleHandlers", () => {
     teardown();
   });
 
-  test("systemDidWakeUp is wired but does nothing", () => {
+  test("systemDidWakeUp forgets sent values, redraws every key and re-polls (sonos-7x8)", () => {
     const sd = createSd();
-    const deps = {
-      callAction: vi.fn(),
-      handleDialRotate: vi.fn(),
-      clearDedupeCache: vi.fn(),
-    };
-    const teardown = wireLifecycleHandlers({ sd }, deps);
+    const clearDedupeCache = vi.fn();
+    const refreshStateAndTitle = vi.fn();
+    const teardown = wireLifecycleHandlers({ sd }, { clearDedupeCache, refreshStateAndTitle });
     expect(sd.listenerCount("systemDidWakeUp")).toBe(1);
-    const beforeSpeakers = { ...getAllSpeakers() };
-    const beforeSettings = { ...actionSettings };
+    for (const c of ["a", "b"]) {
+      sd.emit("willAppear", { action: "com.x.toggle-play-pause", context: c, payload: { settings: { uuid: "uW", hostAddress: "h" } } });
+    }
+    const speaker = getAllSpeakers()["uW"];
+    speaker.state = { playbackState: "PLAYING" };
+    speaker.lastChecked = 500;
+    clearDedupeCache.mockClear();
+    refreshStateAndTitle.mockClear();
+
     sd.emit("systemDidWakeUp");
-    expect(getAllSpeakers()).toEqual(beforeSpeakers);
-    expect(actionSettings).toEqual(beforeSettings);
+
+    expect(clearDedupeCache.mock.calls.map((c) => c[0]).sort()).toEqual(["a", "b"]);
+    expect(refreshStateAndTitle).toHaveBeenCalledTimes(2);
+    expect(refreshStateAndTitle.mock.calls[0][0]).toMatchObject({ force: true });
+    expect(speaker.lastChecked).toBe(0);
+    teardown();
+  });
+
+  test("titleParametersDidChange redraws just that key", () => {
+    const sd = createSd();
+    const clearDedupeCache = vi.fn();
+    const refreshStateAndTitle = vi.fn();
+    const teardown = wireLifecycleHandlers({ sd }, { clearDedupeCache, refreshStateAndTitle });
+    for (const c of ["a", "b"]) {
+      sd.emit("willAppear", { action: "com.x.toggle-play-pause", context: c, payload: { settings: { uuid: "uT", hostAddress: "h" } } });
+    }
+    getAllSpeakers()["uT"].state = { playbackState: "PAUSED_PLAYBACK" };
+    clearDedupeCache.mockClear();
+    refreshStateAndTitle.mockClear();
+
+    // an echo of our own setTitle is ignored (no redraw loop with the marquee)
+    getActionSettings("b").status.lastTitleValue = "Paused";
+    sd.emit("titleParametersDidChange", { context: "b", payload: { title: "Paused" } });
+    expect(clearDedupeCache).not.toHaveBeenCalled();
+
+    sd.emit("titleParametersDidChange", { context: "b", payload: { title: "user edit" } });
+    sd.emit("titleParametersDidChange", { context: "unknown", payload: {} });
+
+    expect(clearDedupeCache).toHaveBeenCalledTimes(1);
+    expect(clearDedupeCache).toHaveBeenCalledWith("b");
+    expect(refreshStateAndTitle).toHaveBeenCalledTimes(1);
+    expect(refreshStateAndTitle.mock.calls[0][0]).toMatchObject({ inContext: "b", force: true });
     teardown();
   });
 
@@ -493,6 +527,8 @@ describe("wireLifecycleHandlers", () => {
       "didReceiveSettings",
       "globalsettings",
       "systemDidWakeUp",
+      "deviceDidConnect",
+      "titleParametersDidChange",
       "keyDown",
       "dialDown",
       "touchTap",

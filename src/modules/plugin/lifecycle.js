@@ -197,8 +197,36 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     }
   };
 
-  // deliberate no-op: lastChecked staleness makes polling re-converge naturally
-  handlers.systemDidWakeUp = () => {};
+  /**
+   * Stream Deck can redraw keys from the manifest (wake from sleep, device reconnect, title settings
+   * edited in the app) without telling the plugin which images/titles it dropped. The dedupe cache
+   * would then suppress re-sending unchanged values, leaving keys on defaults until something
+   * changed (sonos-7x8). Forget what was sent, redraw from known state, and re-poll.
+   */
+  function redrawAll({ repoll }) {
+    for (const speaker of Object.values(getAllSpeakers())) {
+      if (repoll) speaker.lastChecked = 0;
+      for (const context of speaker.contexts) {
+        clearDedupeCache(context);
+        renderNow(context);
+      }
+    }
+  }
+
+  // After sleep the cached speaker state is stale too: redraw what we know, then re-poll everything.
+  handlers.systemDidWakeUp = () => redrawAll({ repoll: true });
+
+  handlers.deviceDidConnect = () => redrawAll({ repoll: true });
+
+  handlers.titleParametersDidChange = (msg) => {
+    const settings = msg?.context ? getActionSettings(msg.context) : undefined;
+    if (!settings) return;
+    // Stream Deck may echo this event for the plugin's own setTitle; redrawing then would loop with
+    // the marquee. Only react when the shown title is not the one we just sent.
+    if (msg.payload?.title !== undefined && msg.payload.title === settings.status?.lastTitleValue) return;
+    clearDedupeCache(msg.context);
+    renderNow(msg.context);
+  };
 
   handlers.keyDown = (msg) => {
     callAction({ inContext: msg.context, inEvent: "keyDown" }, dispatchDeps);
