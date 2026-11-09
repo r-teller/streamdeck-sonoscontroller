@@ -236,7 +236,9 @@ function toggleInputSourceState({ inActionSettings, inSonosSpeakerState }) {
   const currentSource = getInputSourceMappings(inSonosSpeakerState?.currentURI ?? "").currentSource;
   const up = currentSource?.toUpperCase() ?? "SONOS_QUEUE";
   const stateIndex = { SONOS_QUEUE: 0, TV_INPUT: 1, LINE_IN: 2 }[up] ?? 0;
-  const title = getStateBasedTitle(inActionSettings, titleCase(currentSource ?? "Sonos_Queue"));
+  // Short labels: "Sonos Queue" (11 chars) overflowed the key and was cropped to "nos Que".
+  const label = { SONOS_QUEUE: "Queue", TV_INPUT: "TV Input", LINE_IN: "Line In" }[up] ?? titleCase(currentSource);
+  const title = getStateBasedTitle(inActionSettings, label);
 
   return { stateIndex, title };
 }

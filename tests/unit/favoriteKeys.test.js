@@ -124,18 +124,18 @@ describe("rendering: Kendrick -> Top Hits (agreed reference case)", () => {
     let state = playingState(SIG_K);
     let k = buildFavoriteRenderIntent({ inActionSettings: kendrick, inSonosSpeakerState: state });
     let t = buildFavoriteRenderIntent({ inActionSettings: topHits, inSonosSpeakerState: state });
-    expect(k.title).toBe("Kendrick …\n\n\nluther (wi");
+    expect(k.title).toBe("Kendri…\n\n\nluther (");
     expect(k.imageDataURL).toBe("data:http://192.168.50.80:1400/getaa?luther");
-    expect(t.title).toBe("Today's T…");
+    expect(t.title).toBe("Today'…");
     expect(t.imageDataURL).toBe(`data:${TOPHITS.albumArtURI}`);
 
     // Switch to Top Hits
     state = playingState(SIG_T, "Golden Hour Anthem", "http://192.168.50.80:1400/getaa?hit");
     k = buildFavoriteRenderIntent({ inActionSettings: kendrick, inSonosSpeakerState: state });
     t = buildFavoriteRenderIntent({ inActionSettings: topHits, inSonosSpeakerState: state });
-    expect(k.title).toBe("Kendrick …");
+    expect(k.title).toBe("Kendri…"); // 8 chars fit across a key (sonos-06p)
     expect(k.imageDataURL).toBe(`data:${KENDRICK.albumArtURI}`);
-    expect(t.title).toBe("Today's T…\n\n\nGolden Hou");
+    expect(t.title).toBe("Today'…\n\n\nGolden H");
     expect(t.imageDataURL).toBe("data:http://192.168.50.80:1400/getaa?hit");
   });
 
@@ -143,7 +143,7 @@ describe("rendering: Kendrick -> Top Hits (agreed reference case)", () => {
     const kendrick = key(KENDRICK, { favoriteSignature: SIG_K });
     const state = playingState(SIG_K);
     const frames = [0, 1, 2].map(() => buildFavoriteRenderIntent({ inActionSettings: kendrick, inSonosSpeakerState: state }).title);
-    expect(frames).toEqual(["Kendrick …\n\n\nluther (wi", "Kendrick …\n\n\nuther (wit", "Kendrick …\n\n\nther (with"]);
+    expect(frames).toEqual(["Kendri…\n\n\nluther (", "Kendri…\n\n\nuther (w", "Kendri…\n\n\nther (wi"]);
     expect(wantsMarquee(kendrick, state)).toBe(true);
     expect(wantsMarquee(key(TOPHITS, { favoriteSignature: SIG_T }), state)).toBe(false);
   });

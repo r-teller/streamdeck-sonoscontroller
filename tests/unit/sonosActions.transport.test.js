@@ -356,8 +356,8 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
   // 8. toggle‑input‑source – render state
   // -------------------------------------------------------------------------
   it.each([
-    ["x-rincon-queue:RINCON_X#0", 0, "Sonos Queue"],
-    ["x-sonos-htastream:RINCON_X:spdif", 1, "Tv Input"],
+    ["x-rincon-queue:RINCON_X#0", 0, "Queue"],
+    ["x-sonos-htastream:RINCON_X:spdif", 1, "TV Input"],
     ["x-rincon-stream:RINCON_X", 2, "Line In"],
   ])(
     "toggle‑input‑source state maps URI %s to index %i and title when gated",

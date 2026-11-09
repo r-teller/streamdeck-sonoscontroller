@@ -1,4 +1,6 @@
-export const MARQUEE_WIDTH = 10;
+// Characters that fit across a key in Stream Deck's bold title font. Wider text is centered and
+// cropped on both edges ("endrick ." for "Kendrick …"), so names are cut and marquees scroll at 8.
+export const MARQUEE_WIDTH = 8;
 
 const albumArtCache = new Map();
 const inFlightFetches = new Map();

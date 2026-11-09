@@ -11,6 +11,9 @@ import { getAllSpeakers } from "./SonosSpeakers.js";
 
 // Name on the first line, track title pushed towards the bottom of the key (manifest aligns titles top).
 const TRACK_LINE_GAP = "\n\n\n";
+// The "…" renders about as wide as three dots, so truncated lines get one character less than a
+// scrolling window to stay inside the key (sonos-06p).
+const truncateWidth = () => MARQUEE_WIDTH - 1;
 const RUNTIME_KEYS = ["status", "currentStateIndex", "marqueePositionBottom", "lastFavoriteTrackTitle"];
 
 export function isFavoriteSettings(settings) {
@@ -28,7 +31,7 @@ export function buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerStat
   const favorite = settings.selectedSonosFavorite ?? {};
   const active = isFavoriteActive(settings, state);
 
-  const nameLine = settings.displayFavoriteName ? truncateLine(favorite.title, MARQUEE_WIDTH) : "";
+  const nameLine = settings.displayFavoriteName ? truncateLine(favorite.title, truncateWidth()) : "";
 
   let trackLine = "";
   if (active && settings.displayTrackTitle) {
@@ -42,7 +45,7 @@ export function buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerStat
       trackLine = window;
       settings.marqueePositionBottom = nextPos;
     } else {
-      trackLine = truncateLine(track, MARQUEE_WIDTH);
+      trackLine = truncateLine(track, truncateWidth());
     }
   }
 

@@ -40,7 +40,8 @@ describe("computeMarqueeWindow", () => {
   });
 
   test("returns whole text when length equals width", () => {
-    const txt = "ABCDEFGHIJ"; // 10 chars
+    const txt = "ABCDEFGH"; // exactly MARQUEE_WIDTH chars
+    expect(txt).toHaveLength(MARQUEE_WIDTH);
     const { window, nextPos } = computeMarqueeWindow(txt, 3, MARQUEE_WIDTH);
     expect(window).toBe(txt);
     expect(nextPos).toBe(0);
@@ -48,7 +49,7 @@ describe("computeMarqueeWindow", () => {
 
   test("slides window for longer text and wraps correctly", () => {
     const txt = "HelloWorldX"; // 11 chars
-    const width = MARQUEE_WIDTH; // 10
+    const width = 10; // explicit width: this exercises the window maths, not the key width
     // pos 0
     let res = computeMarqueeWindow(txt, 0, width);
     expect(res.window).toBe(txt.slice(0, width));
@@ -94,6 +95,10 @@ describe("computeMarqueeWindow", () => {
       pos = nextPos;
     }
   });
+});
+
+test("MARQUEE_WIDTH is what fits across a key in the bold title font (sonos-06p)", () => {
+  expect(MARQUEE_WIDTH).toBe(8);
 });
 
 describe("detectInputSource", () => {
