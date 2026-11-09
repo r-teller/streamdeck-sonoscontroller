@@ -2,6 +2,10 @@ export const MARQUEE_WIDTH = 10;
 
 const albumArtCache = new Map();
 const inFlightFetches = new Map();
+// url -> epoch ms of the last failed download; retried after ART_RETRY_MS
+const failedFetches = new Map();
+const ART_FETCH_TIMEOUT_MS = 10_000;
+const ART_RETRY_MS = 60_000;
 const artCachedListeners = new Set();
 
 /**
@@ -16,6 +20,7 @@ function onAlbumArtCached(callback) {
 function _resetAlbumArtCache() {
   albumArtCache.clear();
   inFlightFetches.clear();
+  failedFetches.clear();
 }
 
 function _getAlbumArtCache() {
@@ -75,7 +80,11 @@ function ensureAlbumArtCached(url) {
 
   inFlightFetches.set(url, true);
 
-  fetch(url)
+  // A hung download must not pin the URL in inFlightFetches forever (sonos-p93).
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), ART_FETCH_TIMEOUT_MS) : null;
+
+  fetch(url, controller ? { signal: controller.signal } : undefined)
     .then(async (response) => {
       if (!response.ok) throw new Error("Fetch failed");
       const contentType = response.headers.get("content-type") || "";
@@ -88,6 +97,7 @@ function ensureAlbumArtCached(url) {
       const base64 = btoa(binary);
       const dataURL = `data:${contentType};base64,${base64}`;
       albumArtCache.set(url, dataURL);
+      failedFetches.delete(url);
       for (const listener of artCachedListeners) {
         try {
           listener(url);
@@ -97,13 +107,39 @@ function ensureAlbumArtCached(url) {
       }
     })
     .catch(() => {
-      // Swallow errors, cache nothing
+      // Swallow errors, cache nothing; remember the failure so renders fall back to the default image.
+      failedFetches.set(url, Date.now());
+      for (const listener of artCachedListeners) {
+        try {
+          listener(url);
+        } catch (e) {
+          // ignore
+        }
+      }
     })
     .finally(() => {
+      if (timer) clearTimeout(timer);
       inFlightFetches.delete(url);
     });
 
   return null;
+}
+
+/**
+ * Image for a key showing this art URL, distinguishing "still downloading" from "nothing to show":
+ *   data URL / local path -> show it
+ *   undefined             -> download in flight: leave the key's current image alone (no setImage)
+ *   null                  -> no art, or the download failed recently: reset to the default image
+ * Passing null while downloading made every track change flash the manifest icon (sonos-p93).
+ */
+function albumArtImage(url) {
+  if (!url || typeof url !== "string") return null;
+  const failedAt = failedFetches.get(url);
+  if (failedAt !== undefined && !albumArtCache.has(url)) {
+    if (Date.now() - failedAt < ART_RETRY_MS) return null;
+    failedFetches.delete(url);
+  }
+  return ensureAlbumArtCached(url) ?? undefined;
 }
 
 function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState }) {
@@ -138,7 +174,7 @@ function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState }) {
     settings.lastTrackArtURI = currentAlbumArtURI;
   }
 
-  const imageDataURL = settings.displayAlbumArt ? ensureAlbumArtCached(currentAlbumArtURI) : null;
+  const imageDataURL = settings.displayAlbumArt ? albumArtImage(currentAlbumArtURI) : null;
 
   const lines = [];
   const sources = [];
@@ -174,6 +210,7 @@ export {
   detectInputSource,
   computeMarqueeWindow,
   ensureAlbumArtCached,
+  albumArtImage,
   onAlbumArtCached,
   buildMarqueeRenderIntent,
   _resetAlbumArtCache,

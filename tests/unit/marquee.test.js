@@ -4,6 +4,7 @@ import {
   computeMarqueeWindow,
   detectInputSource,
   ensureAlbumArtCached,
+  albumArtImage,
   buildMarqueeRenderIntent,
   _resetAlbumArtCache,
   _getAlbumArtCache,
@@ -124,7 +125,7 @@ describe("ensureAlbumArtCached", () => {
     const ret1 = ensureAlbumArtCached(url);
     expect(ret1).toBeNull();
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith(url);
+    expect(fetch).toHaveBeenCalledWith(url, expect.objectContaining({ signal: expect.anything() }));
     // resolve fetch
     resolveFetch(successResponse);
     // flush microtasks
@@ -162,6 +163,45 @@ describe("ensureAlbumArtCached", () => {
     // subsequent call should try fetch again
     ensureAlbumArtCached(url);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("albumArtImage: undefined while downloading, data once cached, null on no art (sonos-p93)", async () => {
+    expect(albumArtImage(url)).toBeUndefined(); // in flight: keep the key's current image
+    expect(albumArtImage(url)).toBeUndefined();
+    resolveFetch(successResponse);
+    for (let i = 0; i < 10; i += 1) await Promise.resolve();
+    expect(albumArtImage(url)).toBe("data:image/jpeg;base64,AQID");
+    expect(albumArtImage(null)).toBeNull();
+    expect(albumArtImage("")).toBeNull();
+  });
+
+  test("albumArtImage: a failed download falls back to the default image and retries later", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      expect(albumArtImage(url)).toBeUndefined();
+      rejectFetch(new Error("network"));
+      for (let i = 0; i < 10; i += 1) await Promise.resolve();
+      expect(albumArtImage(url)).toBeNull(); // not stuck on the previous track's art
+      expect(fetch).toHaveBeenCalledTimes(1);
+      vi.setSystemTime(Date.now() + 61_000);
+      expect(albumArtImage(url)).toBeUndefined(); // retried
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a hung download is aborted so it can be retried", async () => {
+    vi.useFakeTimers();
+    try {
+      ensureAlbumArtCached(url);
+      const { signal } = fetch.mock.calls[0][1];
+      expect(signal.aborted).toBe(false);
+      vi.advanceTimersByTime(10_000);
+      expect(signal.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("non‑http URLs pass through unchanged", () => {

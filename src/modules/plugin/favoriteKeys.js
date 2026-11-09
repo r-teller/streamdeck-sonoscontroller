@@ -5,7 +5,7 @@ import {
   signaturesEqual,
   truncateLine,
 } from "../common/favoriteSettings.js";
-import { MARQUEE_WIDTH, computeMarqueeWindow, ensureAlbumArtCached } from "./marquee.js";
+import { MARQUEE_WIDTH, computeMarqueeWindow, albumArtImage } from "./marquee.js";
 import { actionSettings, setActionSettings } from "./actionSettings.js";
 import { getAllSpeakers } from "./SonosSpeakers.js";
 
@@ -59,7 +59,7 @@ export function buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerStat
   }
   // While art is downloading, leave the key's image alone (undefined = no setImage); the ticker
   // redraws when the download lands. null resets to the default image.
-  const imageDataURL = artURI ? (ensureAlbumArtCached(artURI) ?? undefined) : null;
+  const imageDataURL = artURI ? albumArtImage(artURI) : null;
 
   return { imageDataURL, title, titleSource: null };
 }
