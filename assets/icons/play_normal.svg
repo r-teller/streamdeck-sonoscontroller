@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Track list: 3 horizontal lines of decreasing length -->
+  <line x1="4" y1="6" x2="14" y2="6"></line>
+  <line x1="4" y1="12" x2="16" y2="12"></line>
+  <line x1="4" y1="18" x2="12" y2="18"></line>
+  <!-- Horizontal arrow over the track list -->
+  <path d="M16 9 L20 12 L16 15" stroke-linejoin="round"></path>
+  <line x1="12" y1="12" x2="20" y2="12"></line>
+</svg>

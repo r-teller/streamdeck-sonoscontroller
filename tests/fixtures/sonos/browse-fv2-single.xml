@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:BrowseResponse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1">
+      <Result>&lt;DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/"&gt;&lt;item id="FV:2/00030064playlist1" parentID="FV:2" restricted="true"&gt;&lt;dc:title&gt;My Playlist&lt;/dc:title&gt;&lt;upnp:class&gt;object.itemobject.item.sonos-favorite&lt;/upnp:class&gt;&lt;r:ordinal&gt;0&lt;/r:ordinal&gt;&lt;res protocolInfo="x-rincon-cpcontainer:*:*:*"&gt;x-rincon-cpcontainer:1006206cspotify%3aplaylist%3a4U1aR8N5g8sV6IuV3xR9rT&lt;/res&gt;&lt;upnp:albumArtURI&gt;/getaa?u=playlist1v1&lt;/upnp:albumArtURI&gt;&lt;r:resMD&gt;&amp;lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:r=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot; xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&amp;gt;&amp;lt;item id=&quot;1006206cspotify%3aplaylist%3a4U1aR8N5g8sV6IuV3xR9rT&quot; parentID=&quot;00020000playlist&quot; restricted=&quot;true&quot;&amp;gt;&amp;lt;dc:title&amp;gt;My Playlist&amp;lt;/dc:title&amp;gt;&amp;lt;upnp:class&amp;gt;object.container.playlistContainer&amp;lt;/upnp:class&amp;gt;&amp;lt;desc id=&quot;cdudn&quot; nameSpace=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot;&amp;gt;SA_RINCON3079_X_#Svc3079-0-Token&amp;lt;/desc&amp;gt;&amp;lt;/item&amp;gt;&amp;lt;/DIDL-Lite&amp;gt;&lt;/r:resMD&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;</Result>
+      <NumberReturned>1</NumberReturned>
+      <TotalMatches>1</TotalMatches>
+      <UpdateID>2</UpdateID>
+    </u:BrowseResponse>
+  </s:Body>
+</s:Envelope>

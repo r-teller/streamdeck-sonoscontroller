@@ -1,462 +1,670 @@
-<template>
-  <div class="container-fluid">
-    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED" class="clearfix mb-3">
-      <h1>Sonos Speakers</h1>
-
-      <AccordeonComponent id="presses" class="mb-2">
-        <AccordeonItem accordeon-id="presses" item-id="availableSonosSpeakers" title="Available Sonos Speakers">
-          <SonosSelection
-            class="mb-3"
-            :available-sonos-speakers="availableSonosSpeakers"
-            v-model="sonosSpeaker"
-            @selection-saved="saveSettings"
-          ></SonosSelection>
-        </AccordeonItem>
-      </AccordeonComponent>
-      <div class="alert alert-light" v-if="selectedSonosSpeaker">
-        <center>{{ selectedSonosSpeaker.title }}</center>
-      </div>
-
-      <div class="form-check form-switch" v-if="displayStateBasedTitleFor.includes(actionName)">
-        <input
-          id="chkButtonTitle"
-          v-model="displayStateBasedTitle"
-          class="form-check-input"
-          type="checkbox"
-          @change="saveSettings"
-        />
-        <label class="form-check-label" for="chkButtonTitle">Display State Based Title</label>
-      </div>
-      <div class="form-check form-switch" v-if="displayMarqueeTitleFor.includes(actionName)">
-        <input
-          id="chkButtonMarqueeTitle"
-          v-model="displayMarqueeTitle"
-          class="form-check-input"
-          type="checkbox"
-          @change="saveSettings"
-        />
-        <label class="form-check-label" for="chkButtonMarqueeTitle">Display Marquee Title</label>
-      </div>
-      <div class="form-check form-switch" v-if="displayMarqueeAlbumTitleFor.includes(actionName)">
-        <input
-          id="chkButtonAlbumTitle"
-          v-model="displayMarqueeAlbumTitle"
-          class="form-check-input"
-          type="checkbox"
-          @change="saveSettings"
-        />
-        <label class="form-check-label" for="chkButtonAlbumTitle">Display Marquee Album Title</label>
-      </div>
-      <div class="form-check form-switch" v-if="displayAlbumArtFor.includes(actionName)">
-        <input
-          id="chkButtonAlbumArt"
-          v-model="displayAlbumArt"
-          class="form-check-input"
-          type="checkbox"
-          @change="saveSettings"
-        />
-        <label class="form-check-label" for="chkButtonAlbumArt">Display Album Art</label>
-      </div>
-    </div>
-
-    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isTogglePlayMode">
-      <h1>Play Mode(s)</h1>
-      <div class="d-flex flex-column gap-2 mb-3">
-        <div v-for="option in availablePlayModes" :key="option.value" class="form-check form-switch">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            :id="option.value"
-            :value="option.value"
-            v-model="selectedPlayModes"
-            @change="saveSettings"
-          />
-          <label class="form-check-label" :for="option.value">
-            {{ option.label }}
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isToggleInputSource">
-      <h1>Input Source(s)</h1>
-      <div class="d-flex flex-column gap-2 mb-3">
-        <div v-for="option in availableInputSources" :key="option.value" class="form-check form-switch">
-          <input
-            type="checkbox"
-            class="form-check-input"
-            :id="option.value"
-            :value="option.value"
-            v-model="selectedInputSources"
-            @change="saveSettings"
-          />
-          <label class="form-check-label" :for="option.value">
-            {{ option.label }}
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isEncoderAudioEqualizer">
-      <h1>Equalizer Target</h1>
-      <div class="d-flex flex-column gap-2 mb-3">
-        <select
-          id="encoderAudioEqualizerTarget"
-          v-model="encoderAudioEqualizerTarget"
-          class="form-select form-select-sm"
-          @change="saveSettings"
-        >
-          <option v-for="option in availableEqualizerTargets" :key="option" :value="option.toUpperCase()">
-            {{ option.charAt(0).toUpperCase() + option.slice(1).toLowerCase() }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <div v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTED && isPlaySonosFavorite">
-      <h1>Sonos Favorite(s)</h1>
-      <div class="d-flex flex-column gap-2 mb-3">
-        <select class="form-select form-select-sm" v-model="sonosFavorite" @change="saveSettings">
-          <option
-            v-for="option in availableSonosFavorites"
-            :key="option.value"
-            :value="option.value"
-            :metadata="option.metadata"
-          >
-            {{ option.title }}
-          </option>
-        </select>
-      </div>
-    </div>
-
-    <div class="clearfix mb-3">
-      <h1>Global Settings</h1>
-      <AccordeonComponent id="globalSettings" class="mb-2">
-        <AccordeonItem
-          accordeon-id="globalSettings"
-          item-id="globalSettings"
-          title="Global Settings"
-          :force-expanded="sonosConnectionState !== OPERATIONAL_STATUS.CONNECTED"
-        >
-          <div class="mb-3">
-            <label class="form-label" for="primaryDeviceAddress">Primary Device Address (Discovery)</label>
-            <small class="text-muted d-block">Note: This device is used to discover all other devices on the network</small>
-            <input id="primaryDeviceAddress" v-model="primaryDeviceAddress" class="form-control form-control-sm" type="text" />
-            <label class="form-label" for="TESTdeviceTimeoutDuration">Device Timeout Duration (Actions)</label>
-            <small class="text-muted d-block">Note: This timeout is used when executing device actions (in seconds)</small>
-            <input
-              id="deviceTimeoutDuration"
-              v-model="deviceTimeoutDuration"
-              class="form-control form-control-sm"
-              type="number"
-            />
-            <label class="form-label" for="deviceCheckInterval">Device Check Interval (Actions)</label>
-            <small class="text-muted d-block"
-              >Note: This interval is used to check the status of the device selected for this action (in seconds)</small
-            >
-            <input id="deviceCheckInterval" v-model="deviceCheckInterval" class="form-control form-control-sm" type="number" />
-          </div>
-
-          <div v-if="sonosError" class="alert alert-danger alert-dismissible" role="alert">
-            {{ sonosError }}
-            <button class="btn-close" type="button" @click="sonosError = ''"></button>
-          </div>
-        </AccordeonItem>
-      </AccordeonComponent>
-      <button
-        :disabled="!isSonosSettingsComplete || sonosConnectionState === OPERATIONAL_STATUS.CONNECTING"
-        class="btn btn-sm btn-primary float-end"
-        v-on:click="saveGlobalSettings"
-      >
-        <span
-          v-if="sonosConnectionState === OPERATIONAL_STATUS.CONNECTING"
-          aria-hidden="true"
-          class="spinner-border spinner-border-sm"
-          role="status"
-        ></span>
-        <span>{{ sonosConnectionState === OPERATIONAL_STATUS.CONNECTED ? "Save and Reconnect" : "Save and Connect" }}</span>
-      </button>
-    </div>
-  </div>
-</template>
-
 <script setup>
-import AccordeonComponent from "@/components/accordeon/BootstrapAccordeon.vue";
-import AccordeonItem from "@/components/accordeon/BootstrapAccordeonItem.vue";
-import { SonosController } from "@/modules/common/sonosController";
-import { OPERATIONAL_STATUS } from "@/modules/plugin/SonosSpeakers";
-import { SonosSpeaker } from "@/modules/pi/SonosSpeaker";
-import { StreamDeck } from "@/modules/common/streamdeck";
-import { computed, onMounted, ref } from "vue";
-import { Buffer } from "buffer";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
+import { streamDeckReady } from "@/modules/common/sdConnect.js";
+import { OPERATIONAL_STATUS } from "@/modules/plugin/operationalStatus.js";
+import { buildActionSettingsPayload } from "@/modules/pi/actionSettingsSchema.js";
+import { buildGlobalSettingsPayload } from "@/modules/pi/globalSettingsSchema.js";
+import BootstrapAccordeon from "@/components/accordeon/BootstrapAccordeon.vue";
+import BootstrapAccordeonItem from "@/components/accordeon/BootstrapAccordeonItem.vue";
 import SonosSelection from "@/components/SonosSelection.vue";
+import SpeakerBindings from "@/components/SpeakerBindings.vue";
+import { isBindingMissing } from "@/modules/common/speakerResolver.js";
+import { FAVORITE_SHORT_NAME, migrateFavoriteSettings } from "@/modules/common/favoriteSettings.js";
 import manifest from "@manifest";
+import { SonosController } from "@/modules/common/sonosController.js";
+import {
+  PLAY_MODES,
+  INPUT_SOURCES,
+  STATE_BASED_TITLE_ACTIONS,
+  MARQUEE_TITLE_ACTIONS,
+  MARQUEE_ALBUM_TITLE_ACTIONS,
+  ALBUM_ART_ACTIONS,
+  actionShortName,
+  encodeFavoriteMetadata,
+} from "@/modules/pi/actionSettingsSchema.js";
 
-const streamDeckConnection = ref(null);
-const sonosError = ref("");
+const actionUUID = ref("");
+const settings = ref({});
+const globalSettings = ref({});
+const connectionState = ref(OPERATIONAL_STATUS.DISCONNECTED);
+const sdClient = ref(null);
+const errorMessage = ref("");
 const primaryDeviceAddress = ref("");
+const isDiscovering = ref(false);
+const speakers = ref([]);
+const deviceTimeoutDuration = ref(10);
 const deviceCheckInterval = ref(10);
-const deviceTimeoutDuration = ref(5);
-const sonosConnectionState = ref(OPERATIONAL_STATUS.DISCONNECTED);
-const availableSonosSpeakers = ref([]);
-const actionSettings = ref({});
+const adjustVolumeIncrement = ref(10);
+const bindings = ref([]);
+const forceGlobalsOpen = ref(false);
+const bindingsSection = ref(null);
 
-// Stores selected sonos speaker UUID
-const sonosSpeaker = ref("");
+const currentSpeakerMissing = computed(() => isBindingMissing(settings.value, globalSettings.value));
 
-// Stores streamdeck action UUID and controller type
-const action = ref("");
-const actionName = ref("");
-const controllerType = ref("");
-const manifestAction = ref({});
+// The PI is served from <StreamDeck data>/Plugins/<plugin>.sdPlugin/pi.html; profiles live in <StreamDeck data>/ProfilesV2.
+const profilesFolderUrl = computed(() => {
+  if (typeof window === "undefined" || window.location.protocol !== "file:") return null;
+  return new URL("../../ProfilesV2/", window.location.href).href;
+});
 
-const isPlaySonosFavorite = ref(false);
-const availableSonosFavorites = ref([]);
-const sonosFavorite = ref("");
+const isConnected = computed(() => connectionState.value === OPERATIONAL_STATUS.CONNECTED && speakers.value.length > 0);
 
-const isTogglePlayMode = ref(false);
-const selectedPlayModes = ref([]);
-const availablePlayModes = ref([]);
+const boundSpeakerLabel = computed(
+  () => settings.value.title ?? formatSpeakerTitle(settings.value.zoneName, settings.value.hostAddress),
+);
 
-const isToggleInputSource = ref(false);
-const availableInputSources = ref([]);
-const selectedInputSources = ref([]);
+const shortName = computed(() => actionShortName(actionUUID.value));
 
-const displayStateBasedTitleFor = [
-  "toggle-play-mode",
-  "toggle-input-source",
-  "toggle-play-pause",
-  "toggle-mute-unmute",
-  "volume-up",
-  "volume-down",
-  "play-previous-track",
-  "play-next-track",
+const showDisplayStateBasedTitle = computed(() => STATE_BASED_TITLE_ACTIONS.has(shortName.value));
+const showDisplayMarqueeTitle = computed(() => MARQUEE_TITLE_ACTIONS.has(shortName.value));
+const showDisplayMarqueeAlbumTitle = computed(() => MARQUEE_ALBUM_TITLE_ACTIONS.has(shortName.value));
+const showDisplayAlbumArt = computed(() => ALBUM_ART_ACTIONS.has(shortName.value));
+const showFavoriteToggles = computed(() => shortName.value === FAVORITE_SHORT_NAME);
+const FAVORITE_TOGGLES = [
+  { key: "displayFavoriteName", label: "Display Favorite Name" },
+  { key: "displayTrackTitle", label: "Display Track Title" },
+  { key: "displayMarquee", label: "Marquee", requires: "displayTrackTitle" },
+  { key: "displayFavoriteArtwork", label: "Display Favorite Artwork" },
+  { key: "displayTrackArtwork", label: "Display Track/Album Artwork" },
 ];
-const displayStateBasedTitle = ref(false);
-
-const displayAlbumArtFor = ["toggle-play-pause", "play-sonos-favorite", "currently-playing"];
-const displayAlbumArt = ref(false);
-
-const displayMarqueeTitleFor = ["play-sonos-favorite", "currently-playing"];
-const displayMarqueeTitle = ref(false);
-
-const displayMarqueeAlbumTitleFor = ["toggle-play-pause", "currently-playing"];
-const displayMarqueeAlbumTitle = ref(false);
-
-const isEncoderAudioEqualizer = ref(false);
-const availableEqualizerTargets = ref(["volume", "bass", "treble"]);
-const encoderAudioEqualizerTarget = ref("");
-
-onMounted(() => {
-  window.connectElgatoStreamDeckSocket = (exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo) => {
-    streamDeckConnection.value = new StreamDeck(exPort, exPropertyInspectorUUID, exRegisterEvent, exInfo, exActionInfo);
-    const exActionInfoObject = JSON.parse(exActionInfo);
-    actionName.value = exActionInfoObject.action.split(".").pop();
-    manifestAction.value = manifest.Actions.find((manifestAction) => manifestAction.UUID === exActionInfoObject.action);
-
-    action.value = exActionInfoObject.action;
-    controllerType.value = exActionInfoObject.payload.controller;
-
-    streamDeckConnection.value.on("connected", () => {
-      streamDeckConnection.value.requestGlobalSettings();
-    });
-
-    // this is called when the user clicks the save button external from the pi
-    // saving in case logic is needed in the future
-    // streamDeckConnection.value.on("didReceiveSettings", (inMessage) => {
-    //   actionSettings.value = inMessage.payload.settings;
-    // });
-    // streamDeckConnection.value.on("sendToPropertyInspector", (inMessage) => {
-    //   console.log(inMessage);
-    // });
-
-    streamDeckConnection.value.on("globalsettings", (inGlobalSettings) => {
-      if (inGlobalSettings) {
-        if (inGlobalSettings.devices) {
-          deviceCheckInterval.value = inGlobalSettings.deviceCheckInterval;
-          deviceTimeoutDuration.value = inGlobalSettings.deviceTimeoutDuration;
-          const primaryDevice = Object.values(inGlobalSettings.devices).find((device) => device.primary === true);
-          if (primaryDevice) {
-            primaryDeviceAddress.value = primaryDevice.hostAddress;
-            actionSettings.value = JSON.parse(exActionInfo).payload.settings;
-
-            sonosConnectionState.value = OPERATIONAL_STATUS.CONNECTED;
-            switch (actionName.value) {
-              case "toggle-play-mode":
-                isTogglePlayMode.value = true;
-                availablePlayModes.value = manifestAction.value.States.map((state) => ({
-                  value: state.Name.toUpperCase(),
-                  label: state.Name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-                }));
-                if (actionSettings.value?.selectedPlayModes) {
-                  selectedPlayModes.value = actionSettings.value.selectedPlayModes;
-                } else {
-                  selectedPlayModes.value = availablePlayModes.value.map((playMode) => playMode.value);
-                }
-                break;
-              case "toggle-input-source":
-                isToggleInputSource.value = true;
-                availableInputSources.value = manifestAction.value.States.map((state) => ({
-                  value: state.Name.toUpperCase(),
-                  label: state.Name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-                }));
-                if (actionSettings.value?.selectedInputSources) {
-                  selectedInputSources.value = actionSettings.value.selectedInputSources;
-                } else {
-                  selectedInputSources.value = availableInputSources.value.map((inputSource) => inputSource.value);
-                }
-                break;
-              case "encoder-audio-equalizer":
-                isEncoderAudioEqualizer.value = true;
-                if (actionSettings.value?.encoderAudioEqualizerTarget) {
-                  encoderAudioEqualizerTarget.value = actionSettings.value.encoderAudioEqualizerTarget;
-                } else {
-                  encoderAudioEqualizerTarget.value = "VOLUME";
-                }
-                break;
-              case "play-sonos-favorite":
-                isPlaySonosFavorite.value = true;
-                availableSonosFavorites.value = inGlobalSettings.favorites.map((favorite) => ({
-                  title: favorite.title,
-                  metadata: Buffer.from(favorite.metadata, "utf-8").toString("base64"),
-                  value: favorite.uri,
-                  albumArtURI: favorite.albumArtURI,
-                }));
-                if (actionSettings.value?.selectedSonosFavorite) {
-                  sonosFavorite.value = actionSettings.value.selectedSonosFavorite.uri;
-                } else {
-                  sonosFavorite.value = availableSonosFavorites.value[0].value;
-                }
-                break;
-            }
-
-            displayStateBasedTitle.value = actionSettings.value?.displayStateBasedTitle ?? false;
-            displayAlbumArt.value = actionSettings.value?.displayAlbumArt ?? false;
-            displayMarqueeTitle.value = actionSettings.value?.displayMarqueeTitle ?? false;
-            displayMarqueeAlbumTitle.value = actionSettings.value?.displayMarqueeAlbumTitle ?? false;
-
-            refreshAvailableSonosSpeakers({
-              inDevices: inGlobalSettings.devices,
-              inActionSettings: actionSettings.value,
-              triggerSaveSettings: !actionSettings.value || Object.keys(actionSettings.value).length === 0,
-            });
-          } else {
-            console.log("No primary device found");
-          }
-        }
-      }
-    });
-  };
-});
-
-const isSonosSettingsComplete = computed(() => {
-  return primaryDeviceAddress.value;
-});
-const selectedSonosFavorite = computed(() =>
-  availableSonosFavorites.value.find((favorite) => favorite.value === sonosFavorite.value),
-);
-const selectedSonosSpeaker = computed(() =>
-  availableSonosSpeakers.value.find((speaker) => speaker.uuid === sonosSpeaker.value),
+const showPresentationToggles = computed(
+  () =>
+    showFavoriteToggles.value ||
+    showDisplayStateBasedTitle.value ||
+    showDisplayMarqueeTitle.value ||
+    showDisplayMarqueeAlbumTitle.value ||
+    showDisplayAlbumArt.value,
 );
 
-function refreshAvailableSonosSpeakers({ inDevices, inActionSettings = {}, triggerSaveSettings = true }) {
-  availableSonosSpeakers.value = Object.values(inDevices)
-    .map(
-      (device) =>
-        new SonosSpeaker({
-          zoneName: device.zoneName,
-          hostAddress: device.hostAddress,
-          uuid: device.uuid,
-          isSatellite: device.isSatellite,
-        }),
-    )
-    .sort((a, b) =>
-      a.title.toLowerCase() > b.title.toLowerCase() ? 1 : b.title.toLowerCase() > a.title.toLowerCase() ? -1 : 0,
-    );
-
-  if (inActionSettings?.uuid) {
-    sonosSpeaker.value = inActionSettings.uuid;
-    if (triggerSaveSettings) {
-      saveSettings();
-    }
-  } else {
-    const primaryDevice = Object.values(inDevices).find((device) => device.primary === true).uuid;
-    sonosSpeaker.value = primaryDevice;
-    if (triggerSaveSettings) {
-      saveSettings();
-    }
-  }
+function formatSpeakerTitle(zoneName, hostAddress) {
+  return `${zoneName} (${hostAddress})`;
 }
 
-async function saveGlobalSettings() {
-  sonosError.value = "";
-  sonosConnectionState.value = OPERATIONAL_STATUS.CONNECTING;
-  const $SONOS = new SonosController();
-  $SONOS.connect(primaryDeviceAddress.value);
+function bindStreamDeck(client) {
+  sdClient.value = client;
 
-  try {
-    const timeout = (sonosAction) =>
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Timeout while ${sonosAction} after ${deviceTimeoutDuration.value} seconds`)),
-          deviceTimeoutDuration.value * 1000,
-        ),
-      );
-    const getDevices = await Promise.race([$SONOS.getDevices({ setAsPrimary: true }), timeout("getting devices")]);
-    if (!getDevices.timedOut) {
-      clearTimeout(getDevices.timedOut);
-    }
-    const getFavorites = await Promise.race([$SONOS.getFavorites(), timeout("getting favorites")]);
-    if (!getFavorites.timedOut) {
-      clearTimeout(getFavorites.timedOut);
-    }
-    sonosConnectionState.value = OPERATIONAL_STATUS.CONNECTED;
-    refreshAvailableSonosSpeakers({
-      inDevices: getDevices.list,
-      inActionSettings: actionSettings.value,
-    });
-    streamDeckConnection.value.saveGlobalSettings({
-      payload: {
-        devices: getDevices.list,
-        deviceCheckInterval: deviceCheckInterval.value,
-        deviceTimeoutDuration: deviceTimeoutDuration.value,
-        favorites: getFavorites.list,
-      },
-    });
-  } catch (error) {
-    sonosConnectionState.value = OPERATIONAL_STATUS.DISCONNECTED;
-    console.error("Failed to get devices:", error.message);
-    sonosError.value = `Failed to get devices: ${error.message}`;
-  }
-}
-
-function saveSettings() {
-  actionSettings.value = {
-    action: action.value,
-    states: manifestAction.value.States,
-    controller: controllerType.value,
-    uuid: selectedSonosSpeaker.value.uuid,
-    title: selectedSonosSpeaker.value.title,
-    hostAddress: selectedSonosSpeaker.value.hostAddress,
-    zoneName: selectedSonosSpeaker.value.zoneName,
-    selectedPlayModes: selectedPlayModes.value || [],
-    selectedInputSources: selectedInputSources.value || [],
-    encoderAudioEqualizerTarget: encoderAudioEqualizerTarget.value,
-    displayStateBasedTitle: displayStateBasedTitleFor.includes(actionName.value) ? displayStateBasedTitle.value : null,
-    displayAlbumArt: displayAlbumArtFor.includes(actionName.value) ? displayAlbumArt.value : null,
-    displayMarqueeTitle: displayMarqueeTitleFor.includes(actionName.value) ? displayMarqueeTitle.value : null,
-    displayMarqueeAlbumTitle: displayMarqueeAlbumTitleFor.includes(actionName.value) ? displayMarqueeAlbumTitle.value : null,
-    selectedSonosFavorite: selectedSonosFavorite.value
-      ? {
-          title: selectedSonosFavorite.value.title,
-          uri: selectedSonosFavorite.value.value,
-          metadata: Buffer.from(selectedSonosFavorite.value.metadata, "base64").toString("utf-8"),
-          albumArtURI: selectedSonosFavorite.value.albumArtURI,
-        }
-      : null,
+  const handleConnected = () => {
+    actionUUID.value = client.actionInfo?.action ?? "";
+    settings.value = normalizeSettings(client.actionInfo?.payload?.settings ?? {});
+    connectionState.value = OPERATIONAL_STATUS.CONNECTED;
+    client.requestGlobalSettings();
+    requestBindings();
   };
-  streamDeckConnection.value.saveSettings({
-    actionSettings: actionSettings.value,
+
+  if (client.connected) {
+    handleConnected();
+  }
+
+  client.on("connected", handleConnected);
+  client.on("disconnected", () => {
+    connectionState.value = OPERATIONAL_STATUS.DISCONNECTED;
+  });
+  client.on("error", () => {
+    connectionState.value = OPERATIONAL_STATUS.DISCONNECTED;
+  });
+  client.on("didReceiveSettings", (message) => {
+    settings.value = normalizeSettings(message?.payload?.settings ?? {});
+  });
+  client.on("globalsettings", (incoming) => {
+    globalSettings.value = incoming ?? {};
+  });
+  client.on("sendToPropertyInspector", (message) => {
+    const payload = message?.payload;
+    if (payload?.type === "bindings" && Array.isArray(payload.bindings)) {
+      bindings.value = payload.bindings;
+    }
   });
 }
+
+// Favorite keys saved before the five favorite toggles existed are mapped onto them (sonos-gw5).
+function normalizeSettings(raw) {
+  return actionShortName(actionUUID.value) === FAVORITE_SHORT_NAME ? migrateFavoriteSettings(raw) : raw;
+}
+
+function requestBindings() {
+  const client = sdClient.value;
+  client?.sendToPlugin?.({ action: actionUUID.value, context: client.uuid, payload: { type: "getBindings" } });
+}
+
+function setReplacements(next) {
+  saveGlobalSettings({ speakerReplacements: next });
+  // The plugin reconciles buttons and pushes fresh bindings on didReceiveGlobalSettings; ask again as a fallback.
+  setTimeout(requestBindings, 500);
+}
+
+function onReplaceSpeaker({ from, to }) {
+  if (!from || !to || from === to) return;
+  setReplacements({ ...(globalSettings.value?.speakerReplacements ?? {}), [from]: to });
+}
+
+function onUndoReplacement({ from }) {
+  const next = { ...(globalSettings.value?.speakerReplacements ?? {}) };
+  delete next[from];
+  setReplacements(next);
+}
+
+async function showSpeakerBindings() {
+  forceGlobalsOpen.value = true;
+  await nextTick();
+  bindingsSection.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+}
+
+function openProfilesFolder() {
+  if (profilesFolderUrl.value) sdClient.value?.openUrl?.({ url: profilesFolderUrl.value });
+}
+
+function buildSaveInput(overrides = {}) {
+  const manifestAction = manifest.Actions.find((entry) => entry.UUID === actionUUID.value);
+  return buildActionSettingsPayload({
+    action: actionUUID.value,
+    states: manifestAction?.States ?? [],
+    controller: sdClient.value?.actionInfo?.payload?.controller ?? "Keypad",
+    current: settings.value,
+    overrides,
+  });
+}
+
+function saveSettings(overrides = {}) {
+  const payload = buildSaveInput(overrides);
+  settings.value = payload;
+  sdClient.value?.saveSettings({ actionSettings: payload, context: sdClient.value.uuid });
+  return payload;
+}
+
+function saveGlobalSettings(partial = {}) {
+  const payload = buildGlobalSettingsPayload({ ...globalSettings.value, ...partial });
+  globalSettings.value = payload;
+  sdClient.value?.saveGlobalSettings({ payload });
+  return payload;
+}
+
+function rebuildSpeakersFromDevices(devices) {
+  speakers.value = Object.values(devices).map((d) => ({
+    uuid: d.uuid,
+    zoneName: d.zoneName,
+    hostAddress: d.hostAddress,
+    isSatellite: d.isSatellite === true,
+  }));
+}
+
+function onSpeakerSelected(uuid) {
+  const device = speakers.value.find((s) => s.uuid === uuid);
+  if (!device) return;
+  saveSettings({
+    uuid: device.uuid,
+    title: formatSpeakerTitle(device.zoneName, device.hostAddress),
+    hostAddress: device.hostAddress,
+    zoneName: device.zoneName,
+  });
+}
+
+watch([actionUUID, globalSettings], () => {
+  if (actionUUID.value && !settings.value?.uuid && sdClient.value) {
+    const devices = globalSettings.value?.devices ?? {};
+    const primary = Object.values(devices).find((d) => d.primary === true);
+    if (primary) {
+      saveSettings({
+        uuid: primary.uuid,
+        title: formatSpeakerTitle(primary.zoneName, primary.hostAddress),
+        hostAddress: primary.hostAddress,
+        zoneName: primary.zoneName,
+      });
+    }
+  }
+});
+
+watch(globalSettings, () => {
+  const devices = globalSettings.value?.devices;
+  if (devices && Object.keys(devices).length > 0) {
+    rebuildSpeakersFromDevices(devices);
+    connectionState.value = OPERATIONAL_STATUS.CONNECTED;
+    const primary = Object.values(devices).find((d) => d.primary === true);
+    if (primary) {
+      primaryDeviceAddress.value = primary.hostAddress;
+    }
+  }
+  deviceTimeoutDuration.value = globalSettings.value?.deviceTimeoutDuration ?? 10;
+  deviceCheckInterval.value = globalSettings.value?.deviceCheckInterval ?? 10;
+  adjustVolumeIncrement.value = globalSettings.value?.adjustVolumeIncrement ?? 10;
+});
+
+onMounted(() => {
+  connectionState.value = OPERATIONAL_STATUS.CONNECTING;
+  streamDeckReady.then(bindStreamDeck).catch((error) => {
+    console.warn("Stream Deck bridge unavailable:", error);
+    connectionState.value = OPERATIONAL_STATUS.DISCONNECTED;
+  });
+});
+
+async function saveAndConnect() {
+  isDiscovering.value = true;
+  try {
+    const controller = new SonosController({ timeoutSec: deviceTimeoutDuration.value ?? 10 });
+    controller.connect(primaryDeviceAddress.value.trim());
+    const [deviceList, favorites] = await Promise.all([
+      controller.getDevices({ setAsPrimary: true }),
+      controller.getFavorites(),
+    ]);
+    const devices = {};
+    for (const device of deviceList) {
+      devices[device.uuid] = device;
+    }
+    const payload = saveGlobalSettings({
+      devices,
+      deviceCheckInterval: deviceCheckInterval.value,
+      deviceTimeoutDuration: deviceTimeoutDuration.value,
+      adjustVolumeIncrement: adjustVolumeIncrement.value,
+      favorites,
+    });
+    deviceCheckInterval.value = payload.deviceCheckInterval;
+    deviceTimeoutDuration.value = payload.deviceTimeoutDuration;
+    adjustVolumeIncrement.value = payload.adjustVolumeIncrement;
+    rebuildSpeakersFromDevices(devices);
+    errorMessage.value = "";
+    connectionState.value = OPERATIONAL_STATUS.CONNECTED;
+    if (!settings.value?.uuid) {
+      const primaryDevice = deviceList.find((d) => d.primary === true);
+      if (primaryDevice) {
+        saveSettings({
+          uuid: primaryDevice.uuid,
+          title: formatSpeakerTitle(primaryDevice.zoneName, primaryDevice.hostAddress),
+          hostAddress: primaryDevice.hostAddress,
+          zoneName: primaryDevice.zoneName,
+        });
+      }
+    }
+  } catch (err) {
+    errorMessage.value = err?.message ?? String(err);
+  } finally {
+    isDiscovering.value = false;
+  }
+}
+
+function onPresentationToggle(field, checked) {
+  saveSettings({ [field]: checked });
+}
+
+function onPlayModeToggled(mode, checked) {
+  const current = settings.value.selectedPlayModes ?? PLAY_MODES;
+  const selectedSet = new Set(current);
+  if (checked) {
+    selectedSet.add(mode);
+  } else {
+    selectedSet.delete(mode);
+  }
+  const rebuilt = PLAY_MODES.filter((m) => selectedSet.has(m));
+  saveSettings({ selectedPlayModes: rebuilt });
+}
+
+function onInputSourceToggled(source, checked) {
+  const current = settings.value.selectedInputSources ?? INPUT_SOURCES;
+  const selectedSet = new Set(current);
+  if (checked) {
+    selectedSet.add(source);
+  } else {
+    selectedSet.delete(source);
+  }
+  const rebuilt = INPUT_SOURCES.filter((s) => selectedSet.has(s));
+  saveSettings({ selectedInputSources: rebuilt });
+}
+
+function onEqualizerTargetChanged(event) {
+  saveSettings({ encoderAudioEqualizerTarget: event.target.value });
+}
+
+function onEncoderPushActionChanged(event) {
+  saveSettings({ encoderPushAction: event.target.value });
+}
+
+function onFavoriteSelected(event) {
+  const option = event.target.selectedOptions[0];
+  if (!option) return;
+  const { title, metadata, albumArtUri } = option.dataset;
+  const uri = event.target.value;
+  saveSettings({
+    selectedSonosFavorite: {
+      title,
+      uri,
+      metadata,
+      albumArtURI: albumArtUri,
+    },
+  });
+}
+
+const volumeIncrementOverride = computed({
+  get() {
+    if (settings.value.adjustVolumeIncrement == null) {
+      return "";
+    }
+    return settings.value.adjustVolumeIncrement;
+  },
+  set(value) {
+    if (value === "" || value == null) {
+      saveSettings({ adjustVolumeIncrement: null });
+    } else {
+      saveSettings({ adjustVolumeIncrement: Number(value) });
+    }
+  },
+});
+
+defineExpose({
+  actionUUID,
+  settings,
+  globalSettings,
+  connectionState,
+  sdClient,
+  errorMessage,
+  primaryDeviceAddress,
+  isDiscovering,
+  speakers,
+  isConnected,
+  bindStreamDeck,
+  buildSaveInput,
+  saveSettings,
+  saveGlobalSettings,
+  formatSpeakerTitle,
+  onSpeakerSelected,
+  deviceTimeoutDuration,
+  deviceCheckInterval,
+  adjustVolumeIncrement,
+  volumeIncrementOverride,
+  saveAndConnect,
+  onPresentationToggle,
+  onPlayModeToggled,
+  onInputSourceToggled,
+  onEqualizerTargetChanged,
+  onFavoriteSelected,
+  bindings,
+  currentSpeakerMissing,
+  requestBindings,
+  onReplaceSpeaker,
+  onUndoReplacement,
+  profilesFolderUrl,
+  openProfilesFolder,
+});
 </script>
+
+<template>
+  <div class="container-fluid p-2">
+    <section data-pi-section="sonos-speakers">
+      <h1 class="h5">Sonos Speakers</h1>
+      <BootstrapAccordeon v-if="isConnected" accordeon-id="sonos-speakers-accordeon">
+        <BootstrapAccordeonItem item-id="AvailableSonosSpeakers" title="Available Sonos Speakers" :force-expanded="false">
+          <SonosSelection :model-value="settings.uuid ?? ''" :speakers="speakers" @selection-saved="onSpeakerSelected" />
+        </BootstrapAccordeonItem>
+      </BootstrapAccordeon>
+      <p v-else class="text-muted" data-pi-disconnected-hint>
+        Set the Primary Device Address below and tap "Save and Connect" to discover your speakers.
+      </p>
+      <div
+        v-if="settings.uuid && currentSpeakerMissing"
+        class="alert alert-warning d-flex justify-content-between align-items-center py-2"
+        role="status"
+        data-pi-bound-speaker-alert
+        data-pi-speaker-missing-alert
+      >
+        <small> {{ boundSpeakerLabel }}. <strong>Speaker not found in household.</strong> </small>
+        <button type="button" class="btn btn-sm btn-outline-warning" data-pi-speaker-missing-fix @click="showSpeakerBindings">
+          Fix
+        </button>
+      </div>
+      <div v-else-if="settings.uuid" class="alert alert-light" role="status" data-pi-bound-speaker-alert>
+        <small>{{ boundSpeakerLabel }}</small>
+      </div>
+    </section>
+
+    <section v-if="showPresentationToggles" data-pi-section="presentation-toggles">
+      <template v-if="showFavoriteToggles">
+        <div v-for="t in FAVORITE_TOGGLES" :key="t.key" class="form-check form-switch">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            :checked="settings[t.key] ?? false"
+            :disabled="t.requires ? !settings[t.requires] : false"
+            :data-pi-favorite-toggle="t.key"
+            @change="onPresentationToggle(t.key, $event.target.checked)"
+          />
+          <label class="form-check-label">{{ t.label }}</label>
+        </div>
+        <div class="form-text text-muted" data-pi-favorite-toggle-hint>
+          Track title, marquee and track artwork show only while this favorite is the one playing.
+        </div>
+      </template>
+      <div v-if="showDisplayStateBasedTitle" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.displayStateBasedTitle ?? false"
+          data-pi-toggle-state-based-title
+          @change="onPresentationToggle('displayStateBasedTitle', $event.target.checked)"
+        />
+        <label class="form-check-label">Display State Based Title</label>
+      </div>
+      <div v-if="showDisplayMarqueeTitle" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.displayMarqueeTitle ?? false"
+          data-pi-toggle-marquee-title
+          @change="onPresentationToggle('displayMarqueeTitle', $event.target.checked)"
+        />
+        <label class="form-check-label">Display Marquee Title</label>
+      </div>
+      <div v-if="showDisplayMarqueeAlbumTitle" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.displayMarqueeAlbumTitle ?? false"
+          data-pi-toggle-marquee-album-title
+          @change="onPresentationToggle('displayMarqueeAlbumTitle', $event.target.checked)"
+        />
+        <label class="form-check-label">Display Marquee Album Title</label>
+      </div>
+      <div v-if="showDisplayAlbumArt" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.displayAlbumArt ?? false"
+          data-pi-toggle-album-art
+          @change="onPresentationToggle('displayAlbumArt', $event.target.checked)"
+        />
+        <label class="form-check-label">Display Album Art</label>
+      </div>
+    </section>
+
+    <section v-if="shortName === 'toggle-play-mode'" data-pi-section="play-modes">
+      <h1 class="h5">Play Mode(s)</h1>
+      <div v-for="mode in PLAY_MODES" :key="mode" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :data-pi-play-mode="mode"
+          :checked="(settings.selectedPlayModes ?? PLAY_MODES).includes(mode)"
+          @change="onPlayModeToggled(mode, $event.target.checked)"
+        />
+        <label class="form-check-label">
+          {{
+            mode === "NORMAL"
+              ? "Normal"
+              : mode === "SHUFFLE_NOREPEAT"
+                ? "Shuffle No Repeat"
+                : mode === "SHUFFLE_REPEAT_ONE"
+                  ? "Shuffle Repeat One"
+                  : mode === "SHUFFLE"
+                    ? "Shuffle"
+                    : mode === "REPEAT_ONE"
+                      ? "Repeat One"
+                      : "Repeat All"
+          }}
+        </label>
+      </div>
+    </section>
+
+    <section v-if="shortName === 'toggle-input-source'" data-pi-section="input-sources">
+      <h1 class="h5">Input Source(s)</h1>
+      <div v-for="source in INPUT_SOURCES" :key="source" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :data-pi-input-source="source"
+          :checked="(settings.selectedInputSources ?? INPUT_SOURCES).includes(source)"
+          @change="onInputSourceToggled(source, $event.target.checked)"
+        />
+        <label class="form-check-label">
+          {{ source === "Sonos_Queue" ? "Sonos Queue" : source === "TV_Input" ? "Tv Input" : "Line In" }}
+        </label>
+      </div>
+    </section>
+
+    <section v-if="shortName === 'encoder-audio-equalizer'" data-pi-section="equalizer-target">
+      <h1 class="h5">Equalizer Target</h1>
+      <select
+        class="form-select"
+        :value="settings.encoderAudioEqualizerTarget ?? 'VOLUME'"
+        data-pi-eq-target-select
+        @change="onEqualizerTargetChanged"
+      >
+        <option value="VOLUME">Volume</option>
+        <option value="BASS">Bass</option>
+        <option value="TREBLE">Treble</option>
+      </select>
+      <div class="form-text text-muted mb-3">Turning the dial adjusts this.</div>
+
+      <h1 class="h5">Dial Push</h1>
+      <select
+        class="form-select"
+        :value="settings.encoderPushAction ?? 'NONE'"
+        data-pi-encoder-push-select
+        @change="onEncoderPushActionChanged"
+      >
+        <option value="NONE">Nothing</option>
+        <option value="TOGGLE_MUTE">Mute / Unmute</option>
+        <option value="TOGGLE_PLAY_PAUSE">Play / Pause</option>
+        <option value="NEXT_TRACK">Next Track</option>
+      </select>
+      <div class="form-text text-muted">Pressing the dial does this.</div>
+    </section>
+
+    <section v-if="shortName === 'play-sonos-favorite'" data-pi-section="sonos-favorites">
+      <h1 class="h5">Sonos Favorite(s)</h1>
+      <select
+        class="form-select"
+        :value="settings.selectedSonosFavorite?.uri ?? globalSettings.favorites?.[0]?.uri ?? ''"
+        data-pi-favorite-select
+        @change="onFavoriteSelected"
+      >
+        <option
+          v-for="favorite in globalSettings.favorites ?? []"
+          :key="favorite.uri"
+          :value="favorite.uri"
+          :data-title="favorite.title"
+          :data-metadata="encodeFavoriteMetadata(favorite.metadata)"
+          :data-album-art-uri="favorite.albumArtURI"
+        >
+          {{ favorite.title }}
+        </option>
+      </select>
+    </section>
+
+    <section v-if="shortName === 'volume-up' || shortName === 'volume-down'" data-pi-section="volume-increment-override">
+      <h1 class="h5">Volume Increment</h1>
+      <label class="form-label">Override increment (leave empty to use global default)</label>
+      <input
+        v-model="volumeIncrementOverride"
+        type="number"
+        min="1"
+        class="form-control"
+        data-pi-volume-increment-override
+        :placeholder="`Global default: ${globalSettings.adjustVolumeIncrement ?? 10}`"
+      />
+      <div class="form-text text-muted">Volume range: 0–100</div>
+    </section>
+
+    <section data-pi-section="global-settings">
+      <h1 class="h5">Global Settings</h1>
+      <BootstrapAccordeon accordeon-id="global-settings-accordeon">
+        <BootstrapAccordeonItem
+          item-id="GlobalSettings"
+          title="Global Settings"
+          :force-expanded="!isConnected || forceGlobalsOpen"
+        >
+          <div v-if="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert" data-pi-error-alert>
+            {{ errorMessage }}
+            <button
+              type="button"
+              class="btn-close"
+              aria-label="Close"
+              data-pi-error-dismiss
+              @click="errorMessage = ''"
+            ></button>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Primary Device Address (Discovery)</label>
+            <input v-model="primaryDeviceAddress" type="text" class="form-control" data-pi-primary-device-address />
+            <div class="form-text text-muted">Note: This device is used to discover all other devices on the network</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Device Timeout Duration (Actions)</label>
+            <input v-model="deviceTimeoutDuration" type="number" min="1" class="form-control" data-pi-device-timeout-duration />
+            <div class="form-text text-muted">Note: This timeout is used when executing device actions (in seconds)</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Device Check Interval (Actions)</label>
+            <input v-model="deviceCheckInterval" type="number" min="1" class="form-control" data-pi-device-check-interval />
+            <div class="form-text text-muted">
+              Note: This interval is used to check the status of the device selected for this action (in seconds)
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Volume Increment (Up/Down)</label>
+            <input v-model="adjustVolumeIncrement" type="number" min="1" class="form-control" data-pi-global-volume-increment />
+            <div class="form-text text-muted">
+              Note: Volume range is 0–100. Used by Volume Up and Volume Down actions unless overridden per-button.
+            </div>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-pi-save-and-connect
+              :disabled="!primaryDeviceAddress.trim() || isDiscovering"
+              @click="saveAndConnect"
+            >
+              <span
+                v-if="isDiscovering"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+                data-pi-save-and-connect-spinner
+              ></span>
+              {{ isConnected ? "Save and Reconnect" : "Save and Connect" }}
+            </button>
+          </div>
+
+          <hr class="my-4" />
+          <div ref="bindingsSection">
+            <SpeakerBindings
+              :bindings="bindings"
+              :globals="globalSettings"
+              @replace="onReplaceSpeaker"
+              @undo="onUndoReplacement"
+            />
+          </div>
+
+          <template v-if="profilesFolderUrl">
+            <hr class="my-4" />
+            <div data-pi-advanced>
+              <h2 class="h6 mb-1">Advanced</h2>
+              <button type="button" class="btn btn-link btn-sm px-0" data-pi-open-profiles @click="openProfilesFolder">
+                Open Stream Deck profiles folder…
+              </button>
+              <div class="form-text text-warning">
+                Quit Stream Deck from the tray before editing profile files. It overwrites them while running.
+              </div>
+            </div>
+          </template>
+        </BootstrapAccordeonItem>
+      </BootstrapAccordeon>
+    </section>
+  </div>
+</template>

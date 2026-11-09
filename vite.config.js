@@ -1,36 +1,30 @@
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from "node:url";
 
-import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
-// import json from "@rollup/plugin-json";
-// import ViteYaml from '@modyfi/vite-plugin-yaml';
-import path from "path";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    // json(),
-    // ViteYaml()
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
-      "~bootstrap": path.resolve(__dirname, "node_modules/bootstrap"),
-      '@manifest': path.resolve(__dirname, './public/manifest.json')
-    },
+      '@': fileURLToPath(new URL("./src", import.meta.url)),
+      '~bootstrap': fileURLToPath(new URL("./node_modules/bootstrap", import.meta.url)),
+      '@manifest': fileURLToPath(new URL("./public/manifest.json", import.meta.url))
+    }
   },
   build: {
     outDir: 'com.r-teller.sonoscontroller.sdPlugin',
     rollupOptions: {
       input: {
-        pi: "pi.html",
-        plugin: "plugin.html",
-      },
-    },
+        pi: 'pi.html',
+        plugin: 'plugin.html',
+        probe: 'harness/sonos-probe.html',
+        preview: 'harness/key-preview.html'
+      }
+    }
   },
-  base: "./",
+  base: './',
+  test: {
+    setupFiles: ["tests/setup.js"],
+    include: ["tests/unit/**/*.test.js"]
+  }
 });

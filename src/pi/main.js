@@ -1,7 +1,9 @@
+import "bootstrap";
+import "@/scss/styles.scss";
 import { createApp } from "vue";
 import PiComponent from "@/components/PiComponent.vue";
-import "../scss/styles.scss";
-// eslint-disable-next-line no-unused-vars
-import * as bootstrap from "bootstrap";
+import { installStreamDeckBridge } from "@/modules/common/sdConnect.js";
+
+installStreamDeckBridge();
 
 createApp(PiComponent).mount("#app");

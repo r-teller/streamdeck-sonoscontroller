@@ -1,226 +1,144 @@
 import { EventEmitter } from "@elgato/streamdeck";
 
-export class StreamDeck {
-  constructor(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
-    let actionInfo = JSON.parse(inActionInfo);
-    this.propertyInspectorUUID = inPropertyInspectorUUID;
-    this.events = new EventEmitter();
+class StreamDeck extends EventEmitter {
+  constructor({ port, uuid, registerEvent, actionInfo = null }) {
+    super();
+    this.uuid = uuid;
+    this.connected = false;
+    this.actionInfo = actionInfo ? JSON.parse(actionInfo) : null;
+    this._ws = new WebSocket(`ws://localhost:${port}`);
+    this._registerEvent = registerEvent;
 
-    this.streamDeckWebsocket = new WebSocket("ws://localhost:" + inPort);
-    this.streamDeckWebsocket.onopen = () => {
-      let json = {
-        event: inRegisterEvent,
-        uuid: inPropertyInspectorUUID,
-      };
-      this.streamDeckWebsocket.send(JSON.stringify(json));
-      this.events.emit("connected", actionInfo);
+    this._ws.onopen = () => {
+      this._ws.send(JSON.stringify({ event: registerEvent, uuid }));
+      this.connected = true;
+      this.emit("connected", this.actionInfo);
     };
 
-    this.on = (evt, fn) => this.events.on(evt, fn);
-
-    this.streamDeckWebsocket.onmessage = (evt) => {
-      let incomingEvent = JSON.parse(evt.data);
-      switch (incomingEvent.event) {
-        case "didReceiveGlobalSettings":
-          this.events.emit("globalsettings", incomingEvent.payload["settings"]);
-          break;
-        case "deviceDidConnect":
-          this.events.emit("deviceDidConnect", incomingEvent);
-          break;
-        case "deviceDidDisconnect":
-          this.events.emit("deviceDidDisconnect", incomingEvent);
-          break;
-        case "keyDown":
-          this.events.emit("keyDown", incomingEvent);
-          break;
-        case "keyUp":
-          this.events.emit("keyUp", incomingEvent);
-          break;
-        case "dialDown":
-          this.events.emit("dialDown", incomingEvent);
-          break;
-        case "dialUp":
-          this.events.emit("dialUp", incomingEvent);
-          break;
-        case "dialRotate":
-          this.events.emit("dialRotate", incomingEvent);
-          break;
-        case "touchTap":
-          this.events.emit("touchTap", incomingEvent);
-          break;
-        case "systemDidWakeUp":
-          this.events.emit("systemDidWakeUp", incomingEvent);
-          break;
-        case "willAppear":
-          this.events.emit("willAppear", incomingEvent);
-          break;
-        case "willDisappear":
-          this.events.emit("willDisappear", incomingEvent);
-          break;
-        case "didReceiveSettings":
-          this.events.emit("didReceiveSettings", incomingEvent);
-          break;
-        case "sendToPlugin":
-          this.events.emit("sendToPlugin", incomingEvent);
-          break;
-        case "sendToPropertyInspector":
-          this.events.emit("sendToPropertyInspector", incomingEvent);
-          break;
-        case "propertyInspectorDidAppear":
-          this.events.emit("propertyInspectorDidAppear", incomingEvent);
-          break;
-        case "propertyInspectorDidDisappear":
-          this.events.emit("propertyInspectorDidDisappear", incomingEvent);
-          break;
-        case "titleParametersDidChange":
-          this.events.emit("titleParametersDidChange", incomingEvent);
-          break;
-        default:
-          console.log(`Unhandled Event: ${incomingEvent.event}`);
-          break;
+    this._ws.onmessage = (event) => {
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch (e) {
+        console.warn("Malformed WebSocket message dropped", e);
+        return;
       }
+
+      const { event: evType } = msg;
+      if (evType === "didReceiveGlobalSettings") {
+        this.emit("globalsettings", msg.payload.settings);
+      } else if (
+        [
+          "keyDown",
+          "keyUp",
+          "dialDown",
+          "dialUp",
+          "dialRotate",
+          "touchTap",
+          "systemDidWakeUp",
+          "willAppear",
+          "willDisappear",
+          "didReceiveSettings",
+          "sendToPlugin",
+          "sendToPropertyInspector",
+          "propertyInspectorDidAppear",
+          "propertyInspectorDidDisappear",
+          "titleParametersDidChange",
+          "deviceDidConnect",
+          "deviceDidDisconnect",
+        ].includes(evType)
+      ) {
+        this.emit(evType, msg);
+      } else {
+        console.warn(`Unknown event "${evType}" dropped`);
+      }
+    };
+
+    this._ws.onclose = (event) => {
+      this.connected = false;
+      this.emit("disconnected", { code: event.code, reason: event.reason });
+    };
+
+    this._ws.onerror = (event) => {
+      this.emit("error", event);
     };
   }
 
   requestGlobalSettings() {
-    let getGlobalSettingsMessage = {
-      event: "getGlobalSettings",
-      context: this.propertyInspectorUUID,
-    };
-    this.streamDeckWebsocket.send(JSON.stringify(getGlobalSettingsMessage));
+    this._send({ event: "getGlobalSettings", context: this.uuid });
   }
 
   saveGlobalSettings({ payload }) {
-    let message = {
-      event: "setGlobalSettings",
-      context: this.propertyInspectorUUID,
-      payload: payload,
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+    this._send({ event: "setGlobalSettings", context: this.uuid, payload });
   }
 
-  getSettings({ context = this.propertyInspectorUUID } = {}) {
-    let message = {
-      event: "getSettings",
-      context: context,
-    };
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+  getSettings({ context }) {
+    this._send({ event: "getSettings", context });
   }
 
-  saveSettings({ actionSettings, context = this.propertyInspectorUUID }) {
-    let message = {
-      event: "setSettings",
-      context: context,
-      payload: actionSettings,
-    };
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+  saveSettings({ actionSettings, context }) {
+    this._send({ event: "setSettings", context, payload: actionSettings });
   }
 
   setTitle({ context, title }) {
-    let message = {
-      event: "setTitle",
-      context: context,
-      payload: {
-        title: title,
-        target: 0,
-      },
-    };
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+    this._send({ event: "setTitle", context, payload: { title, target: 0 } });
   }
 
-  logMessage({ messageText }) {
-    let message = {
-      event: "logMessage",
-      payload: {
-        message: messageText,
-      },
-    };
-    this.streamDeckWebsocket.send(JSON.stringify(message));
-  }
-
-  setImage({ context, image, state = 0 }) {
-    let message = {
-      event: "setImage",
-      context: context,
-      payload: {
-        image: image,
-        target: 0,
-        state,
-      },
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+  // Without a state, Stream Deck applies the image to every state of a multi-state action; defaulting
+  // to state 0 left e.g. the play/pause key's "Playing" state on its default icon (sonos-1vd).
+  setImage({ context, image, state }) {
+    const payload = state === undefined ? { image } : { image, state };
+    this._send({ event: "setImage", context, payload });
   }
 
   setFeedback({ context, payload }) {
-    let message = {
-      event: "setFeedback",
-      context: context,
-      payload: payload,
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+    this._send({ event: "setFeedback", context, payload });
   }
 
   setFeedbackLayout({ context, payload }) {
-    let message = {
-      event: "setFeedbackLayout",
-      context: context,
-      payload: payload,
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
-  }
-
-  showAlert({ context }) {
-    let message = {
-      event: "showAlert",
-      context: context,
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
-  }
-
-  showOk({ context }) {
-    let message = {
-      event: "showOk",
-      context: context,
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+    this._send({ event: "setFeedbackLayout", context, payload });
   }
 
   setState({ context, stateIndex }) {
-    let message = {
-      event: "setState",
-      context: context,
-      payload: {
-        state: stateIndex,
-      },
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+    this._send({ event: "setState", context, payload: { state: stateIndex } });
   }
 
-  sendToPlugin({ context, payload }) {
-    let message = {
-      action: this.propertyInspectorUUID,
-      event: "sendToPlugin",
-      context: context,
-      payload,
-    };
-
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+  showAlert({ context }) {
+    this._send({ event: "showAlert", context });
   }
 
-  sendToPropertyInspector({ context, payload }) {
-    let message = {
-      event: "sendToPropertyInspector",
-      context: context,
-      payload,
-    };
+  showOk({ context }) {
+    this._send({ event: "showOk", context });
+  }
 
-    this.streamDeckWebsocket.send(JSON.stringify(message));
+  logMessage(message) {
+    this._send({ event: "logMessage", payload: { message } });
+  }
+
+  sendToPlugin({ action, context, payload }) {
+    this._send({ action, event: "sendToPlugin", context, payload });
+  }
+
+  sendToPropertyInspector({ action, context, payload }) {
+    this._send({ action, event: "sendToPropertyInspector", context, payload });
+  }
+
+  openUrl({ url }) {
+    this._send({ event: "openUrl", payload: { url } });
+  }
+
+  close() {
+    if (this._ws) {
+      this._ws.close();
+      this._ws = null;
+    }
+  }
+
+  _send(obj) {
+    if (this._ws && this.connected) {
+      this._ws.send(JSON.stringify(obj));
+    }
   }
 }
+
+export { StreamDeck };

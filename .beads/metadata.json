@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "sonos",
+  "project_id": "cfad8182-b4b3-4a9e-a598-3e128b513808"
+}

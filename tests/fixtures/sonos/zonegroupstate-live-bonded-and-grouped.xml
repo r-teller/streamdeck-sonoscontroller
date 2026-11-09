@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Captured 2026-05-04 from a live S2 household running Sonos firmware 86.6-75110
+  (ZPS9 platform). UUIDs and IPs sanitized: real device IDs replaced with
+  human-readable RINCON_<role>01400 stand-ins; IPs replaced with 192.168.x.x
+  placeholders; non-load-bearing attributes (BootSeq, ChannelFreq, etc.) kept
+  intact for shape fidelity. The structural shape — group membership,
+  HTSatChanMapSet, satellite nesting, multi-group, mixed firmware versions —
+  matches the live capture byte-for-byte.
+
+  Topology shape:
+    Group 1 (Coord = LIVINGROOMBAR)
+      ├─ ZoneGroupMember LIVINGROOMBAR             (the soundbar / coordinator)
+      │    ├─ Satellite LIVINGROOMSUB              (subwoofer, :SW in HTMap)
+      │    ├─ Satellite LIVINGROOMSURROUNDLEFT     (left surround, :LR in HTMap)
+      │    └─ Satellite LIVINGROOMSURROUNDRIGHT    (right surround, :RR in HTMap)
+      └─ ZoneGroupMember BEDROOM            (a SEPARATE ROOM, grouped
+                                                    with LR but NOT bonded — it
+                                                    appears as a full
+                                                    ZoneGroupMember, not a
+                                                    Satellite, and is absent
+                                                    from the parent's
+                                                    HTSatChanMapSet)
+    Group 2 (Coord = OFFICE)
+      └─ ZoneGroupMember OFFICE                    (solo)
+
+  Note on the LR bar / Bedroom relationship: a bedroom-zone speaker was
+  added to the household with the intent of pairing it with the LR bar,
+  but the captured topology shows it as a grouped separate room (different
+  ZoneName, not nested as <Satellite>, absent from HTSatChanMapSet). The
+  pair operation may not have completed (model mismatch, room-name conflict,
+  or firmware refusal). The resolver behaves identically either way — both
+  bonded satellites and grouped non-coordinator members route to the
+  group's Coordinator attribute.
+
+  Exercises four resolver cases simultaneously:
+    - Self-coord (bind to LIVINGROOMBAR or OFFICE)
+    - Bonded satellite resolution (bind to SUB / SURROUNDLEFT / SURROUNDRIGHT
+      → LIVINGROOMBAR) — three satellites under one parent member
+    - Multi-group non-coordinator member, "grouped sibling room"
+      (bind to BEDROOM → LIVINGROOMBAR)
+    - Mid-position satellite walk (SURROUNDLEFT is satellite[1] of [0..2],
+      verifying the for-loop reaches non-first satellites)
+-->
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:GetZoneGroupStateResponse xmlns:u="urn:schemas-upnp-org:service:ZoneGroupTopology:1"><ZoneGroupState>&lt;ZoneGroupState&gt;&lt;ZoneGroups&gt;&lt;ZoneGroup Coordinator="RINCON_LIVINGROOMBAR01400" ID="RINCON_LIVINGROOMBAR01400:1000000001"&gt;&lt;ZoneGroupMember UUID="RINCON_LIVINGROOMBAR01400" Location="http://192.168.1.10:1400/xml/device_description.xml" ZoneName="Living Room" Icon="x-rincon-roomicon:living" Configuration="1" SoftwareVersion="86.6-75110" SWGen="2" HTSatChanMapSet="RINCON_LIVINGROOMBAR01400:LF,RF;RINCON_LIVINGROOMSUB01400:SW;RINCON_LIVINGROOMSURROUNDLEFT01400:LR;RINCON_LIVINGROOMSURROUNDRIGHT01400:RR" ActiveZoneID="abc123-living" BootSeq="100" SSLPort="1443" HHSSLPort="1843"&gt;&lt;Satellite UUID="RINCON_LIVINGROOMSUB01400" Location="http://192.168.1.11:1400/xml/device_description.xml" ZoneName="Living Room" Icon="x-rincon-roomicon:living" Configuration="1" Invisible="1" SoftwareVersion="86.6-75110" SWGen="2" HTSatChanMapSet="RINCON_LIVINGROOMBAR01400:LF,RF;RINCON_LIVINGROOMSUB01400:SW" ActiveZoneID="abc123-living" BootSeq="101" SSLPort="1443" HHSSLPort="1843"/&gt;&lt;Satellite UUID="RINCON_LIVINGROOMSURROUNDLEFT01400" Location="http://192.168.1.12:1400/xml/device_description.xml" ZoneName="Living Room" Icon="x-rincon-roomicon:living" Configuration="1" Invisible="1" SoftwareVersion="94.1-76070" SWGen="2" HTSatChanMapSet="RINCON_LIVINGROOMBAR01400:LF,RF;RINCON_LIVINGROOMSURROUNDLEFT01400:LR" ActiveZoneID="abc123-living" BootSeq="102" SSLPort="1443" HHSSLPort="1843"/&gt;&lt;Satellite UUID="RINCON_LIVINGROOMSURROUNDRIGHT01400" Location="http://192.168.1.13:1400/xml/device_description.xml" ZoneName="Living Room" Icon="x-rincon-roomicon:living" Configuration="1" Invisible="1" SoftwareVersion="94.1-76070" SWGen="2" HTSatChanMapSet="RINCON_LIVINGROOMBAR01400:LF,RF;RINCON_LIVINGROOMSURROUNDRIGHT01400:RR" ActiveZoneID="abc123-living" BootSeq="103" SSLPort="1443" HHSSLPort="1843"/&gt;&lt;/ZoneGroupMember&gt;&lt;ZoneGroupMember UUID="RINCON_BEDROOM01400" Location="http://192.168.1.20:1400/xml/device_description.xml" ZoneName="Bedroom" Icon="x-rincon-roomicon:bedroom" Configuration="1" SoftwareVersion="94.1-76070" SWGen="2" BootSeq="104" SSLPort="1443" HHSSLPort="1843"/&gt;&lt;/ZoneGroup&gt;&lt;ZoneGroup Coordinator="RINCON_OFFICE01400" ID="RINCON_OFFICE01400:2000000002"&gt;&lt;ZoneGroupMember UUID="RINCON_OFFICE01400" Location="http://192.168.1.30:1400/xml/device_description.xml" ZoneName="Office" Icon="x-rincon-roomicon:living" Configuration="1" SoftwareVersion="94.1-76070" SWGen="2" BootSeq="105" SSLPort="1443" HHSSLPort="1843"/&gt;&lt;/ZoneGroup&gt;&lt;/ZoneGroups&gt;&lt;VanishedDevices&gt;&lt;/VanishedDevices&gt;&lt;/ZoneGroupState&gt;</ZoneGroupState></u:GetZoneGroupStateResponse></s:Body></s:Envelope>

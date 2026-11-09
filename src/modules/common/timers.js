@@ -1,111 +1,193 @@
-/* global ESDTimerWorker */
-/*eslint no-unused-vars: "off"*/
-/*eslint-env es6*/
+/* eslint-env browser */
 
-let ESDTimerWorker = new Worker(
-  URL.createObjectURL(
-    new Blob(
-      [
-        timerFn
-          .toString()
-          .replace(/^[^{]*{\s*/, "")
-          .replace(/\s*}[^}]*$/, ""),
-      ],
-      { type: "text/javascript" },
-    ),
-  ),
-);
-ESDTimerWorker.timerId = 1;
-ESDTimerWorker.timers = {};
-const ESDDefaultTimeouts = {
-  timeout: 0,
-  interval: 10,
-};
+// Extract function body: strip "function (...) {" and trailing "}"
+function extractBody(fn) {
+  const str = fn.toString();
+  const openBrace = str.indexOf("{");
+  const closeBrace = str.lastIndexOf("}");
+  if (openBrace === -1 || closeBrace === -1 || closeBrace <= openBrace) {
+    return "";
+  }
+  return str.slice(openBrace + 1, closeBrace).trim();
+}
 
-Object.freeze(ESDDefaultTimeouts);
+// Worker script as a function (will be stringified)
+const workerScript = function () {
+  const timeouts = new Map();
+  const intervals = new Map();
+  let nextId = 1;
 
-function _setTimer(callback, delay, type, params) {
-  const id = ESDTimerWorker.timerId++;
-  ESDTimerWorker.timers[id] = { callback, params };
-  ESDTimerWorker.onmessage = (e) => {
-    if (ESDTimerWorker.timers[e.data.id]) {
-      if (e.data.type === "clearTimer") {
-        delete ESDTimerWorker.timers[e.data.id];
+  function schedule(type, delay, id) {
+    // Floor: timeout 0ms, interval 10ms
+    const effectiveDelay = Math.max(type === "timeout" ? 0 : 10, delay);
+
+    const timerId = id || nextId++;
+
+    // Clear existing if re-scheduling same id
+    if (type === "timeout") {
+      if (timeouts.has(timerId)) {
+        clearTimeout(timeouts.get(timerId));
+        timeouts.delete(timerId);
+      }
+    } else {
+      if (intervals.has(timerId)) {
+        clearInterval(intervals.get(timerId));
+        intervals.delete(timerId);
+      }
+    }
+
+    const timerFn = () => {
+      if (type === "timeout") {
+        postMessage({ type: "timeout", id: timerId });
+        timeouts.delete(timerId);
       } else {
-        const cb = ESDTimerWorker.timers[e.data.id].callback;
-        if (cb && typeof cb === "function") cb(...ESDTimerWorker.timers[e.data.id].params);
+        postMessage({ type: "interval", id: timerId });
+      }
+    };
+
+    const timer = type === "timeout" ? setTimeout(timerFn, effectiveDelay) : setInterval(timerFn, effectiveDelay);
+
+    if (type === "timeout") {
+      timeouts.set(timerId, timer);
+    } else {
+      intervals.set(timerId, timer);
+    }
+
+    return timerId;
+  }
+
+  self.onmessage = function (e) {
+    const { action, type, delay, id } = e.data;
+
+    if (action === "schedule") {
+      const timerId = schedule(type, delay, id);
+      postMessage({ type: "ack", id: timerId });
+    } else if (action === "clear") {
+      if (type === "timeout") {
+        if (timeouts.has(id)) {
+          clearTimeout(timeouts.get(id));
+          timeouts.delete(id);
+        }
+      } else {
+        if (intervals.has(id)) {
+          clearInterval(intervals.get(id));
+          intervals.delete(id);
+        }
       }
     }
   };
-  ESDTimerWorker.postMessage({ type, id, delay });
-  return id;
-}
+};
 
-function _setTimeoutESD(...args) {
-  let [callback, delay = 0, ...params] = [...args];
-  return _setTimer(callback, delay, "setTimeout", params);
-}
+// Safe to import under Node (vitest) — no-op if Worker is unavailable
+if (typeof Worker !== "undefined" && typeof window !== "undefined") {
+  // Build worker blob from function body
+  const workerBody = extractBody(workerScript);
+  const blob = new Blob([workerBody], { type: "application/javascript" });
+  const workerUrl = URL.createObjectURL(blob);
+  const worker = new Worker(workerUrl);
 
-function _setIntervalESD(...args) {
-  let [callback, delay = 0, ...params] = [...args];
-  return _setTimer(callback, delay, "setInterval", params);
-}
+  // Main-side tracking: id -> { callback, params }
+  const callbacks = new Map();
+  let nextId = 1;
 
-function _clearTimeoutESD(id) {
-  ESDTimerWorker.postMessage({ type: "clearTimeout", id }); //     ESDTimerWorker.postMessage({type: 'clearInterval', id}); = same thing
-  delete ESDTimerWorker.timers[id];
-}
-
-window.setTimeout = _setTimeoutESD;
-window.setInterval = _setIntervalESD;
-window.clearTimeout = _clearTimeoutESD; //timeout and interval share the same timer-pool
-window.clearInterval = _clearTimeoutESD;
-
-/** This is our worker-code
- *  It is executed in it's own (global) scope
- *  which is wrapped above @ `let ESDTimerWorker`
- */
-
-function timerFn() {
-  /*eslint indent: ["error", 4, { "SwitchCase": 1 }]*/
-
-  let timers = {};
-  let debug = false;
-  let supportedCommands = ["setTimeout", "setInterval", "clearTimeout", "clearInterval"];
-
-  function log(e) {
-    console.log("Worker-Info::Timers", timers);
-  }
-
-  function clearTimerAndRemove(id) {
-    if (timers[id]) {
-      if (debug) console.log("clearTimerAndRemove", id, timers[id], timers);
-      clearTimeout(timers[id]);
-      delete timers[id];
-      postMessage({ type: "clearTimer", id: id });
-      if (debug) log();
-    }
-  }
-
-  onmessage = function (e) {
-    // first see, if we have a timer with this id and remove it
-    // this automatically fulfils clearTimeout and clearInterval
-    supportedCommands.includes(e.data.type) && timers[e.data.id] && clearTimerAndRemove(e.data.id);
-    if (e.data.type === "setTimeout") {
-      timers[e.data.id] = setTimeout(
-        () => {
-          postMessage({ id: e.data.id });
-          clearTimerAndRemove(e.data.id); //cleaning up
-        },
-        Math.max(e.data.delay || 0),
-      );
-    } else if (e.data.type === "setInterval") {
-      timers[e.data.id] = setInterval(
-        () => {
-          postMessage({ id: e.data.id });
-        },
-        Math.max(e.data.delay || ESDDefaultTimeouts.interval),
-      );
+  // Handle messages from worker
+  worker.onmessage = function (e) {
+    const { type, id } = e.data;
+    if (type === "ack") {
+      // Already handled by return value of schedule call
+    } else if (type === "timeout" || type === "interval") {
+      const entry = callbacks.get(id);
+      if (entry) {
+        try {
+          entry.callback(...entry.params);
+        } catch (err) {
+          // Swallow errors to avoid breaking the worker
+        }
+        // For timeouts, remove after execution
+        if (type === "timeout") {
+          callbacks.delete(id);
+        }
+      }
     }
   };
+
+  // Override timer functions
+  const originalSetTimeout = window.setTimeout;
+  const originalSetInterval = window.setInterval;
+  const originalClearTimeout = window.clearTimeout;
+  const originalClearInterval = window.clearInterval;
+
+  window.setTimeout = function (callback, delay, ...params) {
+    if (typeof callback !== "function") {
+      return originalSetTimeout(callback, delay, ...params);
+    }
+
+    const id = nextId++;
+    callbacks.set(id, { callback, params });
+
+    worker.postMessage({
+      action: "schedule",
+      type: "timeout",
+      delay: Math.max(0, delay || 0),
+      id,
+    });
+
+    return id;
+  };
+
+  window.setInterval = function (callback, delay, ...params) {
+    if (typeof callback !== "function") {
+      return originalSetInterval(callback, delay, ...params);
+    }
+
+    const id = nextId++;
+    callbacks.set(id, { callback, params });
+
+    worker.postMessage({
+      action: "schedule",
+      type: "interval",
+      delay: Math.max(10, delay || 0),
+      id,
+    });
+
+    return id;
+  };
+
+  window.clearTimeout = function (id) {
+    if (callbacks.has(id)) {
+      worker.postMessage({
+        action: "clear",
+        type: "timeout",
+        id,
+      });
+      callbacks.delete(id);
+    }
+    return originalClearTimeout(id);
+  };
+
+  window.clearInterval = function (id) {
+    if (callbacks.has(id)) {
+      worker.postMessage({
+        action: "clear",
+        type: "interval",
+        id,
+      });
+      callbacks.delete(id);
+    }
+    return originalClearInterval(id);
+  };
+
+  // Expose teardown for tests/hot reload
+  window.__teardownWorkerTimers = function () {
+    worker.terminate();
+    URL.revokeObjectURL(workerUrl);
+    window.setTimeout = originalSetTimeout;
+    window.setInterval = originalSetInterval;
+    window.clearTimeout = originalClearTimeout;
+    window.clearInterval = originalClearInterval;
+    callbacks.clear();
+  };
 }
+
+// Export for Node tests (no-op if not in browser)
+export { extractBody };

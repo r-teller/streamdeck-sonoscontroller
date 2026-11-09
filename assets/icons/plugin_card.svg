@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 200">
+  <!-- Background -->
+  <rect width="288" height="200" fill="#1c1c1e" />
+  <!-- Speaker motif -->
+  <g transform="translate(144, 90)">
+    <!-- Speaker cabinet -->
+    <rect x="-40" y="-30" width="80" height="60" rx="6" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Speaker cone -->
+    <circle cx="0" cy="0" r="20" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Sound waves -->
+    <path d="M30 0c8-8 13-13 13-13" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M40 0c12-12 20-20 20-20" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M50 0c16-16 26-26 26-26" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M30 0c8 8 13 13 13 13" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M40 0c12 12 20 20 20 20" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M50 0c16 16 26 26 26 26" fill="none" stroke="#d8a158" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+  <!-- Plugin name -->
+  <text x="144" y="160" text-anchor="middle" fill="#e8e8e8" font-family="system-ui, sans-serif" font-size="24" font-weight="600">Sonos Controller</text>
+</svg>
