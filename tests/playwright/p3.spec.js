@@ -205,9 +205,12 @@ test("p3-rate-limit", async ({ page }) => {
   const expectedCalls = callsBefore + 24;
   await expect.poll(() => mock.calls.length, { timeout: 10000 }).toBe(expectedCalls);
 
-  // Ensure the call count stays stable after any delayed handlers settle.
+  // After the presses settle, the only further traffic is ONE confirming re-poll (a successful
+  // action schedules an immediate re-check, sonos-e9y) and nothing from the rate-limited 4th press.
   await page.waitForTimeout(2000);
-  expect(mock.calls.length).toBe(expectedCalls);
+  const extra = mock.calls.slice(expectedCalls);
+  expect(extra.every((c) => String(c.action).startsWith("Get"))).toBe(true);
+  expect(extra.filter((c) => c.action === "GetVolume")).toHaveLength(1);
 
   // No console errors should have been emitted.
   expect(consoleErrors).toEqual([]);

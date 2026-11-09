@@ -18,6 +18,9 @@ export async function installMockSonos(page, options = {}) {
   const failureModes = { ...failures };
   const actionFixtureState = { ...actionFixtures };
   const fixtureFileCache = {};
+  // Like a real speaker, report back the last volume that was set (the plugin re-polls right after
+  // every action, sonos-e9y; a static fixture would undo each change).
+  let currentVolume = null;
 
   const fixtures = {
     topology: readFileSync(join(process.cwd(), "tests/fixtures/sonos", topologyFixture), "utf8"),
@@ -135,6 +138,11 @@ export async function installMockSonos(page, options = {}) {
     let responseXml = "";
     let status = 200;
 
+    if (action === "SetVolume") {
+      const m = (body ?? "").match(/<DesiredVolume>(\d+)<\/DesiredVolume>/);
+      if (m) currentVolume = Number(m[1]);
+    }
+
     // Check for action fixture first
     if (actionFixtureState[action]) {
       const filename = actionFixtureState[action];
@@ -156,6 +164,10 @@ export async function installMockSonos(page, options = {}) {
     } else {
       // AVTransport, RenderingControl, or unknown ContentDirectory action
       responseXml = fixtures.emptyResponse;
+    }
+
+    if (action === "GetVolume" && currentVolume !== null) {
+      responseXml = responseXml.replace(/<CurrentVolume>\d+<\/CurrentVolume>/, `<CurrentVolume>${currentVolume}</CurrentVolume>`);
     }
 
     await route.fulfill({

@@ -657,13 +657,14 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
     // Marquee assertion
     const TITLE = "Did You Know That There Is A Tunnel Under Ocean Blvd";
     const WRAP = TITLE.length + 4;
-    const looped = TITLE + "    " + TITLE.slice(0, 10);
-    const w = (p) => looped.slice(p % WRAP, (p % WRAP) + 10);
+    const WIDTH = 8; // MARQUEE_WIDTH: what fits across a key (sonos-06p)
+    const looped = TITLE + "    " + TITLE.slice(0, WIDTH);
+    const w = (p) => looped.slice(p % WRAP, (p % WRAP) + WIDTH);
 
     const titles = frames
       .filter(
         (f) =>
-          f.event === "setTitle" && f.context === ctx1 && typeof f.payload.title === "string" && f.payload.title.length === 10,
+          f.event === "setTitle" && f.context === ctx1 && typeof f.payload.title === "string" && f.payload.title.length === WIDTH,
       )
       .map((f) => f.payload.title);
 
