@@ -195,7 +195,9 @@ describe("pollingSupervisor", () => {
 
     const updatedSpeaker = getSpeaker({ UUID });
     expect(updatedSpeaker.operationalStatus).toBe(OPERATIONAL_STATUS.DISCONNECTED);
-    expect(updatedSpeaker.lastChecked).toBeNull(); // untouched
+    // backs off a full interval instead of re-polling every tick (sonos-j3f)
+    expect(updatedSpeaker.lastChecked).toBeGreaterThan(0);
+    expect(updatedSpeaker.lastUpdated).toBeNull();
 
     expect(showAlert).toHaveBeenCalledTimes(1);
     expect(showAlert).toHaveBeenCalledWith({ context: "ctx1" });
@@ -252,6 +254,47 @@ describe("pollingSupervisor", () => {
 
     // calling stop again should not error
     expect(() => stopSupervisor()).not.toThrow();
+  });
+
+  test("a speaker that fails fast is not hammered into RATE_LIMITED, and recovers (sonos-j3f)", async () => {
+    const UUID = "uuid-1";
+    addContext({ UUID, context: "ctx1", hostAddress: "host1" });
+    getSpeaker({ UUID }).lastChecked = null;
+
+    let online = false;
+    controllerFactory.mockImplementation(() =>
+      online ? fakeController() : fakeController({ getVolume: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")) }),
+    );
+    start();
+
+    // 30 s offline: one poll per check interval, never rate limited
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(controllerFactory.mock.calls.length).toBeLessThanOrEqual(4);
+    expect(getSpeaker({ UUID }).operationalStatus).toBe(OPERATIONAL_STATUS.DISCONNECTED);
+
+    online = true;
+    await vi.advanceTimersByTimeAsync(10_500);
+    expect(getSpeaker({ UUID }).operationalStatus).toBe(OPERATIONAL_STATUS.UPDATED);
+    expect(getSpeaker({ UUID }).state.audioEqualizer.volume).toBe(42);
+  });
+
+  test("RATE_LIMITED speaker is polled again once the attempt window has passed (sonos-j3f)", async () => {
+    const UUID = "uuid-1";
+    addContext({ UUID, context: "ctx1", hostAddress: "host1" });
+    const speaker = getSpeaker({ UUID });
+    speaker.lastChecked = null;
+    for (let i = 0; i < 4; i++) setOperationalStatus({ UUID, operationalStatus: OPERATIONAL_STATUS.UPDATING });
+    expect(speaker.operationalStatus).toBe(OPERATIONAL_STATUS.RATE_LIMITED);
+
+    controllerFactory.mockImplementation(() => fakeController());
+    start();
+
+    await vi.advanceTimersByTimeAsync(5_000); // still inside the window
+    expect(controllerFactory).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(6_000); // window passed
+    expect(controllerFactory).toHaveBeenCalledTimes(1);
+    expect(getSpeaker({ UUID }).operationalStatus).toBe(OPERATIONAL_STATUS.UPDATED);
   });
 
   test("RATE_LIMITED re-check after UPDATING attempts bails before network call", async () => {

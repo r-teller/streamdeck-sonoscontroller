@@ -1,5 +1,5 @@
 import { SonosController } from "../common/sonosController.js";
-import { getAllSpeakers, getSpeaker, updateSpeakerState, setOperationalStatus } from "./SonosSpeakers.js";
+import { getAllSpeakers, getSpeaker, updateSpeakerState, setOperationalStatus, TIME_WINDOW_SECONDS } from "./SonosSpeakers.js";
 import { OPERATIONAL_STATUS } from "./operationalStatus.js";
 import { resolveSpeaker } from "../common/speakerResolver.js";
 import { globalSettings } from "./globalSettings.js";
@@ -103,6 +103,9 @@ export function startPollingSupervisor({
       } catch (err) {
         // Guard against in-flight poll resurrecting a speaker whose last context was removed
         if (!(UUID in getAllSpeakers())) return;
+        // Back off a full check interval; without this a fast-failing speaker (powered off, refused
+        // connection) was re-polled every tick and tripped RATE_LIMITED (sonos-j3f).
+        getSpeaker({ UUID }).lastChecked = Date.now() / 1000;
         setOperationalStatus({ UUID, operationalStatus: OPERATIONAL_STATUS.DISCONNECTED });
         for (const context of speaker.contexts) {
           showAlert({ context });
@@ -119,9 +122,14 @@ export function startPollingSupervisor({
     const now = Date.now() / 1000; // epoch seconds
 
     for (const [UUID, speaker] of Object.entries(getAllSpeakers())) {
+      if (speaker.operationalStatus === OPERATIONAL_STATUS.UPDATING) {
+        continue;
+      }
+      // RATE_LIMITED is a cool-down, not a dead end: once the attempt window has passed, poll again so
+      // keys recover when the speaker comes back (previously only a key press could clear it, sonos-j3f).
       if (
-        speaker.operationalStatus === OPERATIONAL_STATUS.UPDATING ||
-        speaker.operationalStatus === OPERATIONAL_STATUS.RATE_LIMITED
+        speaker.operationalStatus === OPERATIONAL_STATUS.RATE_LIMITED &&
+        (speaker.updateAttempts ?? []).some((ts) => now - ts <= TIME_WINDOW_SECONDS)
       ) {
         continue;
       }
