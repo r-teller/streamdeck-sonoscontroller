@@ -1,5 +1,7 @@
 import { actionFunctionMap } from "../plugin/actionDispatcher.js";
 import { buildMarqueeRenderIntent } from "../plugin/marquee.js";
+import { buildFavoriteRenderIntent } from "../plugin/favoriteKeys.js";
+import { isQueueFavorite } from "../common/favoriteSettings.js";
 import { getInputSourceMappings } from "../common/uriTaxonomy.js";
 import {
   makeController,
@@ -333,15 +335,36 @@ async function playSonosFavoriteKeyDown({ inActionSettings }) {
 
     await raceWithTimeout(controller.setServiceURI(fav), "setServiceURI");
 
+    // Record which favorite now owns the speaker. For queue favorites the signature must be read
+    // AFTER the load completes, otherwise it is stale immediately (sonos-gw5).
+    if (!isQueueFavorite(fav)) {
+      return {
+        status: "SUCCESS",
+        updatedSonosSpeakerState: {
+          playbackState: "PLAYING",
+          currentURI: fav.uri,
+          mediaURI: fav.uri,
+          queueSignature: null,
+          loadedFavorite: { uri: fav.uri, signature: null },
+        },
+      };
+    }
+
+    let signature = null;
+    try {
+      signature = await raceWithTimeout(controller.getQueueSignature(), "getQueueSignature");
+    } catch (e) {
+      console.warn("playSonosFavoriteKeyDown: queue signature unavailable", e);
+    }
     return {
       status: "SUCCESS",
       updatedSonosSpeakerState: {
         playbackState: "PLAYING",
-        currentURI: fav.uri,
-        playing: {
-          title: fav.title,
-          albumArtURI: fav.albumArtURI,
-        },
+        mediaURI: `x-rincon-queue:${inActionSettings.uuid}#0`,
+        // The previous favorite's track is no longer playing; the immediate re-poll fills this in.
+        playing: { title: "", artist: "", album: "", albumArtURI: "" },
+        queueSignature: signature,
+        loadedFavorite: { uri: fav.uri, signature },
       },
     };
   } catch (e) {
@@ -351,7 +374,7 @@ async function playSonosFavoriteKeyDown({ inActionSettings }) {
 }
 
 function playSonosFavoriteState({ inActionSettings, inSonosSpeakerState }) {
-  return buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState });
+  return buildFavoriteRenderIntent({ inActionSettings, inSonosSpeakerState });
 }
 
 // Action 11: Encoder Audio Equalizer

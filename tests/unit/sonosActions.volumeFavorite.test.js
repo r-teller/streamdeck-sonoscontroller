@@ -164,16 +164,38 @@ describe("play-sonos-favorite action", () => {
     expect(makeController).toHaveBeenCalledTimes(1);
     expect(controller.setServiceURI).toHaveBeenCalledTimes(1);
     expect(controller.setServiceURI).toHaveBeenCalledWith(favorite);
+    // Radio favorite: owns the speaker by URI, no queue signature (sonos-gw5).
     expect(result).toEqual({
       status: "SUCCESS",
       updatedSonosSpeakerState: {
         playbackState: "PLAYING",
         currentURI: favorite.uri,
-        playing: {
-          title: favorite.title,
-          albumArtURI: favorite.albumArtURI,
-        },
+        mediaURI: favorite.uri,
+        queueSignature: null,
+        loadedFavorite: { uri: favorite.uri, signature: null },
       },
+    });
+  });
+
+  it("queue favorite – reads the queue signature after loading and records ownership", async () => {
+    const order = [];
+    controller.setServiceURI.mockImplementationOnce(async () => order.push("load"));
+    const signature = { updateId: "7", total: 100, firstTrackUri: "x-sonos-spotify:t1" };
+    controller.getQueueSignature = vi.fn(async () => {
+      order.push("signature");
+      return signature;
+    });
+    const favorite = { title: "Kendrick Lamar Mix", uri: "x-rincon-cpcontainer:1006206cspotify%3aplaylist%3aabc" };
+    const result = await actionFunctionMap[actionKey].keyDown[0]({
+      inActionSettings: { hostAddress: "10.0.0.5", uuid: "RINCON_A", selectedSonosFavorite: favorite },
+    });
+    expect(order).toEqual(["load", "signature"]);
+    expect(result.status).toBe("SUCCESS");
+    expect(result.updatedSonosSpeakerState).toMatchObject({
+      mediaURI: "x-rincon-queue:RINCON_A#0",
+      queueSignature: signature,
+      loadedFavorite: { uri: favorite.uri, signature },
+      playing: { title: "", albumArtURI: "" },
     });
   });
 

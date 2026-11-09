@@ -8,6 +8,9 @@ import { actionSettings, setActionSettings, getActionSettings, deleteActionSetti
 import { setGlobalSettings } from "./globalSettings.js";
 import { addContext, removeContext, moveContext, setSpeakerHost } from "./SonosSpeakers.js";
 import { reconcileBindings, summarizeBindings } from "./bindingReconciler.js";
+import { isFavoriteSettings, syncFavoriteKeys } from "./favoriteKeys.js";
+import { migrateFavoriteSettings, needsFavoriteMigration } from "../common/favoriteSettings.js";
+import { getSpeaker } from "./SonosSpeakers.js";
 import { cleanupDialRotate, _resetDialRotateState } from "./dialRotateDebouncer.js";
 
 /**
@@ -31,6 +34,12 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     actionSettings,
     showAlert: ({ context }) => sd.showAlert({ context }),
     refreshStateAndTitle,
+    afterAction: ({ UUID, inContext }) => {
+      if (!isFavoriteSettings(actionSettings[inContext])) return;
+      syncFavoriteKeys({ UUID, sd });
+      // Fetch the new favorite's track/art right away instead of waiting a full check interval.
+      getSpeaker({ UUID }).lastChecked = 0;
+    },
   };
 
   // Named handlers for teardown
@@ -50,17 +59,25 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
 
   handlers.willAppear = (msg) => {
     const { action, context, payload } = msg;
+    let incoming = payload.settings ?? {};
+    // One-time move of legacy favorite toggles onto the new ones (sonos-gw5, agreed Q5).
+    if (isFavoriteSettings({ action }) && needsFavoriteMigration(incoming)) {
+      incoming = migrateFavoriteSettings(incoming);
+      sd.saveSettings?.({ actionSettings: incoming, context });
+    }
     setActionSettings(context, {
       action,
       controller: payload.controller ?? "Keypad",
       currentStateIndex: payload.state ?? 0,
-      ...payload.settings,
+      ...incoming,
       status: {},
     });
-    const s = payload.settings ?? {};
+    const s = incoming;
     if (s.uuid) {
       addContext({ UUID: s.uuid, context, hostAddress: s.hostAddress, zoneName: s.zoneName });
       reconcileBindings({ sd, contexts: [context], clearDedupeCache });
+      const bound = getActionSettings(context);
+      if (isFavoriteSettings(bound)) syncFavoriteKeys({ UUID: bound.uuid, sd });
     }
   };
 

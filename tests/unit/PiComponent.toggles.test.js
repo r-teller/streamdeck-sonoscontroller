@@ -144,11 +144,12 @@ describe("PiComponent presentation toggles", () => {
     },
     {
       shortName: "play-sonos-favorite",
+      // Favorite keys use their own five toggles (sonos-gw5); the legacy ones are hidden.
       toggles: {
         stateBased: false,
-        marquee: true,
+        marquee: false,
         marqueeAlbum: false,
-        albumArt: true,
+        albumArt: false,
       },
       section: true,
     },
@@ -190,14 +191,14 @@ describe("PiComponent presentation toggles", () => {
     }
   });
 
-  it("Toggle on saves full 16-field payload", async () => {
+  it("Toggle on saves full 22-field payload", async () => {
     const { wrapper, stubClient } = await mountForAction("toggle-play-pause");
     const albumArtToggle = wrapper.find("[data-pi-toggle-album-art]");
     await albumArtToggle.setValue(true);
     expect(stubClient.saveSettings).toHaveBeenCalledTimes(1);
     const payload = stubClient.saveSettings.mock.calls[0][0].actionSettings;
-    // Expect exactly 16 keys (the schema includes many fields; we assert length)
-    expect(Object.keys(payload).length).toBe(16);
+    // Expect exactly 22 keys (the schema includes many fields; we assert length)
+    expect(Object.keys(payload).length).toBe(22);
     expect(payload.displayAlbumArt).toBe(true);
     expect(payload.action).toBe("com.r-teller.sonoscontroller.toggle-play-pause");
     // other applicable toggles should be false
@@ -240,5 +241,40 @@ describe("PiComponent presentation toggles", () => {
     });
     const toggle2 = w2.find("[data-pi-toggle-state-based-title]").element;
     expect(toggle2.checked).toBe(true);
+  });
+
+  it("Favorite key shows the five favorite toggles and migrates legacy settings", async () => {
+    // Connect the way Stream Deck does, with settings saved by the old version of the plugin.
+    const wrapper = mount(PiComponent);
+    const stubClient = createStubClient();
+    stubClient.actionInfo = {
+      action: "com.r-teller.sonoscontroller.play-sonos-favorite",
+      payload: { controller: "Keypad", settings: { displayAlbumArt: true, displayMarqueeTitle: false } },
+    };
+    wrapper.vm.bindStreamDeck(stubClient);
+    await nextTick();
+    const keys = wrapper.findAll("[data-pi-favorite-toggle]").map((w) => w.attributes("data-pi-favorite-toggle"));
+    expect(keys).toEqual([
+      "displayFavoriteName",
+      "displayTrackTitle",
+      "displayMarquee",
+      "displayFavoriteArtwork",
+      "displayTrackArtwork",
+    ]);
+    const checked = (k) => wrapper.find(`[data-pi-favorite-toggle="${k}"]`).element.checked;
+    expect(checked("displayFavoriteName")).toBe(true);
+    expect(checked("displayFavoriteArtwork")).toBe(true);
+    expect(checked("displayTrackArtwork")).toBe(true);
+    expect(checked("displayTrackTitle")).toBe(false);
+    // Marquee needs the track title
+    expect(wrapper.find('[data-pi-favorite-toggle="displayMarquee"]').element.disabled).toBe(true);
+
+    await wrapper.find('[data-pi-favorite-toggle="displayTrackTitle"]').setValue(true);
+    const payload = stubClient.saveSettings.mock.lastCall[0].actionSettings;
+    expect(payload.displayTrackTitle).toBe(true);
+    expect(payload.displayFavoriteArtwork).toBe(true);
+    expect(payload.displayAlbumArt).toBeNull();
+    expect(payload.displayMarqueeTitle).toBeNull();
+    expect(wrapper.find('[data-pi-favorite-toggle="displayMarquee"]').element.disabled).toBe(false);
   });
 });

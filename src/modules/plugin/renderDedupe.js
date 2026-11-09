@@ -78,9 +78,12 @@ export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = f
         status.lastTitleSource = intent.titleSource;
         status.lastTitleValue = intent.title;
       } else {
-        // Unchanged source: still emit setTitle every frame (no dedupe)
-        sd.setTitle({ context: inContext, title: intent.title });
-        status.lastTitleValue = intent.title;
+        // Unchanged source: emit only when the visible window moved (the marquee ticker re-renders
+        // often; short titles that do not scroll must not resend every tick).
+        if (intent.title !== status.lastTitleValue) {
+          sd.setTitle({ context: inContext, title: intent.title });
+          status.lastTitleValue = intent.title;
+        }
       }
     } else {
       // Static title: dedupe on title value

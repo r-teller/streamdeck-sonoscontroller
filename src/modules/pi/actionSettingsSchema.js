@@ -1,3 +1,4 @@
+import { FAVORITE_SHORT_NAME, FAVORITE_TOGGLE_DEFAULTS } from "../common/favoriteSettings.js";
 export const PLAY_MODES = Object.freeze([
   "NORMAL",
   "SHUFFLE_NOREPEAT",
@@ -18,9 +19,10 @@ export const STATE_BASED_TITLE_ACTIONS = new Set([
   "play-previous-track",
   "play-next-track",
 ]);
-export const MARQUEE_TITLE_ACTIONS = new Set(["play-sonos-favorite", "currently-playing"]);
+// play-sonos-favorite uses its own five toggles (FAVORITE_TOGGLE_DEFAULTS), not these (sonos-gw5).
+export const MARQUEE_TITLE_ACTIONS = new Set(["currently-playing"]);
 export const MARQUEE_ALBUM_TITLE_ACTIONS = new Set(["toggle-play-pause", "currently-playing"]);
-export const ALBUM_ART_ACTIONS = new Set(["toggle-play-pause", "play-sonos-favorite", "currently-playing"]);
+export const ALBUM_ART_ACTIONS = new Set(["toggle-play-pause", "currently-playing"]);
 
 /**
  * Extracts the short name from an action UUID (segment after the last `.`).
@@ -108,8 +110,14 @@ export function decodeFavorite(favorite) {
   };
 }
 
+function favoriteToggle(shortName, key, merged) {
+  if (shortName !== FAVORITE_SHORT_NAME) return null;
+  const value = merged[key];
+  return typeof value === "boolean" ? value : FAVORITE_TOGGLE_DEFAULTS[key];
+}
+
 /**
- * Builds a complete 16-field action settings payload.
+ * Builds a complete 22-field action settings payload.
  * @param {object} params - Parameters object.
  * @param {string} params.action - Full action UUID.
  * @param {array} params.states - States list snapshot.
@@ -139,6 +147,13 @@ export function buildActionSettingsPayload({ action, states, controller, current
     displayMarqueeTitle: gateBool(MARQUEE_TITLE_ACTIONS, shortName, merged.displayMarqueeTitle),
     displayMarqueeAlbumTitle: gateBool(MARQUEE_ALBUM_TITLE_ACTIONS, shortName, merged.displayMarqueeAlbumTitle),
     selectedSonosFavorite: shortName === "play-sonos-favorite" ? decodeFavorite(merged.selectedSonosFavorite) : null,
+    displayFavoriteName: favoriteToggle(shortName, "displayFavoriteName", merged),
+    displayTrackTitle: favoriteToggle(shortName, "displayTrackTitle", merged),
+    displayMarquee: favoriteToggle(shortName, "displayMarquee", merged),
+    displayFavoriteArtwork: favoriteToggle(shortName, "displayFavoriteArtwork", merged),
+    displayTrackArtwork: favoriteToggle(shortName, "displayTrackArtwork", merged),
+    // Written by the plugin when this key's favorite loads the queue; carried through PI saves.
+    favoriteSignature: shortName === FAVORITE_SHORT_NAME ? (merged.favoriteSignature ?? null) : null,
     adjustVolumeIncrement:
       shortName === "volume-up" || shortName === "volume-down" ? coerceIncrement(merged.adjustVolumeIncrement) : null,
   };

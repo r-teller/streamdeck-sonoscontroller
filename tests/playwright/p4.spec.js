@@ -136,7 +136,7 @@ test("p4-first-run", async ({ page }, testInfo) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   expect(setSettingsFrames[0].payload.uuid).toBe("RINCON_LIVINGROOMBAR01400");
-  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(16);
+  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(22);
 
   // Assert bound speaker alert
   const boundAlert = page.locator("[data-pi-bound-speaker-alert]");
@@ -273,7 +273,9 @@ for (const action of actions) {
         sectionsPresent: ["volume-increment-override"]
       },
       "play-sonos-favorite": {
-        togglesPresent: ["marquee-title", "album-art"],
+        // Favorite keys use their own five toggles (sonos-gw5), checked below.
+        togglesPresent: [],
+        favoriteToggles: true,
         sectionsPresent: ["sonos-favorites"]
       },
       "encoder-audio-equalizer": {
@@ -294,8 +296,15 @@ for (const action of actions) {
       }
     }
 
+    const favoriteToggles = page.locator("[data-pi-favorite-toggle]");
+    if (config.favoriteToggles) {
+      await expect(favoriteToggles).toHaveCount(5);
+    } else {
+      await expect(favoriteToggles).toHaveCount(0);
+    }
+
     const togglesSection = page.locator("[data-pi-section='presentation-toggles']");
-    if (config.togglesPresent.length > 0) {
+    if (config.togglesPresent.length > 0 || config.favoriteToggles) {
       await expect(togglesSection).toBeVisible();
     } else {
       await expect(togglesSection).not.toBeVisible();
@@ -440,7 +449,7 @@ test("p4-bind-speaker", async ({ page }) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   const payload = setSettingsFrames[0].payload;
-  expect(Object.keys(payload)).toHaveLength(16);
+  expect(Object.keys(payload)).toHaveLength(22);
   expect(payload.uuid).toBe("RINCON_OFFICE01400");
   expect(payload.title).toBe("Office (192.168.1.42)");
   expect(payload.hostAddress).toBe("192.168.1.42");

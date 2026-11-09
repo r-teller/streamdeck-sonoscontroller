@@ -9,6 +9,7 @@ import BootstrapAccordeonItem from "@/components/accordeon/BootstrapAccordeonIte
 import SonosSelection from "@/components/SonosSelection.vue";
 import SpeakerBindings from "@/components/SpeakerBindings.vue";
 import { isBindingMissing } from "@/modules/common/speakerResolver.js";
+import { FAVORITE_SHORT_NAME, migrateFavoriteSettings } from "@/modules/common/favoriteSettings.js";
 import manifest from "@manifest";
 import { SonosController } from "@/modules/common/sonosController.js";
 import {
@@ -58,8 +59,17 @@ const showDisplayStateBasedTitle = computed(() => STATE_BASED_TITLE_ACTIONS.has(
 const showDisplayMarqueeTitle = computed(() => MARQUEE_TITLE_ACTIONS.has(shortName.value));
 const showDisplayMarqueeAlbumTitle = computed(() => MARQUEE_ALBUM_TITLE_ACTIONS.has(shortName.value));
 const showDisplayAlbumArt = computed(() => ALBUM_ART_ACTIONS.has(shortName.value));
+const showFavoriteToggles = computed(() => shortName.value === FAVORITE_SHORT_NAME);
+const FAVORITE_TOGGLES = [
+  { key: "displayFavoriteName", label: "Display Favorite Name" },
+  { key: "displayTrackTitle", label: "Display Track Title" },
+  { key: "displayMarquee", label: "Marquee", requires: "displayTrackTitle" },
+  { key: "displayFavoriteArtwork", label: "Display Favorite Artwork" },
+  { key: "displayTrackArtwork", label: "Display Track/Album Artwork" },
+];
 const showPresentationToggles = computed(
   () =>
+    showFavoriteToggles.value ||
     showDisplayStateBasedTitle.value ||
     showDisplayMarqueeTitle.value ||
     showDisplayMarqueeAlbumTitle.value ||
@@ -75,7 +85,7 @@ function bindStreamDeck(client) {
 
   const handleConnected = () => {
     actionUUID.value = client.actionInfo?.action ?? "";
-    settings.value = client.actionInfo?.payload?.settings ?? {};
+    settings.value = normalizeSettings(client.actionInfo?.payload?.settings ?? {});
     connectionState.value = OPERATIONAL_STATUS.CONNECTED;
     client.requestGlobalSettings();
     requestBindings();
@@ -93,7 +103,7 @@ function bindStreamDeck(client) {
     connectionState.value = OPERATIONAL_STATUS.DISCONNECTED;
   });
   client.on("didReceiveSettings", (message) => {
-    settings.value = message?.payload?.settings ?? {};
+    settings.value = normalizeSettings(message?.payload?.settings ?? {});
   });
   client.on("globalsettings", (incoming) => {
     globalSettings.value = incoming ?? {};
@@ -104,6 +114,11 @@ function bindStreamDeck(client) {
       bindings.value = payload.bindings;
     }
   });
+}
+
+// Favorite keys saved before the five favorite toggles existed are mapped onto them (sonos-gw5).
+function normalizeSettings(raw) {
+  return actionShortName(actionUUID.value) === FAVORITE_SHORT_NAME ? migrateFavoriteSettings(raw) : raw;
 }
 
 function requestBindings() {
@@ -395,6 +410,22 @@ defineExpose({
     </section>
 
     <section v-if="showPresentationToggles" data-pi-section="presentation-toggles">
+      <template v-if="showFavoriteToggles">
+        <div v-for="t in FAVORITE_TOGGLES" :key="t.key" class="form-check form-switch">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            :checked="settings[t.key] ?? false"
+            :disabled="t.requires ? !settings[t.requires] : false"
+            :data-pi-favorite-toggle="t.key"
+            @change="onPresentationToggle(t.key, $event.target.checked)"
+          />
+          <label class="form-check-label">{{ t.label }}</label>
+        </div>
+        <div class="form-text text-muted" data-pi-favorite-toggle-hint>
+          Track title, marquee and track artwork show only while this favorite is the one playing.
+        </div>
+      </template>
       <div v-if="showDisplayStateBasedTitle" class="form-check form-switch">
         <input
           class="form-check-input"

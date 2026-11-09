@@ -2,6 +2,16 @@ export const MARQUEE_WIDTH = 10;
 
 const albumArtCache = new Map();
 const inFlightFetches = new Map();
+const artCachedListeners = new Set();
+
+/**
+ * Registers a callback fired after an album-art image finishes downloading, so keys that rendered
+ * the default image while it was in flight can redraw. Returns an unsubscribe function.
+ */
+function onAlbumArtCached(callback) {
+  artCachedListeners.add(callback);
+  return () => artCachedListeners.delete(callback);
+}
 
 function _resetAlbumArtCache() {
   albumArtCache.clear();
@@ -78,6 +88,13 @@ function ensureAlbumArtCached(url) {
       const base64 = btoa(binary);
       const dataURL = `data:${contentType};base64,${base64}`;
       albumArtCache.set(url, dataURL);
+      for (const listener of artCachedListeners) {
+        try {
+          listener(url);
+        } catch (e) {
+          // a failing listener must not break the cache
+        }
+      }
     })
     .catch(() => {
       // Swallow errors, cache nothing
@@ -157,6 +174,7 @@ export {
   detectInputSource,
   computeMarqueeWindow,
   ensureAlbumArtCached,
+  onAlbumArtCached,
   buildMarqueeRenderIntent,
   _resetAlbumArtCache,
   _getAlbumArtCache,

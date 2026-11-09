@@ -140,7 +140,7 @@ describe("SonosController orchestrations", () => {
       title: "Anti-Hero",
       artist: "Taylor Swift",
       album: "Midnights",
-      albumArtURI: "/getaa?u=spotify_track1",
+      albumArtURI: "http://192.168.1.42:1400/getaa?u=spotify_track1",
     });
   });
 

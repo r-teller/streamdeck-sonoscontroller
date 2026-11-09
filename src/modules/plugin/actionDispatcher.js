@@ -52,7 +52,7 @@ export function _resetActionFunctionMap() {
 
 export async function callAction(
   { inContext, inEvent, inRotation },
-  { actionSettings, showAlert, refreshStateAndTitle = () => {} },
+  { actionSettings, showAlert, refreshStateAndTitle = () => {}, afterAction = () => {} },
 ) {
   const settings = actionSettings[inContext];
   if (!settings) {
@@ -110,6 +110,11 @@ export async function callAction(
     }
 
     setOperationalStatus({ UUID: uuid, operationalStatus: OPERATIONAL_STATUS.UPDATED });
+    try {
+      afterAction({ UUID: uuid, inContext });
+    } catch (e) {
+      // bookkeeping only
+    }
 
     // Optimistic projection: re-read speaker and refresh all contexts
     const updatedSpeaker = getSpeaker({ UUID: uuid });

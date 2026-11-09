@@ -3,6 +3,7 @@ import { getAllSpeakers, getSpeaker, updateSpeakerState, setOperationalStatus } 
 import { OPERATIONAL_STATUS } from "./operationalStatus.js";
 import { resolveSpeaker } from "../common/speakerResolver.js";
 import { globalSettings } from "./globalSettings.js";
+import { speakerHasFavoriteKeys } from "./favoriteKeys.js";
 
 export function startPollingSupervisor({
   intervalMs = 500,
@@ -12,6 +13,8 @@ export function startPollingSupervisor({
   showAlert = () => {},
   refreshStateAndTitle = () => {},
   getGlobals = () => globalSettings,
+  needsFavoriteInfo = speakerHasFavoriteKeys,
+  afterPoll = () => {},
 } = {}) {
   let intervalId = null;
 
@@ -38,8 +41,8 @@ export function startPollingSupervisor({
       });
 
       try {
-        const [transportSettings, transportInfo, muted, volume, bass, treble, positionInfo] = await Promise.race([
-          Promise.all([
+        const fetchAll = async () => {
+          const base = await Promise.all([
             controller.getTransportSettings(),
             controller.getTransportInfo(),
             controller.getMute(),
@@ -47,7 +50,20 @@ export function startPollingSupervisor({
             controller.getBass(),
             controller.getTreble(),
             controller.getPositionInfo(),
-          ]),
+          ]);
+          // Favorite keys need to know which queue is loaded (sonos-gw5); skip for other speakers.
+          const favoriteInfo = {};
+          if (typeof controller.getMediaInfo === "function" && needsFavoriteInfo(UUID)) {
+            const media = await controller.getMediaInfo();
+            favoriteInfo.mediaURI = media.currentURI;
+            favoriteInfo.queueSignature = String(media.currentURI).startsWith("x-rincon-queue:")
+              ? await controller.getQueueSignature()
+              : null;
+          }
+          return [...base, favoriteInfo];
+        };
+        const [transportSettings, transportInfo, muted, volume, bass, treble, positionInfo, favoriteInfo] = await Promise.race([
+          fetchAll(),
           timeoutPromise,
         ]);
 
@@ -66,10 +82,16 @@ export function startPollingSupervisor({
             album: positionInfo.album,
             albumArtURI: positionInfo.albumArtURI,
           },
+          ...favoriteInfo,
         };
 
         updateSpeakerState({ UUID, state, updateLastChecked: true });
         setOperationalStatus({ UUID, operationalStatus: OPERATIONAL_STATUS.UPDATED });
+        try {
+          afterPoll(UUID);
+        } catch (e) {
+          // never let post-poll bookkeeping break rendering
+        }
 
         for (const context of speaker.contexts) {
           refreshStateAndTitle({ inContext: context, inSonosSpeakerState: state });

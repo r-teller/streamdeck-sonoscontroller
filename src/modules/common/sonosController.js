@@ -222,7 +222,7 @@ export class SonosController {
           title: extractText(item["dc:title"]),
           uri: extractText(item.res),
           metadata: extractText(item["r:resMD"]),
-          albumArtURI: extractText(item["upnp:albumArtURI"]),
+          albumArtURI: this.absoluteArtURI(extractText(item["upnp:albumArtURI"])),
         });
       }
 
@@ -489,7 +489,7 @@ export class SonosController {
           title = extractText(item["dc:title"]);
           artist = extractText(item["dc:creator"]);
           album = extractText(item["upnp:album"]);
-          albumArtURI = extractText(item["upnp:albumArtURI"]);
+          albumArtURI = this.absoluteArtURI(extractText(item["upnp:albumArtURI"]));
         }
       }
 
@@ -497,6 +497,63 @@ export class SonosController {
     } catch (err) {
       const translated = translateSonosError(err, this._opCtx("get position info"));
       throw translated;
+    }
+  }
+
+  /**
+   * Sonos reports track art as a speaker-relative path ("/getaa?s=1&u=..."). Resolve it against
+   * this speaker so it can be fetched (restores 1.0.2.5 behaviour, sonos-clg).
+   * @param {string} uri
+   * @returns {string}
+   */
+  absoluteArtURI(uri) {
+    if (!uri || /^https?:\/\//i.test(uri) || !uri.startsWith("/") || !this.host) return uri ?? "";
+    return `http://${this.host}:1400${uri}`;
+  }
+
+  /**
+   * The transport's current source: "x-rincon-queue:<uuid>#0" for queue playback, otherwise the
+   * stream/input URI (radio, TV, line-in).
+   * @returns {Promise<{currentURI: string}>}
+   */
+  async getMediaInfo() {
+    try {
+      const { service } = await this._coordServiceFor("avTransport");
+      const response = await service.execute("GetMediaInfo", { InstanceID: 0 });
+      return { currentURI: response.CurrentURI ?? "" };
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("get media info"));
+    }
+  }
+
+  /**
+   * Identifies the queue's current contents: version counter, size and first track. Changes when the
+   * queue is cleared, replaced or edited; unaffected by shuffle, seek or play/pause (sonos-gw5).
+   * @returns {Promise<{updateId: string, total: number, firstTrackUri: string}>}
+   */
+  async getQueueSignature() {
+    try {
+      const { service } = await this._coordServiceFor("contentDirectory");
+      const response = await service.execute("Browse", {
+        ObjectID: "Q:0",
+        BrowseFlag: "BrowseDirectChildren",
+        Filter: "*",
+        StartingIndex: 0,
+        RequestedCount: 1,
+        SortCriteria: "",
+      });
+      let firstTrackUri = "";
+      if (response.Result) {
+        const first = asArray(convertXmlToJson(response.Result).item)[0];
+        if (first) firstTrackUri = extractText(first.res);
+      }
+      return {
+        updateId: String(response.UpdateID ?? ""),
+        total: parseInt(response.TotalMatches ?? "0", 10),
+        firstTrackUri,
+      };
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("get queue signature"));
     }
   }
 
@@ -524,7 +581,7 @@ export class SonosController {
           artist: extractText(item["dc:creator"]),
           album: extractText(item["upnp:album"]),
           uri: extractText(item.res),
-          albumArtURI: extractText(item["upnp:albumArtURI"]),
+          albumArtURI: this.absoluteArtURI(extractText(item["upnp:albumArtURI"])),
         }));
       }
 
