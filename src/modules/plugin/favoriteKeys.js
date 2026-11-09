@@ -74,7 +74,7 @@ export function favoriteWantsMarquee(settings, state) {
   );
 }
 
-function persistable(settings) {
+export function persistable(settings) {
   const out = { ...settings };
   for (const key of RUNTIME_KEYS) delete out[key];
   return out;

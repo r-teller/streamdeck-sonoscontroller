@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import { wireLifecycleHandlers } from "@/modules/plugin/lifecycle.js";
 import { getAllSpeakers, addContext, removeContext, moveContext } from "@/modules/plugin/SonosSpeakers.js";
 import { actionSettings, getActionSettings, setActionSettings, deleteActionSettings } from "@/modules/plugin/actionSettings.js";
-import { globalSettings } from "@/modules/plugin/globalSettings.js";
+import { globalSettings, setGlobalSettings } from "@/modules/plugin/globalSettings.js";
 
 import * as dialDebouncer from "@/modules/plugin/dialRotateDebouncer.js";
 
@@ -242,6 +242,72 @@ describe("wireLifecycleHandlers", () => {
     expect(refreshStateAndTitle.mock.calls[0][0]).toMatchObject({ inContext: "dial", force: true });
     expect(getActionSettings("dial").encoderAudioEqualizerTarget).toBe("BASS");
     teardown();
+  });
+
+  describe("stale PI snapshots cannot undo plugin-owned fields (sonos-uyz)", () => {
+    afterEach(() => setGlobalSettings({}));
+
+    test("an old uuid the plugin already repointed is kept on the new speaker and re-saved", () => {
+      setGlobalSettings({
+        devices: { NEW: { uuid: "NEW", zoneName: "Office", hostAddress: "h80", isSatellite: false } },
+        speakerReplacements: { OLD: "NEW" },
+      });
+      const sd = createSd();
+      sd.saveSettings = vi.fn();
+      const teardown = wireLifecycleHandlers({ sd }, { clearDedupeCache: vi.fn(), refreshStateAndTitle: vi.fn() });
+      sd.emit("willAppear", {
+        action: "com.x.toggle-play-pause",
+        context: "k",
+        payload: { settings: { uuid: "NEW", hostAddress: "h80", zoneName: "Office", title: "Office (h80)" } },
+      });
+      sd.saveSettings.mockClear();
+
+      // PI toggles a switch with its snapshot from before the repoint
+      sd.emit("didReceiveSettings", {
+        context: "k",
+        payload: { settings: { uuid: "OLD", hostAddress: "h78", zoneName: "Office", displayAlbumArt: true } },
+      });
+
+      const now = getActionSettings("k");
+      expect(now).toMatchObject({ uuid: "NEW", hostAddress: "h80", displayAlbumArt: true });
+      expect(getAllSpeakers()["NEW"].contexts).toContain("k");
+      expect(getAllSpeakers()["OLD"]).toBeUndefined();
+      expect(sd.saveSettings).toHaveBeenCalledWith({
+        context: "k",
+        actionSettings: expect.objectContaining({ uuid: "NEW", displayAlbumArt: true }),
+      });
+      teardown();
+    });
+
+    test("a stale favorite signature is kept at the plugin's value; a new favorite drops it", () => {
+      const sd = createSd();
+      sd.saveSettings = vi.fn();
+      const teardown = wireLifecycleHandlers({ sd }, { clearDedupeCache: vi.fn(), refreshStateAndTitle: vi.fn() });
+      const fav = { title: "K", uri: "x-rincon-cpcontainer:k" };
+      const sig = { speakerUuid: "S", updateId: "4", total: 100, firstTrackUri: "t1" };
+      sd.emit("willAppear", {
+        action: "com.r-teller.sonoscontroller.play-sonos-favorite",
+        context: "f",
+        payload: {
+          settings: { uuid: "S", hostAddress: "h", zoneName: "Z", selectedSonosFavorite: fav, favoriteSignature: sig, displayFavoriteName: true },
+        },
+      });
+
+      sd.emit("didReceiveSettings", {
+        context: "f",
+        payload: { settings: { uuid: "S", selectedSonosFavorite: fav, favoriteSignature: null, displayTrackTitle: true } },
+      });
+      expect(getActionSettings("f").favoriteSignature).toEqual(sig);
+      expect(getActionSettings("f").displayTrackTitle).toBe(true);
+      expect(sd.saveSettings).toHaveBeenCalledTimes(1);
+
+      sd.emit("didReceiveSettings", {
+        context: "f",
+        payload: { settings: { uuid: "S", selectedSonosFavorite: { title: "T", uri: "x-rincon-cpcontainer:t" }, favoriteSignature: sig } },
+      });
+      expect(getActionSettings("f").favoriteSignature).toBeNull();
+      teardown();
+    });
   });
 
   test("didReceiveSettings with uuid change moves context and clears dedupe", () => {

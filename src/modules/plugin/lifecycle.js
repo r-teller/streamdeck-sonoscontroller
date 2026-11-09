@@ -5,11 +5,12 @@ import {
   refreshStateAndTitle as defaultRefreshStateAndTitle,
 } from "./renderDedupe.js";
 import { actionSettings, setActionSettings, getActionSettings, deleteActionSettings } from "./actionSettings.js";
-import { setGlobalSettings } from "./globalSettings.js";
+import { setGlobalSettings, globalSettings } from "./globalSettings.js";
 import { addContext, removeContext, moveContext, setSpeakerHost, getAllSpeakers } from "./SonosSpeakers.js";
 import { reconcileBindings, summarizeBindings } from "./bindingReconciler.js";
-import { isFavoriteSettings, syncFavoriteKeys } from "./favoriteKeys.js";
-import { migrateFavoriteSettings, needsFavoriteMigration } from "../common/favoriteSettings.js";
+import { isFavoriteSettings, syncFavoriteKeys, persistable } from "./favoriteKeys.js";
+import { migrateFavoriteSettings, needsFavoriteMigration, signaturesEqual } from "../common/favoriteSettings.js";
+import { resolveSpeaker } from "../common/speakerResolver.js";
 import { cleanupDialRotate, _resetDialRotateState } from "./dialRotateDebouncer.js";
 
 /**
@@ -106,11 +107,50 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     deleteActionSettings(msg.context);
   };
 
+  /**
+   * The PI writes its whole settings snapshot. If the plugin changed a plugin-owned field since the
+   * PI last heard (binding repointed by reconcileBindings, favorite signature by syncFavoriteKeys),
+   * a PI toggle in that window would write the stale value back (sonos-uyz). Keep the plugin's value.
+   * @returns {{ settings: Object, corrected: boolean }}
+   */
+  function guardPluginOwnedFields(prev, incoming) {
+    const out = { ...incoming };
+    let corrected = false;
+    if (prev.uuid && out.uuid && out.uuid !== prev.uuid) {
+      const r = resolveSpeaker({ uuid: out.uuid, hostAddress: out.hostAddress, zoneName: out.zoneName }, globalSettings);
+      // The PI only offers live devices, so an old uuid that *resolves* to the current binding is stale.
+      if (r.source !== "device" && r.source !== "saved" && r.uuid === prev.uuid) {
+        out.uuid = prev.uuid;
+        out.hostAddress = prev.hostAddress;
+        out.zoneName = prev.zoneName;
+        if (prev.title !== undefined) out.title = prev.title;
+        corrected = true;
+      }
+    }
+    if (isFavoriteSettings(prev)) {
+      const prevUri = prev.selectedSonosFavorite?.uri;
+      const nextUri = out.selectedSonosFavorite?.uri ?? prevUri;
+      if (nextUri !== prevUri) {
+        // A different favorite: the old queue signature no longer describes this key.
+        if (out.favoriteSignature) {
+          out.favoriteSignature = null;
+          corrected = true;
+        }
+      } else if (prev.favoriteSignature && !signaturesEqual(out.favoriteSignature, prev.favoriteSignature)) {
+        out.favoriteSignature = prev.favoriteSignature;
+        corrected = true;
+      }
+    }
+    return { settings: out, corrected };
+  }
+
   handlers.didReceiveSettings = (msg) => {
     const prev = getActionSettings(msg.context) ?? {};
-    const incoming = msg.payload?.settings ?? {};
+    const guarded = guardPluginOwnedFields(prev, msg.payload?.settings ?? {});
+    const incoming = guarded.settings;
     const merged = { ...prev, ...incoming, status: prev.status ?? {} };
     setActionSettings(msg.context, merged);
+    if (guarded.corrected) sd.saveSettings?.({ actionSettings: persistable(merged), context: msg.context });
 
     if (prev.uuid && incoming.uuid && prev.uuid !== incoming.uuid) {
       moveContext({
