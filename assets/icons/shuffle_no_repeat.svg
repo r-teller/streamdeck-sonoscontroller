@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Shuffle: two crossing arrows (standard shuffle glyph) -->
-  <path d="M16 3h5v5"/>
-  <path d="M4 20 21 3"/>
-  <path d="M21 16v5h-5"/>
-  <path d="M15 15l6 6"/>
-  <path d="M4 4l5 5"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><defs><mask id="cs" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><g stroke="#000" stroke-width="2.2" transform="translate(2.4 2.4) scale(0.8)"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></g></mask></defs><rect x="0" y="0" width="24" height="24" rx="5" fill="currentColor" mask="url(#cs)"/></svg>

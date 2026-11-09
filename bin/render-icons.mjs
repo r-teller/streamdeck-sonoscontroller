@@ -40,7 +40,7 @@ const actions = [
   { name: "paused", svg: "assets/icons/paused.svg" },
   { name: "play_favorite", svg: "assets/icons/play_favorite.svg" },
   { name: "previous_track", svg: "assets/icons/previous_track.svg" },
-  { name: "shuffle", svg: "assets/icons/shuffle_no_repeat.svg" },
+  { name: "shuffle", svg: "assets/icons/shuffle.svg" },
   { name: "volume_down", svg: "assets/icons/volume_down.svg" },
   { name: "volume_up", svg: "assets/icons/volume_up.svg" }
 ];
