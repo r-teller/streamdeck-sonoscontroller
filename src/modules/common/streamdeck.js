@@ -84,8 +84,11 @@ class StreamDeck extends EventEmitter {
     this._send({ event: "setTitle", context, payload: { title, target: 0 } });
   }
 
-  setImage({ context, image, state = 0 }) {
-    this._send({ event: "setImage", context, payload: { image, state } });
+  // Without a state, Stream Deck applies the image to every state of a multi-state action; defaulting
+  // to state 0 left e.g. the play/pause key's "Playing" state on its default icon (sonos-1vd).
+  setImage({ context, image, state }) {
+    const payload = state === undefined ? { image } : { image, state };
+    this._send({ event: "setImage", context, payload });
   }
 
   setFeedback({ context, payload }) {

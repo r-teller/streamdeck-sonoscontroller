@@ -124,6 +124,7 @@ test("outgoing helper methods send correct frames after connection", () => {
   client.saveSettings({ actionSettings: { x: 1 }, context: "ctx2" });
   client.setTitle({ context: "c3", title: "Title" });
   client.setImage({ context: "c4", image: "data:", state: 2 });
+  client.setImage({ context: "c4b", image: "data:" });
   client.setFeedback({ context: "c5", payload: { f: true } });
   client.setFeedbackLayout({ context: "c6", payload: { layout: "b" } });
   client.setState({ context: "c7", stateIndex: 3 });
@@ -140,6 +141,8 @@ test("outgoing helper methods send correct frames after connection", () => {
     { event: "setSettings", context: "ctx2", payload: { x: 1 } },
     { event: "setTitle", context: "c3", payload: { title: "Title", target: 0 } },
     { event: "setImage", context: "c4", payload: { image: "data:", state: 2 } },
+    // no state given: applies to all states (no default to state 0)
+    { event: "setImage", context: "c4b", payload: { image: "data:" } },
     { event: "setFeedback", context: "c5", payload: { f: true } },
     { event: "setFeedbackLayout", context: "c6", payload: { layout: "b" } },
     { event: "setState", context: "c7", payload: { state: 3 } },

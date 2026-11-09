@@ -455,7 +455,9 @@ export class SonosController {
       const { service } = await this._coordServiceFor("avTransport");
       const response = await service.execute("GetTransportInfo", { InstanceID: 0 });
       return {
-        playbackState: response.CurrentTransportState,
+        // Sonos reports TRANSITIONING for a moment after Play (and on track changes); it is on its way
+        // to playing, so surface it as PLAYING rather than letting callers treat it as paused.
+        playbackState: response.CurrentTransportState === "TRANSITIONING" ? "PLAYING" : response.CurrentTransportState,
         currentTransportStatus: response.CurrentTransportStatus,
         currentSpeed: response.CurrentSpeed,
       };

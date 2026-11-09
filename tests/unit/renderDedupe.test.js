@@ -48,7 +48,7 @@ describe("renderDedupe", () => {
     expect(mockSd.setTitle).toHaveBeenCalledTimes(1);
   });
 
-  test("per‑field independence – only changed field re‑emits", () => {
+  test("state change re-sends image and title (Stream Deck sets them per state, sonos-1vd)", () => {
     let stateIdx = 1;
     actionFunctionMap["currently-playing"] = {
       state: {
@@ -68,13 +68,20 @@ describe("renderDedupe", () => {
     // first render – all three fields emit
     refreshStateAndTitle({ inContext: "ctx2", inSonosSpeakerState: {} });
 
-    // change only stateIndex
+    // change only stateIndex: the new state starts with its default image/title, so both re-send
     stateIdx = 2;
     refreshStateAndTitle({ inContext: "ctx2", inSonosSpeakerState: {} });
 
-    expect(mockSd.setImage).toHaveBeenCalledTimes(1);
     expect(mockSd.setState).toHaveBeenCalledTimes(2);
-    expect(mockSd.setTitle).toHaveBeenCalledTimes(1);
+    expect(mockSd.setImage).toHaveBeenCalledTimes(2);
+    expect(mockSd.setTitle).toHaveBeenCalledTimes(2);
+    // setState goes out before the image so the image lands on the new state
+    expect(mockSd.setState.mock.invocationCallOrder[1]).toBeLessThan(mockSd.setImage.mock.invocationCallOrder[1]);
+
+    // nothing changed: no re-emission
+    refreshStateAndTitle({ inContext: "ctx2", inSonosSpeakerState: {} });
+    expect(mockSd.setImage).toHaveBeenCalledTimes(2);
+    expect(mockSd.setTitle).toHaveBeenCalledTimes(2);
   });
 
   test("feedback shallow equality – full payload on change, no duplicate on shallow equal", () => {

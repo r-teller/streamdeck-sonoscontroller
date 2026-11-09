@@ -53,19 +53,23 @@ export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = f
   }
   const status = settings.status;
 
+  // stateIndex first: Stream Deck applies setImage/setTitle to the current state only, so after a
+  // state change the image and title must be re-sent or the new state shows its default icon.
+  let stateChanged = false;
+  if (intent.stateIndex !== undefined) {
+    if (force || intent.stateIndex !== status.lastStateIndex) {
+      sd.setState({ context: inContext, stateIndex: intent.stateIndex });
+      stateChanged = status.lastStateIndex !== undefined && intent.stateIndex !== status.lastStateIndex;
+      status.lastStateIndex = intent.stateIndex;
+    }
+  }
+  if (stateChanged) force = true;
+
   // imageDataURL
   if (intent.imageDataURL !== undefined) {
     if (force || intent.imageDataURL !== status.lastImageDataURL) {
       sd.setImage({ context: inContext, image: intent.imageDataURL });
       status.lastImageDataURL = intent.imageDataURL;
-    }
-  }
-
-  // stateIndex
-  if (intent.stateIndex !== undefined) {
-    if (force || intent.stateIndex !== status.lastStateIndex) {
-      sd.setState({ context: inContext, stateIndex: intent.stateIndex });
-      status.lastStateIndex = intent.stateIndex;
     }
   }
 

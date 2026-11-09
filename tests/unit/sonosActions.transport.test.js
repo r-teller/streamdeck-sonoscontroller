@@ -154,6 +154,8 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
     [{ playbackState: "PLAYING" }, "pause", "PAUSED_PLAYBACK"],
     [{ playbackState: "PAUSED_PLAYBACK" }, "play", "PLAYING"],
     [{ playbackState: "STOPPED" }, "play", "PLAYING"],
+    // Sonos is still starting playback: pressing must pause, not send Play again (sonos-1vd)
+    [{ playbackState: "TRANSITIONING" }, "pause", "PAUSED_PLAYBACK"],
   ])(
     "toggle‑play‑pause with playbackState=%s calls %s and projects %s",
     async (state, method, projected) => {
@@ -178,6 +180,7 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
     [{ playbackState: "PLAYING" }, 1, "Playing"],
     [{ playbackState: "STOPPED" }, 2, "Stopped"],
     [{ playbackState: "PAUSED_PLAYBACK" }, 0, "Paused"],
+    [{ playbackState: "TRANSITIONING" }, 1, "Playing"],
   ])(
     "toggle‑play‑pause state renders correctly for %s",
     async (state, expectedIdx, expectedTitle) => {

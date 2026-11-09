@@ -120,7 +120,8 @@ function toggleMuteState({ inActionSettings, inSonosSpeakerState }) {
 async function togglePlayPauseKeyDown({ inActionSettings, inSonosSpeakerState }) {
   try {
     const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
-    const playbackState = inSonosSpeakerState?.playbackState ?? "STOPPED";
+    const raw = inSonosSpeakerState?.playbackState ?? "STOPPED";
+    const playbackState = raw === "TRANSITIONING" ? "PLAYING" : raw;
 
     if (playbackState === "PLAYING") {
       await raceWithTimeout(controller.pause(), "pause");
@@ -138,7 +139,8 @@ async function togglePlayPauseKeyDown({ inActionSettings, inSonosSpeakerState })
 }
 
 function togglePlayPauseState({ inActionSettings, inSonosSpeakerState }) {
-  const playbackState = inSonosSpeakerState?.playbackState ?? "STOPPED";
+  const raw = inSonosSpeakerState?.playbackState ?? "STOPPED";
+  const playbackState = raw === "TRANSITIONING" ? "PLAYING" : raw;
   const marquee = buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState });
 
   let stateIndex;

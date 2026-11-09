@@ -170,6 +170,17 @@ describe("SonosController orchestrations", () => {
     expect(info.playbackState).toBe("PAUSED_PLAYBACK");
   });
 
+  test("getTransportInfo() reports TRANSITIONING (just after Play) as PLAYING", async () => {
+    mockFetch({
+      GetTransportInfo: fixture("gettransportinfo-transitioning.xml"),
+    });
+    controller = new SonosController().connect("192.168.1.42", { uuid: "RINCON_OFFICE01400" });
+
+    const info = await controller.getTransportInfo();
+
+    expect(info.playbackState).toBe("PLAYING");
+  });
+
   test("getTransportSettings() returns playMode", async () => {
     mockFetch({
       GetTransportSettings: fixture("gettransportsettings-shuffle.xml"),
