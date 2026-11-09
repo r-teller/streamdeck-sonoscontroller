@@ -111,6 +111,34 @@ describe("renderDedupe", () => {
     expect(thirdCallPayload).toEqual({ a: 1, b: 3 });
   });
 
+  test("dial values are sent after the layout, and re-sent when the layout changes (sonos-280)", () => {
+    let layout = "./layouts/encoder-bar-0-100.json";
+    actionFunctionMap["encoder-audio-equalizer"] = {
+      state: { default: () => ({ feedbackLayout: layout, feedback: { title: "Volume", value: 23, indicator: 23 } }) },
+    };
+    setActionSettings("dial", {
+      action: "com.r-teller.sonoscontroller.encoder-audio-equalizer",
+      controller: "Encoder",
+      status: {},
+    });
+
+    refreshStateAndTitle({ inContext: "dial", inSonosSpeakerState: {} });
+    expect(mockSd.setFeedbackLayout).toHaveBeenCalledTimes(1);
+    expect(mockSd.setFeedback).toHaveBeenCalledTimes(1);
+    // a layout resets the strip, so values must land after it
+    expect(mockSd.setFeedbackLayout.mock.invocationCallOrder[0]).toBeLessThan(mockSd.setFeedback.mock.invocationCallOrder[0]);
+
+    // same values, same layout: nothing re-sent
+    refreshStateAndTitle({ inContext: "dial", inSonosSpeakerState: {} });
+    expect(mockSd.setFeedback).toHaveBeenCalledTimes(1);
+
+    // layout changes with identical values: values are re-sent onto the new layout
+    layout = "./layouts/encoder-gbar-10-10.json";
+    refreshStateAndTitle({ inContext: "dial", inSonosSpeakerState: {} });
+    expect(mockSd.setFeedbackLayout).toHaveBeenCalledTimes(2);
+    expect(mockSd.setFeedback).toHaveBeenCalledTimes(2);
+  });
+
   test("feedbackLayout swap – emits on change only", () => {
     let layout = "./layouts/encoder-bar-0-100.json";
     actionFunctionMap["encoder-audio-equalizer"] = {

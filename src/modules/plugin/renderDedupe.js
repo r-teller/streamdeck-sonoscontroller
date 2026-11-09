@@ -99,19 +99,23 @@ export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = f
     }
   }
 
-  // feedback (shallow equality)
-  if (intent.feedback !== undefined && typeof intent.feedback === "object" && intent.feedback !== null) {
-    if (force || !shallowEqual(intent.feedback, status.lastFeedback)) {
-      sd.setFeedback({ context: inContext, payload: intent.feedback });
-      status.lastFeedback = intent.feedback;
-    }
-  }
-
-  // feedbackLayout
+  // feedbackLayout first: setting a layout resets the touch strip to the layout's defaults, so the
+  // values must be sent after it (and re-sent whenever the layout changes), otherwise the dial stays
+  // empty until the next value change (sonos-280).
+  let layoutChanged = false;
   if (intent.feedbackLayout !== undefined) {
     if (force || intent.feedbackLayout !== status.lastAudioEqualizerLayout) {
       sd.setFeedbackLayout({ context: inContext, payload: { layout: intent.feedbackLayout } });
       status.lastAudioEqualizerLayout = intent.feedbackLayout;
+      layoutChanged = true;
+    }
+  }
+
+  // feedback (shallow equality)
+  if (intent.feedback !== undefined && typeof intent.feedback === "object" && intent.feedback !== null) {
+    if (force || layoutChanged || !shallowEqual(intent.feedback, status.lastFeedback)) {
+      sd.setFeedback({ context: inContext, payload: intent.feedback });
+      status.lastFeedback = intent.feedback;
     }
   }
 }
