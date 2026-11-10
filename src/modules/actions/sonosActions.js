@@ -3,6 +3,7 @@ import { buildMarqueeRenderIntent, composeKeyTitle } from "../plugin/marquee.js"
 import { buildFavoriteRenderIntent } from "../plugin/favoriteKeys.js";
 import { isQueueFavorite } from "../common/favoriteSettings.js";
 import { getInputSourceMappings } from "../common/uriTaxonomy.js";
+import { CAROUSEL_LAYOUT, carouselFeedback, pendingTicks, slideNext, wrapIndex } from "../plugin/carousel.js";
 import {
   makeController,
   raceWithTimeout,
@@ -11,6 +12,7 @@ import {
   INPUT_SOURCE_PREFIX,
   resolveVolumeIncrement,
   EQ_LAYOUTS,
+  PLAY_MODE_DISPLAY,
 } from "./helpers.js";
 
 // Title casing helper: "SHUFFLE_NOREPEAT" → "Shuffle Norepeat"
@@ -487,7 +489,62 @@ function encoderAudioEqualizerState({ inActionSettings, inSonosSpeakerState }) {
   };
 }
 
-// Register all eleven actions
+// Action 12: Encoder Play Mode (carousel dial, sonos-gen.3)
+export const PLAY_MODE_DIAL_SETTLE_MS = 600;
+
+function allowedPlayModes(inActionSettings) {
+  return inActionSettings?.selectedPlayModes?.length > 0 ? inActionSettings.selectedPlayModes : PLAY_MODES;
+}
+
+/**
+ * The modes the dial scrolls through and the one it currently rests on. A current mode outside the
+ * dial's subset (set from the Sonos app) is shown as an extra first card, so one step right lands
+ * on the first allowed mode and one step left on the last.
+ */
+export function playModeCards(inActionSettings, inSonosSpeakerState) {
+  const current = inSonosSpeakerState?.playMode || "NORMAL";
+  const allowed = allowedPlayModes(inActionSettings);
+  const modes = allowed.includes(current) ? [...allowed] : [current, ...allowed];
+  return { modes, index: modes.indexOf(current), current };
+}
+
+/** Turning stopped: apply the mode under the centre card (net ticks of the burst). */
+async function encoderPlayModeDialRotate({ inActionSettings, inSonosSpeakerState, inRotation }) {
+  const steps = Math.trunc(Number(inRotation) || 0);
+  const { modes, index, current } = playModeCards(inActionSettings, inSonosSpeakerState);
+  const next = modes[wrapIndex(index + steps, modes.length)];
+  // Net zero (a burst that cancels out, or a full lap): nothing to send.
+  if (steps === 0 || next === current) return { status: "SUCCESS" };
+  try {
+    const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
+    await raceWithTimeout(controller.setPlayMode(next), "setPlayMode");
+    return { status: "SUCCESS", updatedSonosSpeakerState: { playMode: next } };
+  } catch (e) {
+    console.warn("encoderPlayModeDialRotate error:", e);
+    return { status: "ERROR" };
+  }
+}
+
+/** Push and tap: next mode, like the Toggle Play Mode key, with a slide to the new card. */
+async function encoderPlayModeNext(args) {
+  const result = await togglePlayModeKeyDown(args);
+  if (result?.status === "SUCCESS") slideNext(args.inContext);
+  return result;
+}
+
+function encoderPlayModeState({ inContext, inActionSettings, inSonosSpeakerState }) {
+  const { modes, index } = playModeCards(inActionSettings, inSonosSpeakerState);
+  const cards = modes.map((mode) => ({
+    caption: PLAY_MODE_DISPLAY[mode]?.label ?? titleCase(mode),
+    image: PLAY_MODE_DISPLAY[mode]?.image,
+  }));
+  return {
+    feedbackLayout: CAROUSEL_LAYOUT,
+    feedback: carouselFeedback(inContext, { cards, index: index + pendingTicks(inContext) }),
+  };
+}
+
+// Register all actions
 export function registerSonosActions() {
   // Action 1: currently-playing
   actionFunctionMap["currently-playing"].keyDown = [currentlyPlayingKeyDown];
@@ -534,6 +591,15 @@ export function registerSonosActions() {
   actionFunctionMap["encoder-audio-equalizer"].touchTap = [encoderAudioEqualizerTouchTap];
   actionFunctionMap["encoder-audio-equalizer"].dialDown = [encoderAudioEqualizerDialDown];
   actionFunctionMap["encoder-audio-equalizer"].state.encoder = encoderAudioEqualizerState;
+
+  // Action 12: encoder-play-mode (carousel)
+  const playModeDial = actionFunctionMap["encoder-play-mode"];
+  playModeDial.carousel = true;
+  playModeDial.dialSettleMs = PLAY_MODE_DIAL_SETTLE_MS;
+  playModeDial.dialRotate = [encoderPlayModeDialRotate];
+  playModeDial.dialDown = [encoderPlayModeNext];
+  playModeDial.touchTap = [encoderPlayModeNext];
+  playModeDial.state.encoder = encoderPlayModeState;
 }
 
 // Register on import (idempotent)

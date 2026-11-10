@@ -274,6 +274,31 @@
           "Push": "Mute, play/pause or next (set in settings)"
         }
       }
+    },
+    {
+      "Icon": "images/actions/shuffle",
+      "Name": "Play Mode Dial",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Turn to choose shuffle / repeat mode",
+      "UUID": "com.r-teller.sonoscontroller.encoder-play-mode",
+      "Controllers": ["Encoder"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Play Mode",
+          "Image": "images/keys/shuffle_on"
+        }
+      ],
+      "Encoder": {
+        "layout": "layouts/encoder-carousel.json",
+        "TriggerDescription": {
+          "Rotate": "Choose shuffle / repeat mode",
+          "Push": "Next mode",
+          "Touch": "Next mode"
+        }
+      }
     }
   ],
   "SDKVersion": 2,

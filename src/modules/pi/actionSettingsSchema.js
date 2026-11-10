@@ -19,6 +19,9 @@ export const STATE_BASED_TITLE_ACTIONS = new Set([
   "play-previous-track",
   "play-next-track",
 ]);
+/** Actions that cycle play modes and honour the `selectedPlayModes` subset (key and dial). */
+export const PLAY_MODE_ACTIONS = new Set(["toggle-play-mode", "encoder-play-mode"]);
+
 // play-sonos-favorite uses its own five toggles (FAVORITE_TOGGLE_DEFAULTS), not these (sonos-gw5).
 export const MARQUEE_TITLE_ACTIONS = new Set(["currently-playing"]);
 /** What pushing the Audio Equalizer dial does (sonos-6sp). Rotation still adjusts the EQ target. */
@@ -141,7 +144,7 @@ export function buildActionSettingsPayload({ action, states, controller, current
     title: merged.title ?? null,
     hostAddress: merged.hostAddress ?? null,
     zoneName: merged.zoneName ?? null,
-    selectedPlayModes: shortName === "toggle-play-mode" ? (merged.selectedPlayModes ?? [...PLAY_MODES]) : null,
+    selectedPlayModes: PLAY_MODE_ACTIONS.has(shortName) ? (merged.selectedPlayModes ?? [...PLAY_MODES]) : null,
     selectedInputSources: shortName === "toggle-input-source" ? (merged.selectedInputSources ?? [...INPUT_SOURCES]) : null,
     encoderAudioEqualizerTarget:
       shortName === "encoder-audio-equalizer" ? (merged.encoderAudioEqualizerTarget ?? "VOLUME") : null,

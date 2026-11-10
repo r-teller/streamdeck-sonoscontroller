@@ -1,4 +1,5 @@
-import { callAction as defaultCallAction } from "./actionDispatcher.js";
+import { callAction as defaultCallAction, actionFunctionMap } from "./actionDispatcher.js";
+import { browseTick, endBrowse, forgetContext, setCarouselRenderHook } from "./carousel.js";
 import { handleDialRotate as defaultHandleDialRotate } from "./dialRotateDebouncer.js";
 import {
   clearDedupeCache as defaultClearDedupeCache,
@@ -104,6 +105,7 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
       removeContext({ UUID: prev.uuid, context: msg.context });
     }
     cleanupDialRotate(msg.context);
+    forgetContext(msg.context);
     deleteActionSettings(msg.context);
   };
 
@@ -240,11 +242,34 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     callAction({ inContext: msg.context, inEvent: "touchTap" }, dispatchDeps);
   };
 
+  // Carousel dials redraw on every slide frame and when card art arrives; dedupe keeps unchanged
+  // fields from being re-sent (no force).
+  setCarouselRenderHook((context) => {
+    const uuid = getActionSettings(context)?.uuid;
+    const speaker = uuid ? getAllSpeakers()[uuid] : undefined;
+    if (speaker?.state) refreshStateAndTitle({ inContext: context, inSonosSpeakerState: speaker.state });
+  });
+
   handlers.dialRotate = (msg) => {
+    const shortName = getActionSettings(msg.context)?.action?.split(".").pop();
+    const entry = actionFunctionMap[shortName];
+    const carousel = entry?.carousel === true;
     handleDialRotate({
       context: msg.context,
       ticks: msg.payload?.ticks ?? 0,
-      dispatch: (args) => callAction(args, dispatchDeps),
+      settleMs: entry?.dialSettleMs,
+      // Carousel dials move their selection on every tick; the action applies it once turning stops.
+      onTick: carousel ? (ticks) => browseTick(msg.context, ticks) : undefined,
+      dispatch: async (args) => {
+        try {
+          await callAction(args, dispatchDeps);
+        } finally {
+          if (carousel) {
+            endBrowse(msg.context, args.inRotation);
+            renderNow(msg.context);
+          }
+        }
+      },
     });
   };
 

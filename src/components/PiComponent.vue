@@ -20,6 +20,7 @@ import {
   MARQUEE_TITLE_ACTIONS,
   MARQUEE_ALBUM_TITLE_ACTIONS,
   ALBUM_ART_ACTIONS,
+  PLAY_MODE_ACTIONS,
   actionShortName,
   encodeFavoriteMetadata,
 } from "@/modules/pi/actionSettingsSchema.js";
@@ -475,7 +476,7 @@ defineExpose({
       </div>
     </section>
 
-    <section v-if="shortName === 'toggle-play-mode'" data-pi-section="play-modes">
+    <section v-if="PLAY_MODE_ACTIONS.has(shortName)" data-pi-section="play-modes">
       <h1 class="h5">Play Mode(s)</h1>
       <div v-for="mode in PLAY_MODES" :key="mode" class="form-check form-switch">
         <input
