@@ -485,8 +485,14 @@ export class SonosController {
 
       const trackMetaData = response.TrackMetaData;
       if (trackMetaData && trackMetaData !== "NOT_IMPLEMENTED") {
-        const didl = convertXmlToJson(trackMetaData);
-        const item = asArray(didl.item)[0];
+        // Some sources (radio streams, third-party services) send malformed DIDL. The track metadata is
+        // cosmetic, so a bad blob degrades to empty fields rather than failing the whole poll (sonos-9b0).
+        let item;
+        try {
+          item = asArray(convertXmlToJson(trackMetaData).item)[0];
+        } catch {
+          item = undefined;
+        }
         if (item) {
           title = extractText(item["dc:title"]);
           artist = extractText(item["dc:creator"]);

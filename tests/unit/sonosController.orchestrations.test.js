@@ -144,6 +144,26 @@ describe("SonosController orchestrations", () => {
     });
   });
 
+  test("getPositionInfo() degrades malformed track metadata to empty fields (sonos-9b0)", async () => {
+    const malformed = fixture("getpositioninfo-spotify-track.xml").replace(
+      /<TrackMetaData>.*<\/TrackMetaData>/s,
+      "<TrackMetaData>&lt;DIDL-Lite&gt;&lt;item&gt;&lt;dc:title&gt;Broken</TrackMetaData>",
+    );
+    mockFetch({ GetPositionInfo: malformed });
+    controller = new SonosController().connect("192.168.1.42", { uuid: "RINCON_OFFICE01400" });
+
+    const info = await controller.getPositionInfo();
+
+    expect(info).toMatchObject({
+      trackURI: "x-sonos-spotify:track1",
+      relTime: "0:01:23",
+      title: "",
+      artist: "",
+      album: "",
+      albumArtURI: "",
+    });
+  });
+
   test("getTransportInfo() returns correct state for PLAYING", async () => {
     mockFetch({
       GetTransportInfo: fixture("gettransportinfo-playing.xml"),
