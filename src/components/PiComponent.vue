@@ -11,6 +11,7 @@ import SpeakerBindings from "@/components/SpeakerBindings.vue";
 import { isBindingMissing } from "@/modules/common/speakerResolver.js";
 import { FAVORITE_SHORT_NAME, migrateFavoriteSettings } from "@/modules/common/favoriteSettings.js";
 import manifest from "@manifest";
+import { profilesFolderPath, copyText } from "@/modules/pi/profilesFolder.js";
 import { SonosController } from "@/modules/common/sonosController.js";
 import {
   PLAY_MODES,
@@ -41,11 +42,10 @@ const bindingsSection = ref(null);
 
 const currentSpeakerMissing = computed(() => isBindingMissing(settings.value, globalSettings.value));
 
-// The PI is served from <StreamDeck data>/Plugins/<plugin>.sdPlugin/pi.html; profiles live in <StreamDeck data>/ProfilesV2.
-const profilesFolderUrl = computed(() => {
-  if (typeof window === "undefined" || window.location.protocol !== "file:") return null;
-  return new URL("../../ProfilesV2/", window.location.href).href;
-});
+// Shown as a copyable path: Stream Deck 7 will not open file:// folders via openUrl (sonos-sad).
+const profilesFolder = computed(() => (typeof window === "undefined" ? null : profilesFolderPath(window.location.href)));
+const profilesFolderField = ref(null);
+const profilesFolderCopied = ref(false);
 
 const isConnected = computed(() => connectionState.value === OPERATIONAL_STATUS.CONNECTED && speakers.value.length > 0);
 
@@ -149,8 +149,10 @@ async function showSpeakerBindings() {
   bindingsSection.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 }
 
-function openProfilesFolder() {
-  if (profilesFolderUrl.value) sdClient.value?.openUrl?.({ url: profilesFolderUrl.value });
+async function copyProfilesFolder() {
+  if (!profilesFolder.value) return;
+  profilesFolderCopied.value = await copyText(profilesFolder.value, profilesFolderField.value);
+  if (profilesFolderCopied.value) setTimeout(() => (profilesFolderCopied.value = false), 2000);
 }
 
 function buildSaveInput(overrides = {}) {
@@ -379,8 +381,9 @@ defineExpose({
   requestBindings,
   onReplaceSpeaker,
   onUndoReplacement,
-  profilesFolderUrl,
-  openProfilesFolder,
+  profilesFolder,
+  profilesFolderCopied,
+  copyProfilesFolder,
 });
 </script>
 
@@ -651,13 +654,27 @@ defineExpose({
             />
           </div>
 
-          <template v-if="profilesFolderUrl">
+          <template v-if="profilesFolder">
             <hr class="my-4" />
             <div data-pi-advanced>
               <h2 class="h6 mb-1">Advanced</h2>
-              <button type="button" class="btn btn-link btn-sm px-0" data-pi-open-profiles @click="openProfilesFolder">
-                Open Stream Deck profiles folder…
-              </button>
+              <label class="form-label small mb-1" for="pi-profiles-folder">Stream Deck profiles folder</label>
+              <div class="input-group input-group-sm">
+                <input
+                  id="pi-profiles-folder"
+                  ref="profilesFolderField"
+                  type="text"
+                  class="form-control font-monospace"
+                  readonly
+                  :value="profilesFolder"
+                  data-pi-profiles-path
+                  @focus="$event.target.select()"
+                />
+                <button type="button" class="btn btn-outline-secondary" data-pi-copy-profiles @click="copyProfilesFolder">
+                  {{ profilesFolderCopied ? "Copied" : "Copy" }}
+                </button>
+              </div>
+              <div class="form-text">Paste into the File Explorer address bar (or Finder: Go &gt; Go to Folder).</div>
               <div class="form-text text-warning">
                 Quit Stream Deck from the tray before editing profile files. It overwrites them while running.
               </div>

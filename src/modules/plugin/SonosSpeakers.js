@@ -68,11 +68,14 @@ function setSpeakerHost({ UUID, hostAddress }) {
   }
 }
 
+/**
+ * Rebinds a context to another speaker. The destination binding is always made, even when the source
+ * entry no longer holds the context (e.g. it was never registered or was already removed); otherwise
+ * the key would silently stop polling. Returns whether the source held the context.
+ */
 function moveContext({ fromUUID, toUUID, context, hostAddress, zoneName }) {
   const removed = removeContext({ UUID: fromUUID, context });
-  if (removed) {
-    addContext({ UUID: toUUID, context, hostAddress, zoneName });
-  }
+  addContext({ UUID: toUUID, context, hostAddress, zoneName });
   return removed;
 }
 

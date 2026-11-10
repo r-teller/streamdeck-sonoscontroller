@@ -615,6 +615,65 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
     expect(consoleErrors.filter((e) => !e.includes("net::ERR"))).toEqual([]);
   });
 
+  test("p5-eq-dial-push", async ({ page }) => {
+    // Pushing the Audio Equalizer dial runs its configured push action (sonos-6sp, sonos-8px.1).
+    const { mock, mockHost, consoleErrors } = await commonSetup(page, {
+      actionFixtures: { ...GETTER_FIXTURES },
+    });
+    const ctx = "ctx-eq-push";
+    const settings = {
+      uuid: "RINCON_OFFICE01400",
+      hostAddress: "192.168.1.42",
+      zoneName: "Office",
+      encoderAudioEqualizerTarget: "VOLUME",
+      encoderPushAction: "TOGGLE_MUTE",
+    };
+    const lastTitle = async () =>
+      (await mockHost.outbound("setFeedback")).filter((f) => f.context === ctx && f.payload.title !== undefined).at(-1)
+        ?.payload.title;
+    const setMutes = () => mock.calls.filter((c) => c.action === "SetMute");
+    // The plugin re-polls right after every action (sonos-e9y): wait for a GetMute issued after the
+    // n-th SetMute, then give the render a moment, so the check runs against the polled value.
+    const afterNextPoll = async (n) => {
+      await expect
+        .poll(() => {
+          const i = mock.calls.indexOf(setMutes()[n - 1]);
+          return i >= 0 && mock.calls.slice(i + 1).some((c) => c.action === "GetMute");
+        }, { timeout: 8000 })
+        .toBe(true);
+      await page.waitForTimeout(300);
+    };
+
+    await mockHost.inject.willAppear(ctx, "encoder-audio-equalizer", settings, "Encoder");
+    await expect.poll(lastTitle, { timeout: 8000 }).toBe("Volume");
+
+    // Push: mute. dialDown + dialUp arrive, exactly one SetMute is sent.
+    await mockHost.inject.dialDown(ctx);
+    await expect.poll(() => setMutes().length, { timeout: 8000 }).toBe(1);
+    expect(setMutes()[0].body).toContain("<DesiredMute>1</DesiredMute>");
+    await expect.poll(lastTitle, { timeout: 8000 }).toBe("Muted");
+    // Sticks after the next poll (stateful mock speaker, sonos-8px.2).
+    await afterNextPoll(1);
+    expect(await lastTitle()).toBe("Muted");
+    expect(setMutes()).toHaveLength(1);
+
+    // Push again: unmute.
+    await mockHost.inject.dialDown(ctx);
+    await expect.poll(() => setMutes().length, { timeout: 8000 }).toBe(2);
+    expect(setMutes()[1].body).toContain("<DesiredMute>0</DesiredMute>");
+    await afterNextPoll(2);
+    expect(await lastTitle()).toBe("Volume");
+
+    // No push action configured: a push sends nothing to the speaker.
+    await mockHost.inject.didReceiveSettings(ctx, { ...settings, encoderPushAction: "NONE" });
+    const before = mock.calls.filter((c) => /^(Set|Play|Pause|Next)/.test(c.action)).length;
+    await mockHost.inject.dialDown(ctx);
+    await page.waitForTimeout(800);
+    expect(mock.calls.filter((c) => /^(Set|Play|Pause|Next)/.test(c.action)).length).toBe(before);
+
+    expect(consoleErrors.filter((e) => !e.includes("net::ERR"))).toEqual([]);
+  });
+
   test("p5-currently-playing-marquee", async ({ page }) => {
     test.setTimeout(90000);
 

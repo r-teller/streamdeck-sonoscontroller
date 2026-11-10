@@ -52,13 +52,16 @@ bd close <id>         # Complete work
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+npm ci
+npm test                              # Vitest unit tests
+npm run build_dev && npm run test:pw  # Playwright end-to-end (mocked Stream Deck + Sonos)
+npm run lint
+npm run format:check
+npm run build && npm run validate     # production build + Stream Deck manifest validation
 ```
+
+CI (`.github/workflows/`) runs all of these on every branch push and on PRs to `main`.
 
 ## Architecture Overview
 
@@ -66,4 +69,8 @@ _Add a brief overview of your project architecture_
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+### Adding or changing a Stream Deck action (keys and dials)
+
+Every new action or interaction ships with unit and Playwright tests. Follow:
+
+@docs/adding-actions.md

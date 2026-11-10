@@ -120,7 +120,7 @@ function toggleMuteState({ inActionSettings, inSonosSpeakerState }) {
 async function togglePlayPauseKeyDown({ inActionSettings, inSonosSpeakerState }) {
   try {
     const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
-    const raw = inSonosSpeakerState?.playbackState ?? "STOPPED";
+    const raw = inSonosSpeakerState?.playbackState || "STOPPED";
     const playbackState = raw === "TRANSITIONING" ? "PLAYING" : raw;
 
     if (playbackState === "PLAYING") {
@@ -139,7 +139,7 @@ async function togglePlayPauseKeyDown({ inActionSettings, inSonosSpeakerState })
 }
 
 function togglePlayPauseState({ inActionSettings, inSonosSpeakerState, advanceMarquee }) {
-  const raw = inSonosSpeakerState?.playbackState ?? "STOPPED";
+  const raw = inSonosSpeakerState?.playbackState || "STOPPED";
   const playbackState = raw === "TRANSITIONING" ? "PLAYING" : raw;
   const marquee = buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState, advanceMarquee });
 
@@ -185,7 +185,7 @@ async function togglePlayModeKeyDown({ inActionSettings, inSonosSpeakerState }) 
       inActionSettings.selectedPlayModes && inActionSettings.selectedPlayModes.length > 0
         ? inActionSettings.selectedPlayModes
         : PLAY_MODES;
-    const current = inSonosSpeakerState?.playMode ?? "NORMAL";
+    const current = inSonosSpeakerState?.playMode || "NORMAL";
     const next = allowed[getNextIndex(current, allowed)];
 
     await raceWithTimeout(controller.setPlayMode(next), "setPlayMode");
@@ -198,10 +198,10 @@ async function togglePlayModeKeyDown({ inActionSettings, inSonosSpeakerState }) 
 }
 
 function togglePlayModeState({ inActionSettings, inSonosSpeakerState }) {
-  const current = inSonosSpeakerState?.playMode ?? "NORMAL";
+  const current = inSonosSpeakerState?.playMode || "NORMAL";
   const idx = PLAY_MODES.indexOf(current);
   const stateIndex = idx === -1 ? 0 : idx;
-  const modeLabel = titleCase(current ?? "NORMAL");
+  const modeLabel = titleCase(current);
 
   const title = getStateBasedTitle(inActionSettings, modeLabel);
 

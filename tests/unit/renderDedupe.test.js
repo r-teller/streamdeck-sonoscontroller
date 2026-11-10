@@ -139,6 +139,25 @@ describe("renderDedupe", () => {
     expect(mockSd.setFeedback).toHaveBeenCalledTimes(2);
   });
 
+  test("feedback cache stores a copy, so a mutated-in-place payload still re-emits (sonos-jre)", () => {
+    const feedback = { value: 10, indicator: 10 };
+    actionFunctionMap["currently-playing"] = {
+      state: { default: () => ({ feedback }) },
+    };
+    setActionSettings("ctx1", {
+      action: "com.r-teller.sonoscontroller.currently-playing",
+      controller: "Keypad",
+      status: {},
+    });
+
+    refreshStateAndTitle({ inContext: "ctx1", inSonosSpeakerState: {} });
+    feedback.value = 20;
+    feedback.indicator = 20;
+    refreshStateAndTitle({ inContext: "ctx1", inSonosSpeakerState: {} });
+
+    expect(mockSd.setFeedback).toHaveBeenCalledTimes(2);
+  });
+
   test("feedbackLayout swap – emits on change only", () => {
     let layout = "./layouts/encoder-bar-0-100.json";
     actionFunctionMap["encoder-audio-equalizer"] = {

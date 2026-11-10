@@ -126,9 +126,9 @@ describe("PiComponent speaker bindings integration", () => {
     vi.useRealTimers();
   });
 
-  it("hides the profiles folder link outside Stream Deck (non-file origin)", () => {
+  it("hides the profiles folder path outside Stream Deck (non-file origin)", () => {
     const w = mount(PiComponent);
-    expect(w.vm.profilesFolderUrl).toBeNull();
-    expect(w.find("[data-pi-open-profiles]").exists()).toBe(false);
+    expect(w.vm.profilesFolder).toBeNull();
+    expect(w.find("[data-pi-advanced]").exists()).toBe(false);
   });
 });

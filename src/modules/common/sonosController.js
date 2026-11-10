@@ -443,7 +443,7 @@ export class SonosController {
     try {
       const { service } = await this._coordServiceFor("avTransport");
       const response = await service.execute("GetTransportSettings", { InstanceID: 0 });
-      return { playMode: response.PlayMode };
+      return { playMode: response.PlayMode ?? "" };
     } catch (err) {
       const translated = translateSonosError(err, this._opCtx("get transport settings"));
       throw translated;
@@ -457,9 +457,9 @@ export class SonosController {
       return {
         // Sonos reports TRANSITIONING for a moment after Play (and on track changes); it is on its way
         // to playing, so surface it as PLAYING rather than letting callers treat it as paused.
-        playbackState: response.CurrentTransportState === "TRANSITIONING" ? "PLAYING" : response.CurrentTransportState,
-        currentTransportStatus: response.CurrentTransportStatus,
-        currentSpeed: response.CurrentSpeed,
+        playbackState: response.CurrentTransportState === "TRANSITIONING" ? "PLAYING" : (response.CurrentTransportState ?? ""),
+        currentTransportStatus: response.CurrentTransportStatus ?? "",
+        currentSpeed: response.CurrentSpeed ?? "",
       };
     } catch (err) {
       const translated = translateSonosError(err, this._opCtx("get transport info"));
@@ -472,7 +472,8 @@ export class SonosController {
       const { service } = await this._coordServiceFor("avTransport");
       const response = await service.execute("GetPositionInfo", { InstanceID: 0 });
 
-      const track = response.Track ?? "";
+      // Queue position (1-based); 0 when absent or non-numeric (e.g. radio).
+      const track = parseInt(response.Track ?? "0", 10) || 0;
       const trackDuration = response.TrackDuration ?? "";
       const trackURI = response.TrackURI ?? "";
       const relTime = response.RelTime ?? "";
@@ -485,8 +486,14 @@ export class SonosController {
 
       const trackMetaData = response.TrackMetaData;
       if (trackMetaData && trackMetaData !== "NOT_IMPLEMENTED") {
-        const didl = convertXmlToJson(trackMetaData);
-        const item = asArray(didl.item)[0];
+        // Some sources (radio streams, third-party services) send malformed DIDL. The track metadata is
+        // cosmetic, so a bad blob degrades to empty fields rather than failing the whole poll (sonos-9b0).
+        let item;
+        try {
+          item = asArray(convertXmlToJson(trackMetaData).item)[0];
+        } catch {
+          item = undefined;
+        }
         if (item) {
           title = extractText(item["dc:title"]);
           artist = extractText(item["dc:creator"]);
