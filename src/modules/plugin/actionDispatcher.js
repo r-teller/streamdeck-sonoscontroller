@@ -28,6 +28,7 @@ const ACTION_NAMES = [
   "play-sonos-favorite",
   "encoder-audio-equalizer",
   "encoder-play-mode",
+  "encoder-queue-track",
 ];
 
 function createEmptyEntry() {

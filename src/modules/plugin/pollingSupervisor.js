@@ -4,6 +4,15 @@ import { OPERATIONAL_STATUS } from "./operationalStatus.js";
 import { resolveSpeaker } from "../common/speakerResolver.js";
 import { globalSettings } from "./globalSettings.js";
 import { speakerHasFavoriteKeys } from "./favoriteKeys.js";
+import { actionSettings } from "./actionSettings.js";
+
+export const QUEUE_DIAL_ACTION = "encoder-queue-track";
+
+/** True when a Queue Track dial is bound to this speaker (it needs the queue signature, sonos-gen.2). */
+export function speakerHasQueueDial(UUID) {
+  const speaker = getAllSpeakers()[UUID];
+  return !!speaker?.contexts?.some((c) => actionSettings[c]?.action?.split(".").pop() === QUEUE_DIAL_ACTION);
+}
 
 export function startPollingSupervisor({
   intervalMs = 500,
@@ -13,7 +22,7 @@ export function startPollingSupervisor({
   showAlert = () => {},
   refreshStateAndTitle = () => {},
   getGlobals = () => globalSettings,
-  needsFavoriteInfo = speakerHasFavoriteKeys,
+  needsFavoriteInfo = (UUID) => speakerHasFavoriteKeys(UUID) || speakerHasQueueDial(UUID),
   afterPoll = () => {},
 } = {}) {
   let intervalId = null;
@@ -80,6 +89,8 @@ export function startPollingSupervisor({
           muted,
           audioEqualizer: { volume, bass, treble },
           currentURI: positionInfo.trackURI,
+          // 1-based position in the queue (0 when not playing from the queue)
+          trackNumber: positionInfo.track,
           playing: {
             title: positionInfo.title,
             artist: positionInfo.artist,

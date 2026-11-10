@@ -192,6 +192,18 @@ describe("carousel feedback", () => {
     });
   });
 
+  it("message card with an image draws one dimmed card above the text", () => {
+    const canvas = stubCanvas();
+    _setCanvasFactory(() => canvas);
+    const fb = messageFeedback("c1", { caption: "Queue is empty", image: "images/keys/x.png" });
+    expect(fb).toEqual({ cards: "data:image/png;base64,STUB", caption: "Queue is empty", detail: "" });
+    const alphas = canvas.calls.filter(([op]) => op === "set:globalAlpha").map(([, v]) => v);
+    expect(alphas.length).toBe(1);
+    expect(alphas[0]).toBeLessThan(0.5);
+    // no highlight border on a message card
+    expect(canvas.calls.filter(([op]) => op === "stroke")).toHaveLength(0);
+  });
+
   it("feedback keys match the carousel layout", () => {
     const layout = JSON.parse(readFileSync(resolve(process.cwd(), "public/layouts/encoder-carousel.json"), "utf8"));
     const keys = layout.items.map((i) => i.key).sort();

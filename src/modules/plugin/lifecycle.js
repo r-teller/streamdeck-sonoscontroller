@@ -1,5 +1,6 @@
 import { callAction as defaultCallAction, actionFunctionMap } from "./actionDispatcher.js";
 import { browseTick, endBrowse, forgetContext, setCarouselRenderHook } from "./carousel.js";
+import { setQueueLoadedHook } from "./queueCache.js";
 import { handleDialRotate as defaultHandleDialRotate } from "./dialRotateDebouncer.js";
 import {
   clearDedupeCache as defaultClearDedupeCache,
@@ -248,6 +249,14 @@ export function wireLifecycleHandlers({ sd }, deps = {}) {
     const uuid = getActionSettings(context)?.uuid;
     const speaker = uuid ? getAllSpeakers()[uuid] : undefined;
     if (speaker?.state) refreshStateAndTitle({ inContext: context, inSonosSpeakerState: speaker.state });
+  });
+
+  // Queue dial cards fill in once the speaker's queue items have been fetched.
+  setQueueLoadedHook((uuid) => {
+    const speaker = getAllSpeakers()[uuid];
+    for (const context of speaker?.contexts ?? []) {
+      refreshStateAndTitle({ inContext: context, inSonosSpeakerState: speaker.state });
+    }
   });
 
   handlers.dialRotate = (msg) => {

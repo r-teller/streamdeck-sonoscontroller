@@ -299,6 +299,31 @@
           "Touch": "Next mode"
         }
       }
+    },
+    {
+      "Icon": "images/actions/currently_playing",
+      "Name": "Queue Track Dial",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Turn to pick a track from the queue",
+      "UUID": "com.r-teller.sonoscontroller.encoder-queue-track",
+      "Controllers": ["Encoder"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Queue Track",
+          "Image": "images/keys/input_sonos_queue"
+        }
+      ],
+      "Encoder": {
+        "layout": "layouts/encoder-carousel.json",
+        "TriggerDescription": {
+          "Rotate": "Pick a track (plays when you stop)",
+          "Push": "Next track",
+          "Touch": "Next track"
+        }
+      }
     }
   ],
   "SDKVersion": 2,

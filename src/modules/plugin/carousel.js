@@ -186,7 +186,7 @@ function roundedRect(ctx, x, y, w, h, r) {
  * @param {string} context
  * @param {{cards: Array<{image?: string, placeholder?: string}>, index: number, offset?: number}} model
  */
-export function drawCards(context, { cards, index, offset = 0 }) {
+export function drawCards(context, { cards, index, offset = 0, dim = false }) {
   activeContexts.add(context);
   const canvas = canvasFactory();
   const ctx = canvas?.getContext?.("2d");
@@ -198,7 +198,7 @@ export function drawCards(context, { cards, index, offset = 0 }) {
   for (const p of cardPlacements({ count: cards.length, index, offset })) {
     const card = cards[p.item] ?? {};
     ctx.save();
-    ctx.globalAlpha = p.alpha;
+    ctx.globalAlpha = dim ? p.alpha * 0.4 : p.alpha;
     roundedRect(ctx, p.x, p.y, p.size, p.size, 6);
     ctx.clip();
     const img = imageFor(card.image);
@@ -214,7 +214,7 @@ export function drawCards(context, { cards, index, offset = 0 }) {
       ctx.fillText(card.placeholder ?? "♪", p.x + p.size / 2, p.y + p.size / 2 + 1);
     }
     ctx.restore();
-    if (p.center) {
+    if (p.center && !dim) {
       ctx.save();
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = 2;
@@ -242,10 +242,14 @@ export function carouselFeedback(context, { cards, index, detail }) {
   };
 }
 
-/** Feedback payload for a message instead of cards (e.g. "Not playing from queue"). */
-export function messageFeedback(context, { caption, detail = "" }) {
+/**
+ * Feedback payload for a message instead of cards (e.g. "Not playing from queue"). An optional
+ * image is drawn as a single dimmed card above the text so the strip does not look empty.
+ */
+export function messageFeedback(context, { caption, detail = "", image }) {
   activeContexts.add(context);
-  return { cards: "", caption, detail };
+  const cards = image ? drawCards(context, { cards: [{ image }], index: 0, dim: true }) : null;
+  return { cards: cards ?? "", caption, detail };
 }
 
 export function forgetContext(context) {
