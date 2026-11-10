@@ -116,7 +116,9 @@ export function refreshStateAndTitle({ inContext, inSonosSpeakerState, force = f
   if (intent.feedback !== undefined && typeof intent.feedback === "object" && intent.feedback !== null) {
     if (force || layoutChanged || !shallowEqual(intent.feedback, status.lastFeedback)) {
       sd.setFeedback({ context: inContext, payload: intent.feedback });
-      status.lastFeedback = intent.feedback;
+      // Copy, not the live object: a state fn that reuses and mutates its feedback object would
+      // otherwise mutate the cache too, so the next comparison is always "equal" and updates are lost.
+      status.lastFeedback = { ...intent.feedback };
     }
   }
 }
