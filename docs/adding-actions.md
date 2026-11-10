@@ -33,7 +33,11 @@ The beads issue lists acceptance criteria for each interaction the action handle
 - A burst of `dialRotate` events sends exactly one `Set*` call with the summed value.
 - Turning past a limit stops at the limit; check the value actually sent.
 - After a change, wait for the next poll and check the value sticks. The fake speaker
-  (`tests/playwright/support/mockSonos.js`) must remember the value (sonos-8px.2).
+  (`tests/playwright/support/mockSonos.js`) remembers, per speaker, the last volume, bass,
+  treble, mute, play mode and play/pause/stop the plugin set, and reports it on the next
+  poll. A fixture swapped in mid-test with `setActionFixture` overrides the remembered value.
+- Push a dial with `mockHost.inject.dialDown(ctx)`; it sends dialDown then dialUp, like a
+  real push.
 - A speaker failure (`installMockSonos(page, { failures })`) shows the error state and
   produces no page errors.
 - Save screenshot baselines of the dial or key face through `harness/key-preview.html`
@@ -43,7 +47,10 @@ The beads issue lists acceptance criteria for each interaction the action handle
 - Prove each new test once: it must fail with the feature removed and pass with it.
 
 `tests/unit/actionCoverage.test.js` enforces part of this in CI: every dial action in
-`public/manifest.json` must be driven by a Playwright spec for each event it registers.
+`public/manifest.json` must be driven by a Playwright spec for each event it registers. It
+reads the spec source, so keep `willAppear(ctx, <action>, settings, "Encoder")` and the
+`inject.<event>(` calls in the test body, not in a shared helper. It only proves each event
+is sent; the assertions on its effect are still up to you.
 
 ## Before merge
 

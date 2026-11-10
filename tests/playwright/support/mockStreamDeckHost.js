@@ -86,6 +86,12 @@ export const mockStreamDeckHostSource = `
       dialRotate: (ctx, ticks = 1) => {
         window.__sdInject({ event: 'dialRotate', context: ctx, payload: { ticks } });
       },
+      dialDown: (ctx) => {
+        window.__sdInject({ event: 'dialDown', context: ctx, payload: { controller: 'Encoder' } });
+      },
+      dialUp: (ctx) => {
+        window.__sdInject({ event: 'dialUp', context: ctx, payload: { controller: 'Encoder' } });
+      },
       touchTap: (ctx) => {
         window.__sdInject({ event: 'touchTap', context: ctx, payload: {} });
       },
@@ -130,6 +136,14 @@ export function createMockHost(page) {
       },
       dialRotate: async (ctx, ticks = 1) => {
         await page.evaluate(({ ctx, ticks }) => window.sd.inject.dialRotate(ctx, ticks), { ctx, ticks });
+      },
+      // Pushing a dial (sonos-8px.1). A real push sends dialDown then dialUp; inject both so a
+      // handler wired to the wrong event shows up.
+      dialDown: async (ctx) => {
+        await page.evaluate((ctx) => {
+          window.sd.inject.dialDown(ctx);
+          window.sd.inject.dialUp(ctx);
+        }, ctx);
       },
       touchTap: async (ctx) => {
         await page.evaluate((ctx) => window.sd.inject.touchTap(ctx), ctx);

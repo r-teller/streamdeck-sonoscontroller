@@ -18,9 +18,40 @@ export async function installMockSonos(page, options = {}) {
   const failureModes = { ...failures };
   const actionFixtureState = { ...actionFixtures };
   const fixtureFileCache = {};
-  // Like a real speaker, report back the last volume that was set (the plugin re-polls right after
-  // every action, sonos-e9y; a static fixture would undo each change).
-  let currentVolume = null;
+  // Like a real speaker, report back the last value the plugin set (the plugin re-polls right after
+  // every action, sonos-e9y; a static fixture would undo each change). Kept per speaker host
+  // (sonos-8px.2). Each rule: a Set* request and the value it carries, the Get* that reports it and
+  // the response tag to rewrite. Applies only when the Get* response has that tag (a fixture is
+  // configured); the empty response has none.
+  const STATEFUL = [
+    { set: "SetVolume", arg: "DesiredVolume", get: "GetVolume", tag: "CurrentVolume" },
+    { set: "SetBass", arg: "DesiredBass", get: "GetBass", tag: "CurrentBass" },
+    { set: "SetTreble", arg: "DesiredTreble", get: "GetTreble", tag: "CurrentTreble" },
+    { set: "SetMute", arg: "DesiredMute", get: "GetMute", tag: "CurrentMute" },
+    { set: "SetPlayMode", arg: "NewPlayMode", get: "GetTransportSettings", tag: "PlayMode" },
+    { set: "Play", value: "PLAYING", get: "GetTransportInfo", tag: "CurrentTransportState" },
+    { set: "Pause", value: "PAUSED_PLAYBACK", get: "GetTransportInfo", tag: "CurrentTransportState" },
+    { set: "Stop", value: "STOPPED", get: "GetTransportInfo", tag: "CurrentTransportState" },
+  ];
+  const remembered = {}; // host -> { [getAction]: value }
+
+  function remember(host, action, body) {
+    for (const rule of STATEFUL) {
+      if (rule.set !== action) continue;
+      const value = rule.value ?? (body ?? "").match(new RegExp(`<${rule.arg}>([^<]*)</${rule.arg}>`))?.[1];
+      if (value !== undefined) (remembered[host] ??= {})[rule.get] = value;
+    }
+  }
+
+  function applyRemembered(host, action, xml) {
+    for (const rule of STATEFUL) {
+      const value = remembered[host]?.[rule.get];
+      if (rule.get === action && value !== undefined) {
+        xml = xml.replace(new RegExp(`<${rule.tag}>[^<]*</${rule.tag}>`), `<${rule.tag}>${value}</${rule.tag}>`);
+      }
+    }
+    return xml;
+  }
 
   const fixtures = {
     topology: readFileSync(join(process.cwd(), "tests/fixtures/sonos", topologyFixture), "utf8"),
@@ -62,6 +93,9 @@ export async function installMockSonos(page, options = {}) {
   }
 
   function setActionFixture(action, fixtureFile) {
+    // A fixture swapped in mid-test is the newest truth (e.g. "changed from another controller" or
+    // "speaker ignored the change"): it must win over what the plugin last set.
+    for (const host of Object.keys(remembered)) delete remembered[host][action];
     if (fixtureFile == null) {
       delete actionFixtureState[action];
     } else {
@@ -138,10 +172,7 @@ export async function installMockSonos(page, options = {}) {
     let responseXml = "";
     let status = 200;
 
-    if (action === "SetVolume") {
-      const m = (body ?? "").match(/<DesiredVolume>(\d+)<\/DesiredVolume>/);
-      if (m) currentVolume = Number(m[1]);
-    }
+    remember(host, action, body);
 
     // Check for action fixture first
     if (actionFixtureState[action]) {
@@ -166,9 +197,7 @@ export async function installMockSonos(page, options = {}) {
       responseXml = fixtures.emptyResponse;
     }
 
-    if (action === "GetVolume" && currentVolume !== null) {
-      responseXml = responseXml.replace(/<CurrentVolume>\d+<\/CurrentVolume>/, `<CurrentVolume>${currentVolume}</CurrentVolume>`);
-    }
+    responseXml = applyRemembered(host, action, responseXml);
 
     await route.fulfill({
       status,
