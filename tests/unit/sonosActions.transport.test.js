@@ -199,6 +199,8 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
     [{ playbackState: "STOPPED" }, 2, "Stopped"],
     [{ playbackState: "PAUSED_PLAYBACK" }, 0, "Paused"],
     [{ playbackState: "TRANSITIONING" }, 1, "Playing"],
+    // controller getters default a missing state to "" (sonos-va7); that must still read as Stopped
+    [{ playbackState: "" }, 2, "Stopped"],
   ])(
     "toggle‑play‑pause state renders correctly for %s",
     async (state, expectedIdx, expectedTitle) => {
@@ -298,6 +300,15 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
       stateIndex: 1, // index of SHUFFLE_NOREPEAT in full PLAY_MODES
       title: "Shuffle Norepeat",
     });
+  });
+
+  it("toggle‑play‑mode treats an empty playMode as NORMAL (sonos-va7)", () => {
+    const result = actionFunctionMap["toggle-play-mode"].state.keypad({
+      inActionSettings: { displayStateBasedTitle: true },
+      inSonosSpeakerState: { playMode: "" },
+    });
+
+    expect(result).toMatchObject({ stateIndex: 0, title: "Normal" });
   });
 
   it("toggle‑play‑mode renders null title when gate off", () => {

@@ -132,7 +132,7 @@ describe("SonosController orchestrations", () => {
     const info = await controller.getPositionInfo();
 
     expect(info).toEqual({
-      track: "3",
+      track: 3,
       trackDuration: "0:03:42",
       trackURI: "x-sonos-spotify:track1",
       relTime: "0:01:23",
@@ -162,6 +162,21 @@ describe("SonosController orchestrations", () => {
       album: "",
       albumArtURI: "",
     });
+  });
+
+  test("transport getters return typed defaults for an empty response (sonos-va7)", async () => {
+    mockFetch({});
+    controller = new SonosController().connect("192.168.1.42", { uuid: "RINCON_OFFICE01400" });
+
+    expect(await controller.getTransportSettings()).toEqual({ playMode: "" });
+    expect(await controller.getTransportInfo()).toEqual({
+      playbackState: "",
+      currentTransportStatus: "",
+      currentSpeed: "",
+    });
+    const position = await controller.getPositionInfo();
+    expect(position.track).toBe(0);
+    expect(position.trackURI).toBe("");
   });
 
   test("getTransportInfo() returns correct state for PLAYING", async () => {
