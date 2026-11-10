@@ -74,6 +74,17 @@
       font-size: 24px;
       pointer-events: none;
     }
+    /* Generic layout items (preview.js renders public/layouts/*.json). Stream Deck does not wrap
+       layout text; it is cut at the item's rect. */
+    .encoder-text {
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      line-height: 1.2;
+    }
+    .encoder-pixmap {
+      object-fit: contain;
+    }
     .encoder-title {
       position: absolute;
       color: #fff;
