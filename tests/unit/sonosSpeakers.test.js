@@ -118,6 +118,21 @@ describe("Speaker lifecycle and storage", () => {
     expect(target.hostAddress).toBe("2.2.2.2");
     expect(target.zoneName).toBe("B");
   });
+
+  test("moveContext binds the destination even when the source lacks the context (sonos-ba8)", () => {
+    const moved = moveContext({
+      fromUUID: UUID,
+      toUUID: OTHER_UUID,
+      context: "orphanCtx",
+      hostAddress: "3.3.3.3",
+      zoneName: "C",
+    });
+    expect(moved).toBe(false);
+    expect(getAllSpeakers()[UUID]).toBeUndefined();
+    const target = getAllSpeakers()[OTHER_UUID];
+    expect(target.contexts).toContain("orphanCtx");
+    expect(target.hostAddress).toBe("3.3.3.3");
+  });
 });
 
 describe("Speaker state updates", () => {
