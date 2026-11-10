@@ -36,6 +36,16 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
+## Adding or Changing Stream Deck Actions (Keys and Dials)
+
+**Read `docs/adding-actions.md` before writing or changing any action.** Every new action or
+interaction ships with unit tests and Playwright tests for each event it handles (appear,
+turn, push, tap, key press, speaker error, PI settings). CI enforces part of this
+(`tests/unit/actionCoverage.test.js`).
+
+Build and test commands: `npm test`, `npm run build_dev && npm run test:pw`, `npm run lint`,
+`npm run format:check`, `npm run build && npm run validate`.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
 
