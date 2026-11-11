@@ -14,10 +14,15 @@ export const CAROUSEL_LAYOUT = "layouts/encoder-carousel.json";
 // Geometry of the "cards" pixmap item (must match public/layouts/encoder-carousel.json).
 export const CARDS_WIDTH = 200;
 export const CARDS_HEIGHT = 66;
-const CENTER_SIZE = 56;
-const SIDE_SIZE = 40;
-const SPACING = 84; // distance between card centres; side cards end up partly off the strip
-const SIDE_ALPHA = 0.45;
+// Option B (sonos-gen.4): cards overlap a little; two cards per side; a side buffer keeps every card
+// clear of the neighbouring dial's part of the shared touch strip.
+const CENTER_SIZE = 58;
+const SIDE_SIZE = 44; // one slot from the centre
+const FAR_SIZE = 34; // two slots from the centre
+const SPACING = 38; // distance between card centres; neighbours tuck about 10 px under the centre card
+const SIDE_SHADE = 0.55; // brightness of the side cards
+const FAR_SHADE = 0.3; // brightness of the outer cards
+export const SIDE_BUFFER = 6; // px kept clear at the left and right edges
 
 export const ANIMATION_FRAMES = [2 / 3, 1 / 3, 0];
 export const ANIMATION_FRAME_MS = 40;
@@ -28,36 +33,56 @@ export function wrapIndex(index, count) {
   return ((index % count) + count) % count;
 }
 
+/** Card size and brightness at `d` slots from the centre (fractions while sliding). */
+function cardLook(d) {
+  if (d <= 1) {
+    return { size: CENTER_SIZE - (CENTER_SIZE - SIDE_SIZE) * d, shade: 1 - (1 - SIDE_SHADE) * d };
+  }
+  const t = Math.min(1, d - 1);
+  return { size: SIDE_SIZE - (SIDE_SIZE - FAR_SIZE) * t, shade: SIDE_SHADE - (SIDE_SHADE - FAR_SHADE) * t };
+}
+
+function relsFor(count) {
+  if (count === 1) return [0];
+  if (count === 2) return [0, 1];
+  if (count < 5) return [-1, 0, 1]; // 3 or 4: the outer slots would repeat a neighbour
+  return [-2, -1, 0, 1, 2];
+}
+
 /**
  * Where each visible card goes for a given selection and slide offset.
  * offset is in card slots: +1 means the cards are still one slot to the right of their resting
  * place (the start of a step to the right), 0 is at rest.
  *
+ * Only cards that fit whole inside the side buffer at rest are shown; while sliding, a card may
+ * cross the buffer and is clipped there when drawn.
+ *
  * @param {{count: number, index: number, offset?: number}} p
- * @returns {Array<{item: number, x: number, y: number, size: number, alpha: number, center: boolean}>}
+ * @returns {Array<{item: number, x: number, y: number, size: number, shade: number, center: boolean, distance: number}>}
  */
 export function cardPlacements({ count, index, offset = 0 }) {
   if (count <= 0) return [];
-  const rels = count === 1 ? [0] : count === 2 ? [0, 1] : [-2, -1, 0, 1, 2];
   const placements = [];
-  for (const rel of rels) {
+  for (const rel of relsFor(count)) {
+    const rest = cardLook(Math.abs(rel));
+    const restX = CARDS_WIDTH / 2 + rel * SPACING - rest.size / 2;
+    if (restX < SIDE_BUFFER || restX + rest.size > CARDS_WIDTH - SIDE_BUFFER) continue;
     const pos = rel + offset; // slots from the centre
-    const distance = Math.min(1, Math.abs(pos));
-    const size = Math.round(CENTER_SIZE - (CENTER_SIZE - SIDE_SIZE) * distance);
-    const cx = CARDS_WIDTH / 2 + pos * SPACING;
-    const x = Math.round(cx - size / 2);
-    if (x + size <= 0 || x >= CARDS_WIDTH) continue; // fully off the strip
+    const { size, shade } = cardLook(Math.abs(pos));
+    const x = CARDS_WIDTH / 2 + pos * SPACING - size / 2;
+    if (x + size <= SIDE_BUFFER || x >= CARDS_WIDTH - SIDE_BUFFER) continue;
     placements.push({
       item: wrapIndex(index + rel, count),
-      x,
+      x: Math.round(x),
       y: Math.round((CARDS_HEIGHT - size) / 2),
-      size,
-      alpha: 1 - (1 - SIDE_ALPHA) * distance,
+      size: Math.round(size),
+      shade,
       center: rel === 0,
+      distance: Math.abs(pos),
     });
   }
-  // Draw side cards first so the centre card is on top.
-  return placements.sort((a, b) => Number(a.center) - Number(b.center));
+  // Farthest first, so nearer cards (and the centre card last) are drawn on top.
+  return placements.sort((a, b) => b.distance - a.distance);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -195,10 +220,16 @@ export function drawCards(context, { cards, index, offset = 0, dim = false }) {
   canvas.height = CARDS_HEIGHT;
   ctx.clearRect(0, 0, CARDS_WIDTH, CARDS_HEIGHT);
 
+  // Side buffer: nothing is drawn next to the neighbouring dial.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(SIDE_BUFFER, 0, CARDS_WIDTH - 2 * SIDE_BUFFER, CARDS_HEIGHT);
+  ctx.clip();
   for (const p of cardPlacements({ count: cards.length, index, offset })) {
     const card = cards[p.item] ?? {};
+    // Cards are opaque and darkened by distance, so overlapping cards hide each other.
+    const shade = dim ? p.shade * 0.4 : p.shade;
     ctx.save();
-    ctx.globalAlpha = dim ? p.alpha * 0.4 : p.alpha;
     roundedRect(ctx, p.x, p.y, p.size, p.size, 6);
     ctx.clip();
     const img = imageFor(card.image);
@@ -213,7 +244,20 @@ export function drawCards(context, { cards, index, offset = 0, dim = false }) {
       ctx.textBaseline = "middle";
       ctx.fillText(card.placeholder ?? "♪", p.x + p.size / 2, p.y + p.size / 2 + 1);
     }
+    if (shade < 1) {
+      ctx.fillStyle = `rgba(0,0,0,${(1 - shade).toFixed(3)})`;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+    }
     ctx.restore();
+    if (!p.center) {
+      // Thin dark edge so stacked cards stay distinct.
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,0,0,0.6)";
+      ctx.lineWidth = 1.5;
+      roundedRect(ctx, p.x, p.y, p.size, p.size, 6);
+      ctx.stroke();
+      ctx.restore();
+    }
     if (p.center && !dim) {
       ctx.save();
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
@@ -223,6 +267,7 @@ export function drawCards(context, { cards, index, offset = 0, dim = false }) {
       ctx.restore();
     }
   }
+  ctx.restore();
   return canvas.toDataURL("image/png");
 }
 

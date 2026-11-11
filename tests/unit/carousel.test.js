@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import {
   CARDS_WIDTH,
   CARDS_HEIGHT,
+  SIDE_BUFFER,
   ANIMATION_FRAMES,
   ANIMATION_FRAME_MS,
   wrapIndex,
@@ -50,20 +51,41 @@ describe("carousel geometry", () => {
     expect(wrapIndex(3, 0)).toBe(0);
   });
 
-  it("at rest: centre card large in the middle, neighbours smaller and cut at the edges", () => {
+  it("at rest: centre card large in the middle, two smaller, darker cards per side (option B)", () => {
+    const p = cardPlacements({ count: 10, index: 4 });
+    expect(p.map((c) => c.item).sort((a, b) => a - b)).toEqual([2, 3, 4, 5, 6]);
+    const at = (item) => p.find((c) => c.item === item);
+    const center = at(4);
+    expect(center.center).toBe(true);
+    expect(center.x + center.size / 2).toBe(CARDS_WIDTH / 2);
+    expect(center.size).toBeGreaterThan(at(3).size);
+    expect(at(3).size).toBeGreaterThan(at(2).size);
+    expect(at(3).shade).toBeLessThan(1);
+    expect(at(2).shade).toBeLessThan(at(3).shade);
+    for (const c of p) expect(c.y + c.size).toBeLessThanOrEqual(CARDS_HEIGHT);
+    // outer cards drawn first, centre card last so it is on top
+    expect(p.at(-1).center).toBe(true);
+    expect(p[0].distance).toBe(2);
+  });
+
+  it("neighbours overlap the centre card a little", () => {
     const p = cardPlacements({ count: 10, index: 4 });
     const center = p.find((c) => c.center);
-    expect(center.item).toBe(4);
-    expect(center.x + center.size / 2).toBe(CARDS_WIDTH / 2);
-    expect(center.size).toBeGreaterThan(p.find((c) => c.item === 3).size);
     const left = p.find((c) => c.item === 3);
     const right = p.find((c) => c.item === 5);
-    expect(left.x).toBeLessThan(0); // peeks in from the left edge
-    expect(right.x + right.size).toBeGreaterThan(CARDS_WIDTH); // and from the right
-    expect(left.alpha).toBeLessThan(1);
-    for (const c of p) expect(c.y + c.size).toBeLessThanOrEqual(CARDS_HEIGHT);
-    // centre drawn last so it is on top
-    expect(p.at(-1).center).toBe(true);
+    for (const overlap of [left.x + left.size - center.x, center.x + center.size - right.x]) {
+      expect(overlap).toBeGreaterThan(5);
+      expect(overlap).toBeLessThan(15);
+    }
+  });
+
+  it("at rest every card fits whole inside the side buffer", () => {
+    for (const count of [1, 2, 3, 4, 5, 12]) {
+      for (const c of cardPlacements({ count, index: 0 })) {
+        expect(c.x).toBeGreaterThanOrEqual(SIDE_BUFFER);
+        expect(c.x + c.size).toBeLessThanOrEqual(CARDS_WIDTH - SIDE_BUFFER);
+      }
+    }
   });
 
   it("neighbours wrap around the list", () => {
@@ -72,13 +94,16 @@ describe("carousel geometry", () => {
     expect(items).toContain(1);
   });
 
-  it("small lists: one card alone, two cards side by side", () => {
-    expect(cardPlacements({ count: 1, index: 0 }).map((c) => c.item)).toEqual([0]);
-    expect(
-      cardPlacements({ count: 2, index: 0 })
+  it("small lists never show the same card twice", () => {
+    const items = (count) =>
+      cardPlacements({ count, index: 0 })
         .map((c) => c.item)
-        .sort(),
-    ).toEqual([0, 1]);
+        .sort((a, b) => a - b);
+    expect(items(1)).toEqual([0]);
+    expect(items(2)).toEqual([0, 1]);
+    expect(items(3)).toEqual([0, 1, 2]);
+    expect(items(4)).toEqual([0, 1, 3]);
+    expect(items(5)).toEqual([0, 1, 2, 3, 4]);
     expect(cardPlacements({ count: 0, index: 0 })).toEqual([]);
   });
 
@@ -197,11 +222,19 @@ describe("carousel feedback", () => {
     _setCanvasFactory(() => canvas);
     const fb = messageFeedback("c1", { caption: "Queue is empty", image: "images/keys/x.png" });
     expect(fb).toEqual({ cards: "data:image/png;base64,STUB", caption: "Queue is empty", detail: "" });
-    const alphas = canvas.calls.filter(([op]) => op === "set:globalAlpha").map(([, v]) => v);
-    expect(alphas.length).toBe(1);
-    expect(alphas[0]).toBeLessThan(0.5);
-    // no highlight border on a message card
+    // dimmed with a dark overlay on the (opaque) card, and no highlight border
+    const overlays = canvas.calls.filter(([op, v]) => op === "set:fillStyle" && /^rgba\(0,0,0,/.test(v));
+    expect(overlays).toHaveLength(1);
+    expect(Number(overlays[0][1].match(/,([\d.]+)\)$/)[1])).toBeGreaterThan(0.5);
     expect(canvas.calls.filter(([op]) => op === "stroke")).toHaveLength(0);
+  });
+
+  it("clips drawing to the side buffer", () => {
+    const canvas = stubCanvas();
+    _setCanvasFactory(() => canvas);
+    carouselFeedback("c1", { cards: [{}, {}, {}, {}, {}], index: 0 });
+    const rect = canvas.calls.find(([op]) => op === "rect");
+    expect(rect).toEqual(["rect", SIDE_BUFFER, 0, CARDS_WIDTH - 2 * SIDE_BUFFER, CARDS_HEIGHT]);
   });
 
   it("feedback keys match the carousel layout", () => {
