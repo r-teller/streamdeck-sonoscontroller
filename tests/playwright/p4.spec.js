@@ -138,7 +138,7 @@ test("p4-first-run", async ({ page }, testInfo) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   expect(setSettingsFrames[0].payload.uuid).toBe("RINCON_LIVINGROOMBAR01400");
-  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(24);
+  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(25);
 
   // Assert bound speaker alert
   const boundAlert = page.locator("[data-pi-bound-speaker-alert]");
@@ -235,12 +235,13 @@ for (const action of actions) {
       "marquee-title": page.locator("[data-pi-toggle-marquee-title]"),
       "marquee-album-title": page.locator("[data-pi-toggle-marquee-album-title]"),
       "album-art": page.locator("[data-pi-toggle-album-art]"),
-      "track-time": page.locator("[data-pi-toggle-track-time]")
+      "track-time": page.locator("[data-pi-toggle-track-time]"),
+      "favorite-badge": page.locator("[data-pi-toggle-favorite-badge]")
     };
 
     const expected = {
       "currently-playing": {
-        togglesPresent: ["marquee-title", "marquee-album-title", "album-art", "track-time"],
+        togglesPresent: ["marquee-title", "marquee-album-title", "album-art", "track-time", "favorite-badge"],
         sectionsPresent: []
       },
       "toggle-mute-unmute": {
@@ -248,7 +249,7 @@ for (const action of actions) {
         sectionsPresent: []
       },
       "toggle-play-pause": {
-        togglesPresent: ["state-based-title", "marquee-album-title", "album-art", "track-time"],
+        togglesPresent: ["state-based-title", "marquee-album-title", "album-art", "track-time", "favorite-badge"],
         sectionsPresent: []
       },
       "toggle-play-mode": {
@@ -460,7 +461,7 @@ test("p4-bind-speaker", async ({ page }) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   const payload = setSettingsFrames[0].payload;
-  expect(Object.keys(payload)).toHaveLength(24);
+  expect(Object.keys(payload)).toHaveLength(25);
   expect(payload.uuid).toBe("RINCON_OFFICE01400");
   expect(payload.title).toBe("Office (192.168.1.42)");
   expect(payload.hostAddress).toBe("192.168.1.42");

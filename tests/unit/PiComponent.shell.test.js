@@ -165,7 +165,7 @@ describe("PiComponent shell", () => {
     const payload = stubClient.saveSettings.mock.calls[0][0].actionSettings;
     expect(payload.uuid).toBe("RINCON_A");
     expect(payload.title).toBe("Office (192.168.1.42)");
-    expect(Object.keys(payload)).toHaveLength(24);
+    expect(Object.keys(payload)).toHaveLength(25);
   });
 
   it("does not clobber existing bound speaker", async () => {
@@ -239,7 +239,7 @@ describe("PiComponent shell", () => {
     expect(payload.adjustVolumeIncrement).toBeNull();
     expect(payload.selectedPlayModes).toBeNull();
     expect(payload.displayStateBasedTitle).toBe(false);
-    expect(Object.keys(payload)).toHaveLength(24);
+    expect(Object.keys(payload)).toHaveLength(25);
   });
 
   it("handles didReceiveSettings, globalsettings and disconnected events", async () => {

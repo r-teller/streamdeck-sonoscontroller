@@ -181,8 +181,11 @@ function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState, advan
 
   const artImage = settings.displayAlbumArt ? albumArtImage(currentAlbumArtURI) : null;
   // Track time (sonos-bg0.2): remaining time + bar drawn over the art, only when art is shown.
-  const time = typeof artImage === "string" && artImage && wantsTrackTime(settings) ? trackTimeView(state) : null;
-  const imageDataURL = time ? composeKeyImage(artImage, time) : artImage;
+  const hasArt = typeof artImage === "string" && artImage !== "";
+  const time = hasArt && wantsTrackTime(settings) ? trackTimeView(state) : null;
+  // Heart badge (sonos-bg0.3) when the song is in the Stream Deck Favorites playlist.
+  const badge = hasArt && settings.displayFavoriteBadge !== false && state.inFavorites === true;
+  const imageDataURL = time || badge ? composeKeyImage(artImage, { ...time, badge }) : artImage;
 
   const sources = [];
   let titleLine = "";

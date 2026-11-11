@@ -117,7 +117,7 @@ describe("PiComponent volume increment override", () => {
     expect(stubClient.saveSettings).toHaveBeenCalled();
     const payload = stubClient.saveSettings.mock.calls[0][0].actionSettings;
     expect(payload.adjustVolumeIncrement).toBe(1);
-    expect(Object.keys(payload).length).toBe(24);
+    expect(Object.keys(payload).length).toBe(25);
     expect(input.element.value).toBe("1");
   });
 

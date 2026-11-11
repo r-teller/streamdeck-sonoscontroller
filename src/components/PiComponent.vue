@@ -487,6 +487,17 @@ defineExpose({
         />
         <label class="form-check-label">Display Track Time (over album art)</label>
       </div>
+      <div v-if="showDisplayTrackTime" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.displayFavoriteBadge !== false"
+          :disabled="settings.displayAlbumArt !== true"
+          data-pi-toggle-favorite-badge
+          @change="onPresentationToggle('displayFavoriteBadge', $event.target.checked)"
+        />
+        <label class="form-check-label">Show Heart for Stream Deck Favorites</label>
+      </div>
     </section>
 
     <section v-if="PLAY_MODE_ACTIONS.has(shortName)" data-pi-section="play-modes">

@@ -151,6 +151,29 @@ describe("drawing time onto the album art", () => {
     expect(composeKeyImage("data:image/jpeg;base64,ART", { text: "-2:22", fraction: 0.37 })).toBe(a);
     expect(drawn.length).toBe(n);
   });
+  it("heart badge alone: a dark dot in the top-right corner, no fade or bar", () => {
+    composeKeyImage("data:image/jpeg;base64,ART", { badge: true });
+    const arc = drawn.find((c) => c[0] === "arc");
+    expect(arc?.[1]).toBeGreaterThan(100); // right side of the 144 px key
+    expect(arc?.[2]).toBeLessThan(40); // top
+    expect(drawn.filter((c) => c[0] === "fillRect")).toHaveLength(0);
+  });
+  it("time and badge together, cached separately from time alone", () => {
+    const both = composeKeyImage("data:image/jpeg;base64,ART", { text: "-2:22", fraction: 0.37, badge: true });
+    const timeOnly = composeKeyImage("data:image/jpeg;base64,ART", { text: "-2:22", fraction: 0.37 });
+    expect(both).not.toBe(timeOnly);
+  });
+  it("Currently Playing draws the heart only for a song in the playlist, with the setting on", () => {
+    const art = "data:image/jpeg;base64,ART";
+    const render = (inFavorites, extra = {}) =>
+      buildMarqueeRenderIntent({
+        inActionSettings: { displayAlbumArt: true, displayTrackTime: false, ...extra },
+        inSonosSpeakerState: { inFavorites, playing: { albumArtURI: art } },
+      }).imageDataURL;
+    expect(render(true)).toMatch(/COMPOSED/);
+    expect(render(false)).toBe(art);
+    expect(render(true, { displayFavoriteBadge: false })).toBe(art);
+  });
   it("returns the plain art when no canvas is available", () => {
     _setKeyCanvasFactory(() => null);
     expect(composeKeyImage("data:image/jpeg;base64,ART", { text: "-2:22", fraction: 0.37 })).toBe("data:image/jpeg;base64,ART");

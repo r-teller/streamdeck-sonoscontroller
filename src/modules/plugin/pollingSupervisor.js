@@ -6,6 +6,7 @@ import { globalSettings } from "./globalSettings.js";
 import { speakerHasFavoriteKeys } from "./favoriteKeys.js";
 import { actionSettings } from "./actionSettings.js";
 import { positionSnapshot } from "./trackTime.js";
+import { refreshPlaylist, isInPlaylist } from "./favoritesPlaylist.js";
 
 export const QUEUE_DIAL_ACTION = "encoder-queue-track";
 /** Play mode only changes on the queue, so these actions need the media URI (sonos-8cc). */
@@ -25,6 +26,24 @@ export function speakerHasPlayModeAction(UUID) {
   return speakerHasAction(UUID, PLAY_MODE_ACTION_NAMES);
 }
 
+/** The heart key (sonos-bg0.4). */
+export const FAVORITE_TRACK_ACTION = "toggle-favorite-track";
+const HEART_BADGE_ACTIONS = new Set(["currently-playing", "toggle-play-pause"]);
+
+/**
+ * True when a key on this speaker shows whether the playing song is in the Stream Deck Favorites
+ * playlist: the heart key, or a Currently Playing / Play-Pause key with the heart badge on (sonos-bg0.3).
+ */
+export function speakerNeedsFavoritesPlaylist(UUID) {
+  const speaker = getAllSpeakers()[UUID];
+  return !!speaker?.contexts?.some((c) => {
+    const s = actionSettings[c];
+    const name = s?.action?.split(".").pop();
+    if (name === FAVORITE_TRACK_ACTION) return true;
+    return HEART_BADGE_ACTIONS.has(name) && s.displayAlbumArt === true && s.displayFavoriteBadge !== false;
+  });
+}
+
 export function startPollingSupervisor({
   intervalMs = 500,
   getDeviceCheckIntervalSeconds = () => 10,
@@ -35,6 +54,7 @@ export function startPollingSupervisor({
   getGlobals = () => globalSettings,
   needsFavoriteInfo = (UUID) => speakerHasFavoriteKeys(UUID) || speakerHasQueueDial(UUID),
   needsMediaUri = (UUID) => speakerHasPlayModeAction(UUID),
+  needsFavoritesPlaylist = (UUID) => speakerNeedsFavoritesPlaylist(UUID),
   afterPoll = () => {},
 } = {}) {
   let intervalId = null;
@@ -84,6 +104,16 @@ export function startPollingSupervisor({
               favoriteInfo.queueSignature = String(media.currentURI).startsWith("x-rincon-queue:")
                 ? await controller.getQueueSignature()
                 : null;
+            }
+          }
+          // Stream Deck Favorites playlist (sonos-bg0.3): a 1-item read unless it changed. A failure
+          // here must not mark the speaker disconnected; the heart just keeps its last value.
+          if (typeof controller.findPlaylist === "function" && needsFavoritesPlaylist(UUID)) {
+            try {
+              await refreshPlaylist(UUID, controller);
+              favoriteInfo.inFavorites = isInPlaylist(UUID, base[6]?.trackURI);
+            } catch (e) {
+              // keep polling
             }
           }
           return [...base, favoriteInfo];

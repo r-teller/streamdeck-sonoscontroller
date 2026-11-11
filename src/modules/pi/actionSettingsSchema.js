@@ -125,7 +125,7 @@ function favoriteToggle(shortName, key, merged) {
 }
 
 /**
- * Builds a complete 24-field action settings payload.
+ * Builds a complete 25-field action settings payload.
  * @param {object} params - Parameters object.
  * @param {string} params.action - Full action UUID.
  * @param {array} params.states - States list snapshot.
@@ -161,6 +161,7 @@ export function buildActionSettingsPayload({ action, states, controller, current
     displayMarqueeTitle: gateBool(MARQUEE_TITLE_ACTIONS, shortName, merged.displayMarqueeTitle),
     displayMarqueeAlbumTitle: gateBool(MARQUEE_ALBUM_TITLE_ACTIONS, shortName, merged.displayMarqueeAlbumTitle),
     displayTrackTime: TRACK_TIME_ACTIONS.has(shortName) ? merged.displayTrackTime !== false : null,
+    displayFavoriteBadge: TRACK_TIME_ACTIONS.has(shortName) ? merged.displayFavoriteBadge !== false : null,
     selectedSonosFavorite: shortName === "play-sonos-favorite" ? decodeFavorite(merged.selectedSonosFavorite) : null,
     displayFavoriteName: favoriteToggle(shortName, "displayFavoriteName", merged),
     displayTrackTitle: favoriteToggle(shortName, "displayTrackTitle", merged),
