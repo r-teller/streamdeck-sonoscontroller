@@ -278,6 +278,7 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
       actionFixtures: {
         ...GETTER_FIXTURES,
         GetTransportSettings: "gettransportsettings-repeatall.xml",
+        GetMediaInfo: "getmediainfo-queue.xml",
       },
     });
 
@@ -303,6 +304,30 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
     const setPlayModeCall = mock.calls.find((c) => c.action === "SetPlayMode");
     expect(setPlayModeCall.body).toContain("<NewPlayMode>NORMAL</NewPlayMode>");
 
+    expect(consoleErrors.filter((e) => !e.includes("net::ERR"))).toEqual([]);
+  });
+
+  test("p5-play-mode-not-on-queue", async ({ page }) => {
+    // Same rule as the Queue Track dial (sonos-8cc): off the queue the key sends nothing, no alert.
+    const { mock, mockHost, consoleErrors } = await commonSetup(page, {
+      actionFixtures: { ...GETTER_FIXTURES, GetMediaInfo: "getmediainfo-radio.xml" },
+    });
+    const ctx1 = "ctx1";
+    await mockHost.inject.willAppear(ctx1, "com.r-teller.sonoscontroller.toggle-play-mode", {
+      uuid: "RINCON_OFFICE01400",
+      hostAddress: "192.168.1.42",
+      zoneName: "Office",
+    });
+    // The first poll reads the source (radio); let its state land before pressing.
+    await expect.poll(() => mock.calls.filter((c) => c.action === "GetMediaInfo").length, { timeout: 8000 }).toBeGreaterThan(0);
+    await page.waitForTimeout(500);
+
+    await mockHost.inject.keyDown(ctx1);
+    await mockHost.inject.keyDown(ctx1);
+    await page.waitForTimeout(1500);
+
+    expect(mock.calls.filter((c) => c.action === "SetPlayMode")).toEqual([]);
+    expect((await mockHost.outbound("showAlert")).filter((f) => f.context === ctx1)).toEqual([]);
     expect(consoleErrors.filter((e) => !e.includes("net::ERR"))).toEqual([]);
   });
 

@@ -15,7 +15,7 @@ Deck app; **States** are the images the key can show.
 | <img src="docs/images/action-icons/currently_playing.png" width="32" alt="Currently Playing" title="Currently Playing"> | Currently Playing | <img src="public/images/keys/currently_playing@2x.png" width="40" alt="currently playing" title="currently playing"> | Refreshes the speaker's state | Album art with a scrolling title | Album art, scrolling title |
 | <img src="docs/images/action-icons/paused.png" width="32" alt="Toggle Play/Pause" title="Toggle Play/Pause"> | Toggle Play/Pause | <img src="public/images/keys/paused@2x.png" width="40" alt="paused" title="paused"> <img src="public/images/keys/playing@2x.png" width="40" alt="playing" title="playing"> <img src="public/images/keys/stopped@2x.png" width="40" alt="stopped" title="stopped"> | Play or pause | Paused, playing or stopped; album art if enabled | Album art, scrolling album title, state title |
 | <img src="docs/images/action-icons/muted.png" width="32" alt="Toggle Mute" title="Toggle Mute"> | Toggle Mute | <img src="public/images/keys/unmuted@2x.png" width="40" alt="unmuted" title="unmuted"> <img src="public/images/keys/muted@2x.png" width="40" alt="muted" title="muted"> | Mute or unmute | Unmuted or muted | State title |
-| <img src="docs/images/action-icons/shuffle.png" width="32" alt="Toggle Play Mode" title="Toggle Play Mode"> | Toggle Play Mode | <img src="public/images/keys/play_normal@2x.png" width="40" alt="play normal" title="play normal"> <img src="public/images/keys/shuffle_no_repeat@2x.png" width="40" alt="shuffle no repeat" title="shuffle no repeat"> <img src="public/images/keys/shuffle_one@2x.png" width="40" alt="shuffle one" title="shuffle one"> <img src="public/images/keys/shuffle_on@2x.png" width="40" alt="shuffle on" title="shuffle on"> <img src="public/images/keys/repeat_one@2x.png" width="40" alt="repeat one" title="repeat one"> <img src="public/images/keys/repeat_all@2x.png" width="40" alt="repeat all" title="repeat all"> | Next shuffle/repeat mode | Normal, shuffle (no repeat), shuffle (repeat one), shuffle (repeat all), repeat one, repeat all | Which modes to cycle through |
+| <img src="docs/images/action-icons/shuffle.png" width="32" alt="Toggle Play Mode" title="Toggle Play Mode"> | Toggle Play Mode | <img src="public/images/keys/play_normal@2x.png" width="40" alt="play normal" title="play normal"> <img src="public/images/keys/shuffle_no_repeat@2x.png" width="40" alt="shuffle no repeat" title="shuffle no repeat"> <img src="public/images/keys/shuffle_one@2x.png" width="40" alt="shuffle one" title="shuffle one"> <img src="public/images/keys/shuffle_on@2x.png" width="40" alt="shuffle on" title="shuffle on"> <img src="public/images/keys/repeat_one@2x.png" width="40" alt="repeat one" title="repeat one"> <img src="public/images/keys/repeat_all@2x.png" width="40" alt="repeat all" title="repeat all"> | Next shuffle/repeat mode; only while playing from the queue | Normal, shuffle (no repeat), shuffle (repeat one), shuffle (repeat all), repeat one, repeat all | Which modes to cycle through |
 | <img src="docs/images/action-icons/input_source.png" width="32" alt="Toggle Input Source" title="Toggle Input Source"> | Toggle Input Source | <img src="public/images/keys/input_sonos_queue@2x.png" width="40" alt="input sonos queue" title="input sonos queue"> <img src="public/images/keys/input_tv@2x.png" width="40" alt="input tv" title="input tv"> <img src="public/images/keys/input_line_in@2x.png" width="40" alt="input line in" title="input line in"> | Next source | Sonos Queue, TV or Line-In | Which sources to cycle through |
 | <img src="docs/images/action-icons/previous_track.png" width="32" alt="Play Previous Track" title="Play Previous Track"> | Play Previous Track | <img src="public/images/keys/previous_track@2x.png" width="40" alt="previous track" title="previous track"> | Previous track in the queue |  |  |
 | <img src="docs/images/action-icons/next_track.png" width="32" alt="Play Next Track" title="Play Next Track"> | Play Next Track | <img src="public/images/keys/next_track@2x.png" width="40" alt="next track" title="next track"> | Next track in the queue |  |  |
@@ -30,20 +30,25 @@ Each dial draws on its part of the touch strip.
 | Icon | Dial | Turn | Push | Tap the strip | Settings |
 |---|---|---|---|---|---|
 | <img src="docs/images/action-icons/equalizer.png" width="32" alt="Audio Equalizer" title="Audio Equalizer"> | Audio Equalizer | Adjusts Volume, Bass or Treble | Mute, play/pause, next track or nothing | Re-reads volume, bass and treble | Which level to adjust; what push does |
-| <img src="docs/images/action-icons/shuffle.png" width="32" alt="Play Mode Dial" title="Play Mode Dial"> | Play Mode Dial | Slides through the shuffle/repeat modes; applied when you stop turning | Next mode now | Next mode now | Which modes appear |
+| <img src="docs/images/action-icons/shuffle.png" width="32" alt="Play Mode Dial" title="Play Mode Dial"> | Play Mode Dial | Slides through the shuffle/repeat modes; applied when you stop turning. Only while playing from the queue | Next mode now | Next mode now | Which modes appear |
 | <img src="docs/images/action-icons/currently_playing.png" width="32" alt="Queue Track Dial" title="Queue Track Dial"> | Queue Track Dial | Slides through the current queue (art, title, artist, position); plays the track when you stop turning; wraps at both ends | Next track now | Next track now | |
 
-On the touch strip (the Queue Track Dial shows **Not playing from queue** and does nothing while
-the speaker plays radio, TV or line-in):
+Shuffle and repeat only exist for the Sonos queue. While the speaker plays radio, TV or line-in,
+the Play Mode key and dial and the Queue Track Dial do nothing, and the dials show **Not playing
+from queue**.
+
+On the touch strip:
 
 <table>
   <tr>
     <td align="center"><img src="docs/images/dial-audio-equalizer.png" width="200" alt="Audio Equalizer: Volume 45 with a level bar"><br>Audio Equalizer</td>
     <td align="center"><img src="docs/images/dial-play-mode.png" width="200" alt="Play Mode Dial: carousel of modes"><br>Play Mode Dial</td>
+    <td align="center"><img src="docs/images/dial-play-mode-not-on-queue.png" width="200" alt="Play Mode Dial: Not playing from queue"><br>Play Mode Dial, not on the queue</td>
   </tr>
   <tr>
     <td align="center"><img src="docs/images/dial-queue-track.png" width="200" alt="Queue Track Dial: carousel of queue tracks"><br>Queue Track Dial</td>
     <td align="center"><img src="docs/images/dial-queue-track-not-on-queue.png" width="200" alt="Queue Track Dial: Not playing from queue"><br>Queue Track Dial, not on the queue</td>
+    <td></td>
   </tr>
 </table>
 

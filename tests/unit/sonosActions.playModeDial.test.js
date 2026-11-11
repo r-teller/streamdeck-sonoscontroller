@@ -182,3 +182,30 @@ function labelOf(mode) {
     SHUFFLE_REPEAT_ONE: "Shuffle Repeat One",
   }[mode];
 }
+
+describe("play mode only on the queue (sonos-8cc, same rule as the Queue Track dial)", () => {
+  const RADIO = { playMode: "SHUFFLE", mediaURI: "x-sonosapi-stream:s1" };
+  const QUEUE = { playMode: "SHUFFLE", mediaURI: "x-rincon-queue:RINCON_X#0" };
+  const args = (state, extra = {}) => ({ inContext: "c", inActionSettings: settings(), inSonosSpeakerState: state, ...extra });
+  const key = () => actionFunctionMap["toggle-play-mode"];
+
+  it("off the queue: key, turn, push and tap send nothing and succeed quietly", async () => {
+    expect(await key().keyDown[0](args(RADIO))).toEqual({ status: "SUCCESS" });
+    expect(await dial().dialRotate[0](args(RADIO, { inRotation: 1 }))).toEqual({ status: "SUCCESS" });
+    expect(await dial().dialDown[0](args(RADIO))).toEqual({ status: "SUCCESS" });
+    expect(await dial().touchTap[0](args(RADIO))).toEqual({ status: "SUCCESS" });
+    expect(controller.setPlayMode).not.toHaveBeenCalled();
+  });
+
+  it("off the queue: the dial shows 'Not playing from queue'", () => {
+    const intent = dial().state.encoder(args(RADIO));
+    expect(intent.feedbackLayout).toBe(CAROUSEL_LAYOUT);
+    expect(intent.feedback.caption).toBe("Not playing from queue");
+  });
+
+  it("on the queue, or before the source is known, play mode still changes", async () => {
+    await key().keyDown[0](args(QUEUE));
+    await dial().dialRotate[0](args({ playMode: "SHUFFLE" }, { inRotation: -1 }));
+    expect(controller.setPlayMode).toHaveBeenCalledTimes(2);
+  });
+});

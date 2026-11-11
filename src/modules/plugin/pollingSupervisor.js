@@ -7,11 +7,21 @@ import { speakerHasFavoriteKeys } from "./favoriteKeys.js";
 import { actionSettings } from "./actionSettings.js";
 
 export const QUEUE_DIAL_ACTION = "encoder-queue-track";
+/** Play mode only changes on the queue, so these actions need the media URI (sonos-8cc). */
+export const PLAY_MODE_ACTION_NAMES = new Set(["toggle-play-mode", "encoder-play-mode"]);
+
+function speakerHasAction(UUID, names) {
+  const speaker = getAllSpeakers()[UUID];
+  return !!speaker?.contexts?.some((c) => names.has(actionSettings[c]?.action?.split(".").pop()));
+}
 
 /** True when a Queue Track dial is bound to this speaker (it needs the queue signature, sonos-gen.2). */
 export function speakerHasQueueDial(UUID) {
-  const speaker = getAllSpeakers()[UUID];
-  return !!speaker?.contexts?.some((c) => actionSettings[c]?.action?.split(".").pop() === QUEUE_DIAL_ACTION);
+  return speakerHasAction(UUID, new Set([QUEUE_DIAL_ACTION]));
+}
+
+export function speakerHasPlayModeAction(UUID) {
+  return speakerHasAction(UUID, PLAY_MODE_ACTION_NAMES);
 }
 
 export function startPollingSupervisor({
@@ -23,6 +33,7 @@ export function startPollingSupervisor({
   refreshStateAndTitle = () => {},
   getGlobals = () => globalSettings,
   needsFavoriteInfo = (UUID) => speakerHasFavoriteKeys(UUID) || speakerHasQueueDial(UUID),
+  needsMediaUri = (UUID) => speakerHasPlayModeAction(UUID),
   afterPoll = () => {},
 } = {}) {
   let intervalId = null;
@@ -63,12 +74,16 @@ export function startPollingSupervisor({
           ]);
           // Favorite keys need to know which queue is loaded (sonos-gw5); skip for other speakers.
           const favoriteInfo = {};
-          if (typeof controller.getMediaInfo === "function" && needsFavoriteInfo(UUID)) {
+          const wantsQueue = needsFavoriteInfo(UUID);
+          if (typeof controller.getMediaInfo === "function" && (wantsQueue || needsMediaUri(UUID))) {
             const media = await controller.getMediaInfo();
             favoriteInfo.mediaURI = media.currentURI;
-            favoriteInfo.queueSignature = String(media.currentURI).startsWith("x-rincon-queue:")
-              ? await controller.getQueueSignature()
-              : null;
+            // The queue signature (a Browse) is only for favorites and the queue dial.
+            if (wantsQueue) {
+              favoriteInfo.queueSignature = String(media.currentURI).startsWith("x-rincon-queue:")
+                ? await controller.getQueueSignature()
+                : null;
+            }
           }
           return [...base, favoriteInfo];
         };
