@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:GetMediaInfoResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+      <NrTracks>5</NrTracks>
+      <MediaDuration>NOT_IMPLEMENTED</MediaDuration>
+      <CurrentURI>x-sonosapi-stream:s12345?sid=254&amp;flags=8224&amp;sn=0</CurrentURI>
+      <CurrentURIMetaData></CurrentURIMetaData>
+      <NextURI></NextURI>
+      <NextURIMetaData></NextURIMetaData>
+      <PlayMedium>NETWORK</PlayMedium>
+      <RecordMedium>NOT_IMPLEMENTED</RecordMedium>
+      <WriteStatus>NOT_IMPLEMENTED</WriteStatus>
+    </u:GetMediaInfoResponse>
+  </s:Body>
+</s:Envelope>

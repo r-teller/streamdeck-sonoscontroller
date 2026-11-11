@@ -114,3 +114,17 @@ export const EQ_LAYOUTS = Object.freeze({
   BASS: "./layouts/encoder-gbar-10-10.json",
   TREBLE: "./layouts/encoder-gbar-10-10.json",
 });
+
+/**
+ * Card caption and image per play mode (labels match the property inspector). Images are the
+ * Toggle Play Mode key images, relative to the plugin folder.
+ * @type {Readonly<Record<string, { label: string, image: string }>>}
+ */
+export const PLAY_MODE_DISPLAY = Object.freeze({
+  NORMAL: { label: "Normal", image: "images/keys/play_normal.png" },
+  REPEAT_ALL: { label: "Repeat All", image: "images/keys/repeat_all.png" },
+  REPEAT_ONE: { label: "Repeat One", image: "images/keys/repeat_one.png" },
+  SHUFFLE_NOREPEAT: { label: "Shuffle No Repeat", image: "images/keys/shuffle_no_repeat.png" },
+  SHUFFLE: { label: "Shuffle", image: "images/keys/shuffle_on.png" },
+  SHUFFLE_REPEAT_ONE: { label: "Shuffle Repeat One", image: "images/keys/shuffle_one.png" },
+});

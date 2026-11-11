@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "encoder-carousel",
+  "items": [
+    {
+      "key": "cards",
+      "type": "pixmap",
+      "rect": [0, 0, 200, 66]
+    },
+    {
+      "key": "caption",
+      "type": "text",
+      "rect": [6, 66, 188, 18],
+      "font": { "size": 14, "weight": 600 },
+      "alignment": "center"
+    },
+    {
+      "key": "detail",
+      "type": "text",
+      "rect": [6, 84, 188, 14],
+      "font": { "size": 11, "weight": 400 },
+      "alignment": "center",
+      "color": "#b0b0b0"
+    }
+  ]
+}

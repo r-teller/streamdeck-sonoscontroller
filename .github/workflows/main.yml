@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - ".claude/**"
+      - ".beads/**"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - ".claude/**"
+      - ".beads/**"
 
 jobs:
   checks:

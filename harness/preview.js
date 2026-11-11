@@ -1,35 +1,30 @@
-const LAYOUTS = {
-  "./layouts/encoder-bar-0-100.json": {
-    title: { rect: [16, 10, 136, 24], fontSize: 16, fontWeight: 600, textAlign: "center" },
-    icon: { rect: [16, 40, 48, 48] },
-    value: { rect: [76, 40, 108, 32], fontSize: 24, textAlign: "right" },
-    indicator: { rect: [76, 74, 108, 12], type: "bar", min: 0, max: 100 },
-  },
-  "./layouts/encoder-gbar-10-10.json": {
-    title: { rect: [16, 10, 136, 24], fontSize: 16, fontWeight: 600, textAlign: "center" },
-    icon: { rect: [16, 40, 48, 48] },
-    value: { rect: [76, 40, 108, 32], fontSize: 24, textAlign: "right" },
-    indicator: { rect: [76, 74, 108, 12], type: "gbar", min: -10, max: 10 },
-  },
-  "./layouts/encoder-audio-equalizer.json": {
-    icon: { rect: [16, 40, 48, 48] },
-  },
-  "/layouts/encoder-bar-0-100.json": {
-    title: { rect: [16, 10, 136, 24], fontSize: 16, fontWeight: 600, textAlign: "center" },
-    icon: { rect: [16, 40, 48, 48] },
-    value: { rect: [76, 40, 108, 32], fontSize: 24, textAlign: "right" },
-    indicator: { rect: [76, 74, 108, 12], type: "bar", min: 0, max: 100 },
-  },
-  "/layouts/encoder-gbar-10-10.json": {
-    title: { rect: [16, 10, 136, 24], fontSize: 16, fontWeight: 600, textAlign: "center" },
-    icon: { rect: [16, 40, 48, 48] },
-    value: { rect: [76, 40, 108, 32], fontSize: 24, textAlign: "right" },
-    indicator: { rect: [76, 74, 108, 12], type: "gbar", min: -10, max: 10 },
-  },
-  "/layouts/encoder-audio-equalizer.json": {
-    icon: { rect: [16, 40, 48, 48] },
-  },
-};
+// Dial layouts are loaded from the plugin's real layout files (public/layouts/*.json), so a wrong
+// rect or key in a layout shows up in screenshots (sonos-8px.4).
+const DEFAULT_LAYOUT = "/layouts/encoder-bar-0-100.json";
+const layoutCache = new Map();
+
+function layoutPath(layout) {
+  if (!layout) return DEFAULT_LAYOUT;
+  if (layout.startsWith("./")) return "/" + layout.slice(2);
+  if (layout.startsWith("/")) return layout;
+  return "/" + layout;
+}
+
+async function loadLayout(layout) {
+  const path = layoutPath(layout);
+  if (!layoutCache.has(path)) {
+    layoutCache.set(
+      path,
+      fetch(path)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${path}: HTTP ${r.status}`))))
+        .catch((err) => {
+          console.warn("preview: layout not loaded", err.message);
+          return { id: "missing", items: [] };
+        }),
+    );
+  }
+  return layoutCache.get(path);
+}
 
 const tiles = new Map();
 let processedCount = 0;
@@ -38,6 +33,9 @@ function resolveImage(image) {
   if (!image) return null;
   if (image.startsWith("data:")) return image;
   if (image.startsWith("./")) return "/" + image.slice(2);
+  // setFeedback pixmap values are plugin-relative paths ("images/keys/x.png"); the preview page
+  // lives under /harness/, so resolve them from the plugin root.
+  if (!image.startsWith("/") && !/^[a-z]+:/i.test(image)) return "/" + image;
   return image;
 }
 
@@ -177,97 +175,113 @@ function renderKeyTile(tile) {
   }
 }
 
+/** A setFeedback value is either a plain value or an object with a `value` and display overrides. */
+function feedbackValue(entry) {
+  return entry !== null && typeof entry === "object" ? entry.value : entry;
+}
+
+function placeItem(node, rect) {
+  node.style.position = "absolute";
+  node.style.left = rect[0] + "px";
+  node.style.top = rect[1] + "px";
+  node.style.width = rect[2] + "px";
+  node.style.height = rect[3] + "px";
+}
+
+function renderLayoutItem(item, entry, tile) {
+  const value = entry === undefined ? item.value : feedbackValue(entry);
+  if (item.type === "text") {
+    const textEl = document.createElement("div");
+    textEl.className = "encoder-text";
+    placeItem(textEl, item.rect);
+    textEl.style.fontSize = (item.font?.size ?? 16) + "px";
+    if (item.font?.weight) textEl.style.fontWeight = item.font.weight;
+    textEl.style.textAlign = item.alignment ?? "center";
+    if (item.color) textEl.style.color = item.color;
+    textEl.textContent = value ?? "";
+    return textEl;
+  }
+  if (item.type === "pixmap") {
+    const imgEl = document.createElement("img");
+    imgEl.className = "encoder-pixmap";
+    placeItem(imgEl, item.rect);
+    // Stream Deck shows the action image in the "icon" item until feedback sets it.
+    const source = value ?? (item.key === "icon" ? tile.state.image : null);
+    if (source) imgEl.src = resolveImage(source);
+    else imgEl.style.display = "none";
+    imgEl.onerror = () => (imgEl.style.display = "none");
+    return imgEl;
+  }
+  if (item.type === "bar" || item.type === "gbar") {
+    const barEl = document.createElement("div");
+    barEl.className = "encoder-indicator";
+    placeItem(barEl, item.rect);
+    const min = item.range?.min ?? 0;
+    const max = item.range?.max ?? 100;
+    const percent = Math.max(0, Math.min(100, (((value ?? min) - min) / (max - min)) * 100));
+    if (item.type === "bar") {
+      const fillEl = document.createElement("div");
+      fillEl.className = "encoder-indicator-bar";
+      fillEl.style.width = percent + "%";
+      barEl.appendChild(fillEl);
+    } else {
+      barEl.style.background = "linear-gradient(to right, #ff0000 0%, yellow 50%, #00ff00 100%)";
+      const needleEl = document.createElement("div");
+      needleEl.className = "encoder-indicator-needle";
+      needleEl.style.left = percent + "%";
+      barEl.appendChild(needleEl);
+    }
+    return barEl;
+  }
+  return null;
+}
+
 function renderEncoderTile(tile) {
   const { el, state, prev } = tile;
-  const layout = LAYOUTS[state.layout] || LAYOUTS["/layouts/encoder-bar-0-100.json"];
-  const indicator = layout.indicator;
-  const feedback = state.feedback || { title: "", value: 0, indicator: 0 };
+  const feedback = state.feedback || {};
 
-  let changed = false;
-
-  if (!deepEqual(state.feedback, prev.feedback) || !deepEqual(state.layout, prev.layout)) {
-    el.innerHTML = "";
-
-    if (layout.title) {
-      const titleEl = document.createElement("div");
-      titleEl.className = "encoder-title";
-      titleEl.style.left = layout.title.rect[0] + "px";
-      titleEl.style.top = layout.title.rect[1] + "px";
-      titleEl.style.width = layout.title.rect[2] + "px";
-      titleEl.style.height = layout.title.rect[3] + "px";
-      titleEl.style.fontSize = layout.title.fontSize + "px";
-      titleEl.style.fontWeight = layout.title.fontWeight;
-      titleEl.style.textAlign = layout.title.textAlign;
-      titleEl.textContent = feedback.title || "";
-      el.appendChild(titleEl);
-    }
-
-    if (layout.icon) {
-      const iconEl = document.createElement("img");
-      iconEl.className = "encoder-icon";
-      iconEl.style.left = layout.icon.rect[0] + "px";
-      iconEl.style.top = layout.icon.rect[1] + "px";
-      iconEl.style.width = layout.icon.rect[2] + "px";
-      iconEl.style.height = layout.icon.rect[3] + "px";
-      iconEl.src = state.image ? resolveImage(state.image) : "";
-      iconEl.onerror = () => (iconEl.style.display = "none");
-      el.appendChild(iconEl);
-    }
-
-    if (layout.value) {
-      const valueEl = document.createElement("div");
-      valueEl.className = "encoder-value";
-      valueEl.style.left = layout.value.rect[0] + "px";
-      valueEl.style.top = layout.value.rect[1] + "px";
-      valueEl.style.width = layout.value.rect[2] + "px";
-      valueEl.style.height = layout.value.rect[3] + "px";
-      valueEl.style.fontSize = layout.value.fontSize + "px";
-      valueEl.style.textAlign = layout.value.textAlign;
-      valueEl.textContent = feedback.value != null ? feedback.value : "";
-      el.appendChild(valueEl);
-    }
-
-    if (indicator) {
-      const indicatorEl = document.createElement("div");
-      indicatorEl.className = "encoder-indicator";
-      indicatorEl.style.left = indicator.rect[0] + "px";
-      indicatorEl.style.top = indicator.rect[1] + "px";
-      indicatorEl.style.width = indicator.rect[2] + "px";
-      indicatorEl.style.height = indicator.rect[3] + "px";
-
-      if (indicator.type === "bar") {
-        const fillEl = document.createElement("div");
-        fillEl.className = "encoder-indicator-bar";
-        const percent = Math.max(
-          0,
-          Math.min(100, ((feedback.indicator - indicator.min) / (indicator.max - indicator.min)) * 100),
-        );
-        fillEl.style.width = percent + "%";
-        indicatorEl.appendChild(fillEl);
-      } else if (indicator.type === "gbar") {
-        indicatorEl.style.background = "linear-gradient(to right, #ff0000 0%, yellow 50%, #00ff00 100%)";
-        const needleEl = document.createElement("div");
-        needleEl.className = "encoder-indicator-needle";
-        const percent = Math.max(
-          0,
-          Math.min(100, ((feedback.indicator - indicator.min) / (indicator.max - indicator.min)) * 100),
-        );
-        needleEl.style.left = percent + "%";
-        indicatorEl.appendChild(needleEl);
-      }
-
-      el.appendChild(indicatorEl);
-    }
-
-    prev.feedback = JSON.parse(JSON.stringify(state.feedback));
-    prev.layout = state.layout;
-    changed = true;
+  if (
+    deepEqual(state.feedback, prev.feedback) &&
+    deepEqual(state.layoutDef, prev.layoutDef) &&
+    state.image === prev.image &&
+    state.alert === prev.alert
+  ) {
+    return;
   }
 
-  if (changed) {
-    tile.redrawCount++;
-    updateCaption(tile);
+  el.innerHTML = "";
+  for (const item of state.layoutDef?.items ?? []) {
+    const node = renderLayoutItem(item, feedback[item.key], tile);
+    if (node) el.appendChild(node);
   }
+
+  // showAlert on a dial: same marker as key tiles (the strip itself keeps its last feedback).
+  const alertEl = document.createElement("div");
+  alertEl.className = "tile-alert";
+  alertEl.textContent = "\u26a0";
+  alertEl.style.display = state.alert ? "flex" : "none";
+  el.appendChild(alertEl);
+
+  prev.feedback = JSON.parse(JSON.stringify(state.feedback ?? null));
+  prev.layoutDef = state.layoutDef;
+  prev.image = state.image;
+  prev.alert = state.alert;
+  tile.redrawCount++;
+  updateCaption(tile);
+}
+
+/** Resolves when every image in the preview has loaded (or failed), so screenshots are complete. */
+function imagesSettled() {
+  const pending = [...document.querySelectorAll("#tiles img")].filter((img) => img.src && !img.complete);
+  return Promise.all(
+    pending.map(
+      (img) =>
+        new Promise((resolve) => {
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        }),
+    ),
+  );
 }
 
 function renderAllTiles() {
@@ -286,7 +300,7 @@ window.resetPreview = function resetPreview() {
   document.getElementById("tiles").innerHTML = "";
 };
 
-window.renderFrames = function renderFrames(frames) {
+window.renderFrames = async function renderFrames(frames) {
   if (frames.length < processedCount) {
     resetPreview();
   }
@@ -330,17 +344,19 @@ window.renderFrames = function renderFrames(frames) {
     } else if (event === "showAlert") {
       tile.state.alert = true;
     } else if (event === "setFeedback") {
-      tile.state.feedback = {
-        title: payload.title,
-        value: payload.value,
-        indicator: payload.indicator,
-      };
+      // Like Stream Deck, setFeedback is a partial update: keys left out keep their last value.
+      tile.state.feedback = { ...(tile.state.feedback ?? {}), ...payload };
+      tile.state.alert = false;
     } else if (event === "setFeedbackLayout") {
       tile.state.layout = payload.layout;
     }
   }
 
+  for (const tile of tiles.values()) {
+    if (tile.kind === "encoder") tile.state.layoutDef = await loadLayout(tile.state.layout);
+  }
   renderAllTiles();
+  await imagesSettled();
 };
 
 window.getTile = function getTile(context) {

@@ -1,8 +1,10 @@
 import { actionFunctionMap } from "../plugin/actionDispatcher.js";
-import { buildMarqueeRenderIntent, composeKeyTitle } from "../plugin/marquee.js";
+import { buildMarqueeRenderIntent, composeKeyTitle, albumArtImage } from "../plugin/marquee.js";
+import { queueItems } from "../plugin/queueCache.js";
 import { buildFavoriteRenderIntent } from "../plugin/favoriteKeys.js";
 import { isQueueFavorite } from "../common/favoriteSettings.js";
 import { getInputSourceMappings } from "../common/uriTaxonomy.js";
+import { CAROUSEL_LAYOUT, carouselFeedback, messageFeedback, pendingTicks, slideNext, wrapIndex } from "../plugin/carousel.js";
 import {
   makeController,
   raceWithTimeout,
@@ -11,6 +13,7 @@ import {
   INPUT_SOURCE_PREFIX,
   resolveVolumeIncrement,
   EQ_LAYOUTS,
+  PLAY_MODE_DISPLAY,
 } from "./helpers.js";
 
 // Title casing helper: "SHUFFLE_NOREPEAT" → "Shuffle Norepeat"
@@ -487,7 +490,154 @@ function encoderAudioEqualizerState({ inActionSettings, inSonosSpeakerState }) {
   };
 }
 
-// Register all eleven actions
+// Action 12: Encoder Play Mode (carousel dial, sonos-gen.3)
+export const PLAY_MODE_DIAL_SETTLE_MS = 600;
+
+function allowedPlayModes(inActionSettings) {
+  return inActionSettings?.selectedPlayModes?.length > 0 ? inActionSettings.selectedPlayModes : PLAY_MODES;
+}
+
+/**
+ * The modes the dial scrolls through and the one it currently rests on. A current mode outside the
+ * dial's subset (set from the Sonos app) is shown as an extra first card, so one step right lands
+ * on the first allowed mode and one step left on the last.
+ */
+export function playModeCards(inActionSettings, inSonosSpeakerState) {
+  const current = inSonosSpeakerState?.playMode || "NORMAL";
+  const allowed = allowedPlayModes(inActionSettings);
+  const modes = allowed.includes(current) ? [...allowed] : [current, ...allowed];
+  return { modes, index: modes.indexOf(current), current };
+}
+
+/** Turning stopped: apply the mode under the centre card (net ticks of the burst). */
+async function encoderPlayModeDialRotate({ inActionSettings, inSonosSpeakerState, inRotation }) {
+  const steps = Math.trunc(Number(inRotation) || 0);
+  const { modes, index, current } = playModeCards(inActionSettings, inSonosSpeakerState);
+  const next = modes[wrapIndex(index + steps, modes.length)];
+  // Net zero (a burst that cancels out, or a full lap): nothing to send.
+  if (steps === 0 || next === current) return { status: "SUCCESS" };
+  try {
+    const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
+    await raceWithTimeout(controller.setPlayMode(next), "setPlayMode");
+    return { status: "SUCCESS", updatedSonosSpeakerState: { playMode: next } };
+  } catch (e) {
+    console.warn("encoderPlayModeDialRotate error:", e);
+    return { status: "ERROR" };
+  }
+}
+
+/** Push and tap: next mode, like the Toggle Play Mode key, with a slide to the new card. */
+async function encoderPlayModeNext(args) {
+  const result = await togglePlayModeKeyDown(args);
+  if (result?.status === "SUCCESS") slideNext(args.inContext);
+  return result;
+}
+
+function encoderPlayModeState({ inContext, inActionSettings, inSonosSpeakerState }) {
+  const { modes, index } = playModeCards(inActionSettings, inSonosSpeakerState);
+  const cards = modes.map((mode) => ({
+    caption: PLAY_MODE_DISPLAY[mode]?.label ?? titleCase(mode),
+    image: PLAY_MODE_DISPLAY[mode]?.image,
+  }));
+  return {
+    feedbackLayout: CAROUSEL_LAYOUT,
+    feedback: carouselFeedback(inContext, { cards, index: index + pendingTicks(inContext) }),
+  };
+}
+
+// Action 13: Encoder Queue Track (carousel dial, sonos-gen.2)
+// Longer than the mode dial: slow browsing through a queue must not start tracks on the way.
+export const QUEUE_DIAL_SETTLE_MS = 1000;
+const QUEUE_ICON = "images/keys/input_sonos_queue.png";
+
+/** What the queue dial knows about the speaker's queue from the last poll. */
+export function queueView(inSonosSpeakerState) {
+  const state = inSonosSpeakerState ?? {};
+  const known = state.mediaURI !== undefined;
+  const onQueue = String(state.mediaURI ?? "").startsWith("x-rincon-queue:");
+  const total = onQueue ? Number(state.queueSignature?.total) || 0 : 0;
+  const base = wrapIndex((Number(state.trackNumber) || 1) - 1, total);
+  return { known, onQueue, total, base, signature: state.queueSignature ?? null };
+}
+
+async function playQueueTrack({ inActionSettings, inSonosSpeakerState }, target, label) {
+  try {
+    const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
+    await raceWithTimeout(controller.seek("TRACK_NR", String(target + 1)), "seek");
+    await raceWithTimeout(controller.play(), "play");
+    const { signature } = queueView(inSonosSpeakerState);
+    const item = queueItems(inActionSettings.uuid, signature, () => controller)[target];
+    const projection = { trackNumber: target + 1, playbackState: "PLAYING" };
+    if (item) {
+      projection.playing = {
+        title: item.title,
+        artist: item.artist,
+        album: item.album,
+        albumArtURI: item.albumArtURI,
+      };
+    }
+    return { status: "SUCCESS", updatedSonosSpeakerState: projection };
+  } catch (e) {
+    console.warn(`${label} error:`, e);
+    return { status: "ERROR" };
+  }
+}
+
+/** Turning stopped: play the track under the centre card (net ticks of the burst). */
+async function encoderQueueTrackDialRotate(args) {
+  const steps = Math.trunc(Number(args.inRotation) || 0);
+  const { onQueue, total, base } = queueView(args.inSonosSpeakerState);
+  if (!onQueue || total === 0 || steps === 0) return { status: "SUCCESS" };
+  const target = wrapIndex(base + steps, total);
+  if (target === base) return { status: "SUCCESS" }; // full lap(s)
+  return playQueueTrack(args, target, "encoderQueueTrackDialRotate");
+}
+
+/** Push and tap: play the next track now (wrapping from the last to the first). */
+async function encoderQueueTrackNext(args) {
+  const { onQueue, total, base } = queueView(args.inSonosSpeakerState);
+  if (!onQueue || total === 0) return { status: "SUCCESS" };
+  const result = await playQueueTrack(args, wrapIndex(base + 1, total), "encoderQueueTrackNext");
+  if (result.status === "SUCCESS" && total > 1) slideNext(args.inContext);
+  return result;
+}
+
+function encoderQueueTrackState({ inContext, inActionSettings, inSonosSpeakerState }) {
+  const { known, onQueue, total, base, signature } = queueView(inSonosSpeakerState);
+  let feedback;
+  if (!known) {
+    feedback = messageFeedback(inContext, { caption: "Loading queue\u2026", image: QUEUE_ICON });
+  } else if (!onQueue) {
+    feedback = messageFeedback(inContext, { caption: "Not playing from queue", image: QUEUE_ICON });
+  } else if (total === 0) {
+    feedback = messageFeedback(inContext, { caption: "Queue is empty", image: QUEUE_ICON });
+  } else {
+    const items = queueItems(inActionSettings.uuid, signature, () =>
+      makeController(inActionSettings.hostAddress, inActionSettings.uuid),
+    );
+    const index = wrapIndex(base + pendingTicks(inContext), total);
+    // Only the cards that can be on the strip are filled in (long queues).
+    const cards = new Array(total);
+    for (let rel = -2; rel <= 2; rel++) {
+      const i = wrapIndex(index + rel, total);
+      const item = items[i];
+      cards[i] = {
+        caption: item?.title || `Track ${i + 1}`,
+        artist: item?.artist ?? "",
+        image: item?.albumArtURI ? albumArtImage(item.albumArtURI) || undefined : undefined,
+      };
+    }
+    const artist = cards[index].artist;
+    feedback = carouselFeedback(inContext, {
+      cards,
+      index,
+      detail: `${artist ? `${artist} \u00b7 ` : ""}${index + 1} / ${total}`,
+    });
+  }
+  return { feedbackLayout: CAROUSEL_LAYOUT, feedback };
+}
+
+// Register all actions
 export function registerSonosActions() {
   // Action 1: currently-playing
   actionFunctionMap["currently-playing"].keyDown = [currentlyPlayingKeyDown];
@@ -534,6 +684,24 @@ export function registerSonosActions() {
   actionFunctionMap["encoder-audio-equalizer"].touchTap = [encoderAudioEqualizerTouchTap];
   actionFunctionMap["encoder-audio-equalizer"].dialDown = [encoderAudioEqualizerDialDown];
   actionFunctionMap["encoder-audio-equalizer"].state.encoder = encoderAudioEqualizerState;
+
+  // Action 12: encoder-play-mode (carousel)
+  const playModeDial = actionFunctionMap["encoder-play-mode"];
+  playModeDial.carousel = true;
+  playModeDial.dialSettleMs = PLAY_MODE_DIAL_SETTLE_MS;
+  playModeDial.dialRotate = [encoderPlayModeDialRotate];
+  playModeDial.dialDown = [encoderPlayModeNext];
+  playModeDial.touchTap = [encoderPlayModeNext];
+  playModeDial.state.encoder = encoderPlayModeState;
+
+  // Action 13: encoder-queue-track (carousel)
+  const queueDial = actionFunctionMap["encoder-queue-track"];
+  queueDial.carousel = true;
+  queueDial.dialSettleMs = QUEUE_DIAL_SETTLE_MS;
+  queueDial.dialRotate = [encoderQueueTrackDialRotate];
+  queueDial.dialDown = [encoderQueueTrackNext];
+  queueDial.touchTap = [encoderQueueTrackNext];
+  queueDial.state.encoder = encoderQueueTrackState;
 }
 
 // Register on import (idempotent)

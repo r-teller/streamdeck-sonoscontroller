@@ -274,6 +274,56 @@
           "Push": "Mute, play/pause or next (set in settings)"
         }
       }
+    },
+    {
+      "Icon": "images/actions/shuffle",
+      "Name": "Play Mode Dial",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Turn to choose shuffle / repeat mode",
+      "UUID": "com.r-teller.sonoscontroller.encoder-play-mode",
+      "Controllers": ["Encoder"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Play Mode",
+          "Image": "images/keys/shuffle_on"
+        }
+      ],
+      "Encoder": {
+        "layout": "layouts/encoder-carousel.json",
+        "TriggerDescription": {
+          "Rotate": "Choose shuffle / repeat mode",
+          "Push": "Next mode",
+          "Touch": "Next mode"
+        }
+      }
+    },
+    {
+      "Icon": "images/actions/currently_playing",
+      "Name": "Queue Track Dial",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Turn to pick a track from the queue",
+      "UUID": "com.r-teller.sonoscontroller.encoder-queue-track",
+      "Controllers": ["Encoder"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Queue Track",
+          "Image": "images/keys/input_sonos_queue"
+        }
+      ],
+      "Encoder": {
+        "layout": "layouts/encoder-carousel.json",
+        "TriggerDescription": {
+          "Rotate": "Pick a track (plays when you stop)",
+          "Push": "Next track",
+          "Touch": "Next track"
+        }
+      }
     }
   ],
   "SDKVersion": 2,
@@ -283,7 +333,7 @@
   "Name": "Sonos Controller",
   "Icon": "images/sonos",
   "URL": "https://github.com/r-teller/streamdeck-sonoscontroller",
-  "Version": "2.0.1.0",
+  "Version": "2.1.0.0",
   "Category": "Sonos Controller",
   "CategoryIcon": "images/category",
   "OS": [

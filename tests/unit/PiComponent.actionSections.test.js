@@ -85,11 +85,19 @@ describe("PiComponent action sections", () => {
   });
 
   it("mutual exclusivity of sections", async () => {
-    const actions = ["toggle-play-mode", "toggle-input-source", "encoder-audio-equalizer", "play-sonos-favorite", "volume-up"];
+    const actions = [
+      "toggle-play-mode",
+      "toggle-input-source",
+      "encoder-audio-equalizer",
+      "encoder-play-mode",
+      "play-sonos-favorite",
+      "volume-up",
+    ];
     const expected = {
       "toggle-play-mode": "play-modes",
       "toggle-input-source": "input-sources",
       "encoder-audio-equalizer": "equalizer-target",
+      "encoder-play-mode": "play-modes",
       "play-sonos-favorite": "sonos-favorites",
       "volume-up": null,
     };

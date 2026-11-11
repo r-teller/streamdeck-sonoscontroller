@@ -9,8 +9,11 @@ const dialState = new Map();
  * @param {string} params.context - The context identifier.
  * @param {number} params.ticks - The number of ticks rotated (positive = clockwise).
  * @param {Function} params.dispatch - The dispatch function to call on flush.
+ * @param {number} [params.settleMs] - How long turning must pause before dispatching (per action).
+ * @param {Function} [params.onTick] - Called on every tick, before the flush (carousel dials move
+ *   their selection immediately, sonos-gen.1).
  */
-export function handleDialRotate({ context, ticks, dispatch }) {
+export function handleDialRotate({ context, ticks, dispatch, settleMs = DIAL_DEBOUNCE_MS, onTick }) {
   // Store the most recent dispatch function for this context
   if (!dialState.has(context)) {
     dialState.set(context, { accumulator: 0, timer: null, dispatch });
@@ -20,6 +23,7 @@ export function handleDialRotate({ context, ticks, dispatch }) {
 
   // Add ticks to accumulator
   state.accumulator += ticks;
+  onTick?.(ticks);
 
   // Clear existing timer and set new one (re-arms the window)
   if (state.timer) {
@@ -33,7 +37,7 @@ export function handleDialRotate({ context, ticks, dispatch }) {
     state.timer = null;
     // Call the stored dispatch function with the accumulated value
     state.dispatch({ inContext: context, inEvent: "dialRotate", inRotation: sum });
-  }, DIAL_DEBOUNCE_MS);
+  }, settleMs);
 }
 
 /**

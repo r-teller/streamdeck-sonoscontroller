@@ -27,6 +27,8 @@ const ACTION_NAMES = [
   "volume-down",
   "play-sonos-favorite",
   "encoder-audio-equalizer",
+  "encoder-play-mode",
+  "encoder-queue-track",
 ];
 
 function createEmptyEntry() {

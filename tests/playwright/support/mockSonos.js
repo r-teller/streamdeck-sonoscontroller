@@ -1,9 +1,9 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from "fs";
+import { join } from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = join(__filename, '..');
+const __dirname = join(__filename, "..");
 
 export async function installMockSonos(page, options = {}) {
   const {
@@ -11,7 +11,7 @@ export async function installMockSonos(page, options = {}) {
     favoritesFixture = "browse-fv2-mixed.xml",
     queueFixture = "browse-q0-five-tracks.xml",
     failures = {},
-    actionFixtures = {}
+    actionFixtures = {},
   } = options;
 
   const calls = [];
@@ -32,12 +32,15 @@ export async function installMockSonos(page, options = {}) {
     { set: "Play", value: "PLAYING", get: "GetTransportInfo", tag: "CurrentTransportState" },
     { set: "Pause", value: "PAUSED_PLAYBACK", get: "GetTransportInfo", tag: "CurrentTransportState" },
     { set: "Stop", value: "STOPPED", get: "GetTransportInfo", tag: "CurrentTransportState" },
+    // Jumping to a queue position changes the reported track number (Queue Track dial, sonos-gen.2).
+    { set: "Seek", arg: "Target", when: /<Unit>TRACK_NR<\/Unit>/, get: "GetPositionInfo", tag: "Track" },
   ];
   const remembered = {}; // host -> { [getAction]: value }
 
   function remember(host, action, body) {
     for (const rule of STATEFUL) {
       if (rule.set !== action) continue;
+      if (rule.when && !rule.when.test(body ?? "")) continue;
       const value = rule.value ?? (body ?? "").match(new RegExp(`<${rule.arg}>([^<]*)</${rule.arg}>`))?.[1];
       if (value !== undefined) (remembered[host] ??= {})[rule.get] = value;
     }
@@ -58,7 +61,7 @@ export async function installMockSonos(page, options = {}) {
     favorites: readFileSync(join(process.cwd(), "tests/fixtures/sonos", favoritesFixture), "utf8"),
     queue: readFileSync(join(process.cwd(), "tests/fixtures/sonos", queueFixture), "utf8"),
     emptyResponse: readFileSync(join(process.cwd(), "tests/fixtures/sonos", "soap-empty-response.xml"), "utf8"),
-    fault500: readFileSync(join(process.cwd(), "tests/fixtures/sonos", "soap-fault-401.xml"), "utf8")
+    fault500: readFileSync(join(process.cwd(), "tests/fixtures/sonos", "soap-fault-401.xml"), "utf8"),
   };
 
   function getServiceKey(url) {
@@ -73,8 +76,8 @@ export async function installMockSonos(page, options = {}) {
     const soapAction = headers["soapaction"];
     if (!soapAction) return null;
     // Strip quotes and extract action after '#'
-    const clean = soapAction.replace(/"/g, '').trim();
-    const idx = clean.indexOf('#');
+    const clean = soapAction.replace(/"/g, "").trim();
+    const idx = clean.indexOf("#");
     return idx === -1 ? null : clean.slice(idx + 1);
   }
 
@@ -123,20 +126,20 @@ export async function installMockSonos(page, options = {}) {
       action,
       host,
       body,
-      bodyArgs: parseBodyArgs(body)
+      bodyArgs: parseBodyArgs(body),
     });
 
     // Apply failure mode if set
     const mode = failureModes[serviceKey];
     if (mode) {
       if (mode.mode === "hang") {
-        await new Promise(resolve => setTimeout(resolve, mode.ms ?? 6000));
+        await new Promise((resolve) => setTimeout(resolve, mode.ms ?? 6000));
         // Client will abort before fulfillment, but we still fulfill to avoid hanging Playwright
         await route.fulfill({
           status: 200,
           contentType: 'text/xml; charset="utf-8"',
           headers: { "Access-Control-Allow-Origin": "*" },
-          body: fixtures.emptyResponse
+          body: fixtures.emptyResponse,
         });
         return;
       }
@@ -145,7 +148,7 @@ export async function installMockSonos(page, options = {}) {
           status: 500,
           contentType: 'text/xml; charset="utf-8"',
           headers: { "Access-Control-Allow-Origin": "*" },
-          body: fixtures.fault500
+          body: fixtures.fault500,
         });
         return;
       }
@@ -158,7 +161,7 @@ export async function installMockSonos(page, options = {}) {
           status: 200,
           contentType: 'text/xml; charset="utf-8"',
           headers: { "Access-Control-Allow-Origin": "*" },
-          body: "<not-xml"
+          body: "<not-xml",
         });
         return;
       }
@@ -203,7 +206,7 @@ export async function installMockSonos(page, options = {}) {
       status,
       contentType: 'text/xml; charset="utf-8"',
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: responseXml
+      body: responseXml,
     });
   };
 
@@ -217,6 +220,6 @@ export async function installMockSonos(page, options = {}) {
     calls,
     setFailure,
     clearCalls,
-    setActionFixture
+    setActionFixture,
   };
 }
