@@ -4,17 +4,53 @@ Control Sonos speakers directly from your Elgato Stream Deck. Communicates over 
 
 ## Actions
 
-| Action | Description |
-|--------|-------------|
-| Currently Playing | Read-only now-playing tile (album art + scrolling title); press forces a state refresh |
-| Toggle Mute | Mute/unmute with state icon |
-| Toggle Play/Pause | Play/pause/stopped states |
-| Toggle Play Mode | Cycles normal/shuffle/repeat modes (configurable subset) |
-| Toggle Input Source | Cycles Sonos Queue / TV Input / Line-In (configurable subset) |
-| Play Next Track / Play Previous Track | Queue navigation |
-| Volume Up / Volume Down | Step volume with configurable increment |
-| Play Sonos Favorite | Clears the queue and plays a chosen Sonos favorite |
-| Audio Equalizer | Dial (encoder) action: rotate to adjust Volume, Bass, or Treble; LCD bar feedback; touch tap refreshes |
+Every action is bound to one speaker, chosen in the action's settings. Keys work on any Stream
+Deck; dials need a Stream Deck +.
+
+### Keys
+
+| | Key | Press | Shows | Settings |
+|---|---|---|---|---|
+| <img src="public/images/keys/currently_playing@2x.png" width="40" alt=""> | Currently Playing | Refreshes the speaker's state | Album art and a scrolling title | Album art, scrolling title |
+| <img src="public/images/keys/playing@2x.png" width="40" alt=""> <img src="public/images/keys/paused@2x.png" width="40" alt=""> | Toggle Play/Pause | Play or pause | Playing, paused or stopped; optional album art | Album art, scrolling album title, state title |
+| <img src="public/images/keys/unmuted@2x.png" width="40" alt=""> <img src="public/images/keys/muted@2x.png" width="40" alt=""> | Toggle Mute | Mute or unmute | Muted or unmuted | State title |
+| <img src="public/images/keys/play_normal@2x.png" width="40" alt=""> <img src="public/images/keys/shuffle_on@2x.png" width="40" alt=""> <img src="public/images/keys/repeat_all@2x.png" width="40" alt=""> | Toggle Play Mode | Next shuffle/repeat mode | The current mode | Which modes to cycle through |
+| <img src="public/images/keys/input_sonos_queue@2x.png" width="40" alt=""> <img src="public/images/keys/input_tv@2x.png" width="40" alt=""> <img src="public/images/keys/input_line_in@2x.png" width="40" alt=""> | Toggle Input Source | Next source: Sonos Queue, TV, Line-In | The current source | Which sources to cycle through |
+| <img src="public/images/keys/previous_track@2x.png" width="40" alt=""> <img src="public/images/keys/next_track@2x.png" width="40" alt=""> | Play Previous / Next Track | Previous or next track in the queue | | |
+| <img src="public/images/keys/volume_down@2x.png" width="40" alt=""> <img src="public/images/keys/volume_up@2x.png" width="40" alt=""> | Volume Down / Up | Lowers or raises the volume | | Volume step |
+| <img src="public/images/keys/play_favorite@2x.png" width="40" alt=""> | Play Sonos Favorite | Clears the queue and plays the chosen favorite | | Favorite |
+
+### Dials (Stream Deck +)
+
+Each dial draws on its part of the touch strip.
+
+#### Audio Equalizer
+
+<img src="docs/images/dial-audio-equalizer.png" width="300" alt="Audio Equalizer dial showing Volume 45 with a level bar">
+
+- **Turn:** adjusts Volume, Bass or Treble (chosen in settings); the bar shows the level.
+- **Push:** mute, play/pause, next track or nothing (chosen in settings).
+- **Tap the strip:** re-reads volume, bass and treble from the speaker.
+
+#### Play Mode Dial
+
+<img src="docs/images/dial-play-mode.png" width="300" alt="Play Mode dial: a carousel of mode cards with Shuffle No Repeat in the centre">
+
+- **Turn:** slides a carousel of shuffle/repeat modes; the mode is applied when you stop turning.
+- **Push or tap:** switches to the next mode right away.
+- **Settings:** which modes appear in the carousel.
+
+#### Queue Track Dial
+
+<img src="docs/images/dial-queue-track.png" width="300" alt="Queue Track dial: a carousel of queue tracks with Track Three, 3 of 5, in the centre">
+
+- **Turn:** slides through the tracks in the current queue (album art, title, artist and
+  position); the track plays when you stop turning. Wraps from the last track to the first.
+- **Push or tap:** plays the next track right away.
+- When the speaker is playing radio, TV or line-in, the dial shows **Not playing from queue**
+  and does nothing:
+
+  <img src="docs/images/dial-queue-track-not-on-queue.png" width="300" alt="Queue Track dial showing Not playing from queue">
 
 ## First-run setup
 
@@ -47,7 +83,7 @@ Build and package locally with:
 `npm run build && npm run package`  
 This produces `com.r-teller.sonoscontroller.streamDeckPlugin` in the repo root.
 
-Releases are built by CI, which injects `<tag>.<run_number>` into the manifest version (e.g., `0.1.0.123`) and attaches the artifact to the GitHub release.
+Releases are built by CI when a GitHub release is published; it stamps the version from the tag and attaches the plugin file. See [docs/releases.md](docs/releases.md) for version numbers (betas `x.y.z.n`, final `x.y.z`) and steps.
 
 ## License
 
