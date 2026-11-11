@@ -12,8 +12,8 @@ Deck app; **States** are the images the key can show.
 
 | Icon | Key | States | Press | Shows | Settings |
 |---|---|---|---|---|---|
-| <img src="docs/images/action-icons/currently_playing.png" width="32" alt="Currently Playing" title="Currently Playing"> | Currently Playing | <img src="public/images/keys/currently_playing@2x.png" width="40" alt="currently playing" title="currently playing"> | Refreshes the speaker's state | Album art with a scrolling title | Album art, scrolling title |
-| <img src="docs/images/action-icons/paused.png" width="32" alt="Toggle Play/Pause" title="Toggle Play/Pause"> | Toggle Play/Pause | <img src="public/images/keys/paused@2x.png" width="40" alt="paused" title="paused"> <img src="public/images/keys/playing@2x.png" width="40" alt="playing" title="playing"> <img src="public/images/keys/stopped@2x.png" width="40" alt="stopped" title="stopped"> | Play or pause | Paused, playing or stopped; album art if enabled | Album art, scrolling album title, state title |
+| <img src="docs/images/action-icons/currently_playing.png" width="32" alt="Currently Playing" title="Currently Playing"> | Currently Playing | <img src="public/images/keys/currently_playing@2x.png" width="40" alt="currently playing" title="currently playing"> | Refreshes the speaker's state | Album art with a scrolling title; remaining time and a heart (see below) | Album art, scrolling title, track time, heart |
+| <img src="docs/images/action-icons/paused.png" width="32" alt="Toggle Play/Pause" title="Toggle Play/Pause"> | Toggle Play/Pause | <img src="public/images/keys/paused@2x.png" width="40" alt="paused" title="paused"> <img src="public/images/keys/playing@2x.png" width="40" alt="playing" title="playing"> <img src="public/images/keys/stopped@2x.png" width="40" alt="stopped" title="stopped"> | Play or pause | Paused, playing or stopped; album art if enabled, with remaining time and a heart | Album art, scrolling album title, state title, track time, heart |
 | <img src="docs/images/action-icons/muted.png" width="32" alt="Toggle Mute" title="Toggle Mute"> | Toggle Mute | <img src="public/images/keys/unmuted@2x.png" width="40" alt="unmuted" title="unmuted"> <img src="public/images/keys/muted@2x.png" width="40" alt="muted" title="muted"> | Mute or unmute | Unmuted or muted | State title |
 | <img src="docs/images/action-icons/shuffle.png" width="32" alt="Toggle Play Mode" title="Toggle Play Mode"> | Toggle Play Mode | <img src="public/images/keys/play_normal@2x.png" width="40" alt="play normal" title="play normal"> <img src="public/images/keys/shuffle_no_repeat@2x.png" width="40" alt="shuffle no repeat" title="shuffle no repeat"> <img src="public/images/keys/shuffle_one@2x.png" width="40" alt="shuffle one" title="shuffle one"> <img src="public/images/keys/shuffle_on@2x.png" width="40" alt="shuffle on" title="shuffle on"> <img src="public/images/keys/repeat_one@2x.png" width="40" alt="repeat one" title="repeat one"> <img src="public/images/keys/repeat_all@2x.png" width="40" alt="repeat all" title="repeat all"> | Next shuffle/repeat mode; only while playing from the queue | Normal, shuffle (no repeat), shuffle (repeat one), shuffle (repeat all), repeat one, repeat all | Which modes to cycle through |
 | <img src="docs/images/action-icons/input_source.png" width="32" alt="Toggle Input Source" title="Toggle Input Source"> | Toggle Input Source | <img src="public/images/keys/input_sonos_queue@2x.png" width="40" alt="input sonos queue" title="input sonos queue"> <img src="public/images/keys/input_tv@2x.png" width="40" alt="input tv" title="input tv"> <img src="public/images/keys/input_line_in@2x.png" width="40" alt="input line in" title="input line in"> | Next source | Sonos Queue, TV or Line-In | Which sources to cycle through |
@@ -22,6 +22,24 @@ Deck app; **States** are the images the key can show.
 | <img src="docs/images/action-icons/volume_down.png" width="32" alt="Volume Down" title="Volume Down"> | Volume Down | <img src="public/images/keys/volume_down@2x.png" width="40" alt="volume down" title="volume down"> | Lowers the volume |  | Volume step |
 | <img src="docs/images/action-icons/volume_up.png" width="32" alt="Volume Up" title="Volume Up"> | Volume Up | <img src="public/images/keys/volume_up@2x.png" width="40" alt="volume up" title="volume up"> | Raises the volume |  | Volume step |
 | <img src="docs/images/action-icons/play_favorite.png" width="32" alt="Play Sonos Favorite" title="Play Sonos Favorite"> | Play Sonos Favorite | <img src="public/images/keys/play_favorite@2x.png" width="40" alt="play favorite" title="play favorite"> | Clears the queue and plays the chosen favorite |  | Favorite |
+| <img src="docs/images/action-icons/favorite_track.png" width="32" alt="Favorite Song" title="Favorite Song"> | Favorite Song | <img src="public/images/keys/favorite_track_off@2x.png" width="40" alt="not a favorite" title="not a favorite"> <img src="public/images/keys/favorite_track_on@2x.png" width="40" alt="favorite" title="favorite"> <img src="public/images/keys/favorite_track_unavailable@2x.png" width="40" alt="can't favorite" title="can't favorite"> | Adds the playing song to the **Stream Deck Favorites** playlist; press again to remove it | Whether the playing song is in the playlist; dimmed when it can't be added | Press again to remove |
+
+### Track time and Stream Deck Favorites
+
+<img src="docs/images/key-now-playing-time-heart.png" width="96" alt="Currently Playing key: album art, a heart in the corner, -2:57 above a progress bar" align="right">
+
+With album art on, **Currently Playing** and **Toggle Play/Pause** show the time left in the song
+above a progress bar (radio shows the time played instead). They count down between polls and stop
+while paused.
+
+The **Favorite Song** key saves the playing song to a Sonos playlist named **Stream Deck
+Favorites**, created on the first press. It never adds a song twice; pressing it on a song that is
+already there removes it (turn this off with "Press again to remove"). Songs added or removed in
+the Sonos app are picked up within a poll. The two keys above show a heart when the playing song is
+in that playlist. Spotify songs only for now; on other sources the key is dimmed. The playlist is a
+normal Sonos playlist: play it from the Sonos app, or save it as one Sonos Favorite.
+
+Each piece has a setting: "Display Track Time" and "Show Heart for Stream Deck Favorites".
 
 ### Dials (Stream Deck +)
 
