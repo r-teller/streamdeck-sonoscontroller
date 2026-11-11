@@ -37,7 +37,7 @@ describe.skipIf(!existsSync(buildDir))("package integrity", () => {
     expect(manifest.UUID).toBe("com.r-teller.sonoscontroller");
     expect(manifest.CodePath).toBe("plugin.html");
     expect(Array.isArray(manifest.Actions)).toBe(true);
-    expect(manifest.Actions.length).toBe(13);
+    expect(manifest.Actions.length).toBe(14);
   });
 
   // ---------------------------------------------------------------------------

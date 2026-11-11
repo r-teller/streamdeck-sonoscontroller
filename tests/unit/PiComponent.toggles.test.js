@@ -191,19 +191,46 @@ describe("PiComponent presentation toggles", () => {
     }
   });
 
-  it("Toggle on saves full 23-field payload", async () => {
+  it("Toggle on saves full 26-field payload", async () => {
     const { wrapper, stubClient } = await mountForAction("toggle-play-pause");
     const albumArtToggle = wrapper.find("[data-pi-toggle-album-art]");
     await albumArtToggle.setValue(true);
     expect(stubClient.saveSettings).toHaveBeenCalledTimes(1);
     const payload = stubClient.saveSettings.mock.calls[0][0].actionSettings;
     // Expect exactly 23 keys (the schema includes many fields; we assert length)
-    expect(Object.keys(payload).length).toBe(23);
+    expect(Object.keys(payload).length).toBe(26);
     expect(payload.displayAlbumArt).toBe(true);
     expect(payload.action).toBe("com.r-teller.sonoscontroller.toggle-play-pause");
     // other applicable toggles should be false
     expect(payload.displayStateBasedTitle).toBe(false);
     expect(payload.displayMarqueeAlbumTitle).toBe(false);
+  });
+
+  it("Display Track Time (sonos-bg0.2): on by default, needs album art, saves false when turned off", async () => {
+    const { wrapper, stubClient } = await mountForAction("currently-playing", { displayAlbumArt: true });
+    const toggle = wrapper.find("[data-pi-toggle-track-time]");
+    expect(toggle.exists()).toBe(true);
+    expect(toggle.element.checked).toBe(true);
+    expect(toggle.element.disabled).toBe(false);
+    await toggle.setValue(false);
+    expect(stubClient.saveSettings.mock.calls[0][0].actionSettings.displayTrackTime).toBe(false);
+
+    const noArt = await mountForAction("toggle-play-pause", { displayAlbumArt: false });
+    expect(noArt.wrapper.find("[data-pi-toggle-track-time]").element.disabled).toBe(true);
+    const other = await mountForAction("toggle-mute-unmute", {});
+    expect(other.wrapper.find("[data-pi-toggle-track-time]").exists()).toBe(false);
+  });
+
+  it("Show Heart (sonos-bg0.3): on by default, needs album art, saves false when turned off", async () => {
+    const { wrapper, stubClient } = await mountForAction("toggle-play-pause", { displayAlbumArt: true });
+    const toggle = wrapper.find("[data-pi-toggle-favorite-badge]");
+    expect(toggle.element.checked).toBe(true);
+    await toggle.setValue(false);
+    expect(stubClient.saveSettings.mock.calls[0][0].actionSettings.displayFavoriteBadge).toBe(false);
+    const noArt = await mountForAction("currently-playing", {});
+    expect(noArt.wrapper.find("[data-pi-toggle-favorite-badge]").element.disabled).toBe(true);
+    const other = await mountForAction("volume-up", {});
+    expect(other.wrapper.find("[data-pi-toggle-favorite-badge]").exists()).toBe(false);
   });
 
   it("Toggle off persists false, not null", async () => {

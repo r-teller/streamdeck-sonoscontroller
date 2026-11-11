@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:GetPositionInfoResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+      <Track>1</Track>
+      <TrackDuration>0:04:21</TrackDuration>
+      <TrackMetaData>&lt;DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/"&gt;&lt;item id="-1" parentID="-1" restricted="true"&gt;&lt;res protocolInfo="sonos.com-spotify:*:audio/x-spotify:*"&gt;x-sonos-spotify:spotify%3atrack%3a6WvF2AJU3J9PR9OHSqqcuk?sid=12&amp;amp;flags=8232&amp;amp;sn=7&lt;/res&gt;&lt;upnp:albumArtURI&gt;http://192.168.1.42:1400/getaa?u=art1&lt;/upnp:albumArtURI&gt;&lt;dc:title&gt;Did You Know That There Is A Tunnel Under Ocean Blvd&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;&lt;dc:creator&gt;Lana Del Rey&lt;/dc:creator&gt;&lt;upnp:album&gt;Ocean Blvd&lt;/upnp:album&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;</TrackMetaData>
+      <TrackURI>x-sonos-spotify:spotify%3atrack%3a6WvF2AJU3J9PR9OHSqqcuk?sid=12&amp;flags=8232&amp;sn=7</TrackURI>
+      <RelTime>0:01:23</RelTime>
+      <AbsTime>NOT_IMPLEMENTED</AbsTime>
+      <RelCount>2147483647</RelCount>
+      <AbsCount>2147483647</AbsCount>
+    </u:GetPositionInfoResponse>
+  </s:Body>
+</s:Envelope>

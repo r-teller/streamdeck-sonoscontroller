@@ -605,6 +605,108 @@ export class SonosController {
     }
   }
 
+  // === Sonos playlists (SQ:), used by the favorites playlist (sonos-bg0) ===
+
+  async _browse(objectId, { flag = "BrowseDirectChildren", start = 0, count = 0 } = {}) {
+    const { service } = await this._coordServiceFor("contentDirectory");
+    return service.execute("Browse", {
+      ObjectID: objectId,
+      BrowseFlag: flag,
+      Filter: "*",
+      StartingIndex: start,
+      RequestedCount: count,
+      SortCriteria: "",
+    });
+  }
+
+  /** The Sonos playlist with this exact title, or null. */
+  async findPlaylist(title) {
+    try {
+      const response = await this._browse("SQ:");
+      const didl = response.Result ? convertXmlToJson(response.Result) : {};
+      const match = asArray(didl.container).find((c) => extractText(c["dc:title"]) === title);
+      return match ? { id: match._attributes?.id, title } : null;
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("find playlist"));
+    }
+  }
+
+  /** Change counter and length of a playlist; one item read. */
+  async getPlaylistSignature(id) {
+    try {
+      const response = await this._browse(id, { count: 1 });
+      return { updateId: String(response.UpdateID ?? ""), total: parseInt(response.TotalMatches ?? "0", 10) };
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("get playlist signature"));
+    }
+  }
+
+  /** Track URIs of a playlist page, in order. */
+  async getPlaylistTracks(id, { start = 0, count = 100 } = {}) {
+    try {
+      const response = await this._browse(id, { start, count });
+      const didl = response.Result ? convertXmlToJson(response.Result) : {};
+      return {
+        uris: asArray(didl.item).map((item) => extractText(item.res)),
+        total: parseInt(response.TotalMatches ?? "0", 10),
+        updateId: String(response.UpdateID ?? ""),
+      };
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("get playlist tracks"));
+    }
+  }
+
+  /** Creates an empty Sonos playlist; returns its id (SQ:n). */
+  async createPlaylist(title) {
+    try {
+      const { service } = await this._coordServiceFor("avTransport");
+      const response = await service.execute("CreateSavedQueue", {
+        InstanceID: 0,
+        Title: title,
+        EnqueuedURI: "",
+        EnqueuedURIMetaData: "",
+      });
+      return response.AssignedObjectID;
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("create playlist"));
+    }
+  }
+
+  /** Appends a track. The speaker checks argument order; updateId is the playlist's current one. */
+  async addToPlaylist(id, updateId, uri, metadata) {
+    try {
+      const { service } = await this._coordServiceFor("avTransport");
+      const response = await service.execute("AddURIToSavedQueue", {
+        InstanceID: 0,
+        UpdateID: updateId,
+        ObjectID: id,
+        EnqueuedURI: uri,
+        EnqueuedURIMetaData: metadata,
+        AddAtIndex: 4294967295,
+      });
+      return { updateId: String(response.NewUpdateID ?? ""), total: parseInt(response.NewQueueLength ?? "0", 10) };
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("add to playlist"));
+    }
+  }
+
+  /** Removes the tracks at these 0-based positions. */
+  async removeFromPlaylist(id, updateId, indices) {
+    try {
+      const { service } = await this._coordServiceFor("avTransport");
+      const response = await service.execute("ReorderTracksInSavedQueue", {
+        InstanceID: 0,
+        ObjectID: id,
+        UpdateID: updateId,
+        TrackList: indices.join(","),
+        NewPositionList: "",
+      });
+      return { updateId: String(response.NewUpdateID ?? ""), total: parseInt(response.NewQueueLength ?? "0", 10) };
+    } catch (err) {
+      throw translateSonosError(err, this._opCtx("remove from playlist"));
+    }
+  }
+
   // Orchestrations
   async setLocalTransport(prefix, suffix) {
     try {

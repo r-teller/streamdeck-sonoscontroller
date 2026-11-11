@@ -20,6 +20,8 @@ import {
   MARQUEE_TITLE_ACTIONS,
   MARQUEE_ALBUM_TITLE_ACTIONS,
   ALBUM_ART_ACTIONS,
+  TRACK_TIME_ACTIONS,
+  FAVORITE_TRACK_SHORT_NAME,
   PLAY_MODE_ACTIONS,
   actionShortName,
   encodeFavoriteMetadata,
@@ -60,6 +62,8 @@ const showDisplayStateBasedTitle = computed(() => STATE_BASED_TITLE_ACTIONS.has(
 const showDisplayMarqueeTitle = computed(() => MARQUEE_TITLE_ACTIONS.has(shortName.value));
 const showDisplayMarqueeAlbumTitle = computed(() => MARQUEE_ALBUM_TITLE_ACTIONS.has(shortName.value));
 const showDisplayAlbumArt = computed(() => ALBUM_ART_ACTIONS.has(shortName.value));
+const showDisplayTrackTime = computed(() => TRACK_TIME_ACTIONS.has(shortName.value));
+const showAllowRemoveFavorite = computed(() => shortName.value === FAVORITE_TRACK_SHORT_NAME);
 const showFavoriteToggles = computed(() => shortName.value === FAVORITE_SHORT_NAME);
 const FAVORITE_TOGGLES = [
   { key: "displayFavoriteName", label: "Display Favorite Name" },
@@ -74,7 +78,8 @@ const showPresentationToggles = computed(
     showDisplayStateBasedTitle.value ||
     showDisplayMarqueeTitle.value ||
     showDisplayMarqueeAlbumTitle.value ||
-    showDisplayAlbumArt.value,
+    showDisplayAlbumArt.value ||
+    showAllowRemoveFavorite.value,
 );
 
 function formatSpeakerTitle(zoneName, hostAddress) {
@@ -473,6 +478,38 @@ defineExpose({
           @change="onPresentationToggle('displayAlbumArt', $event.target.checked)"
         />
         <label class="form-check-label">Display Album Art</label>
+      </div>
+      <div v-if="showDisplayTrackTime" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.displayTrackTime !== false"
+          :disabled="settings.displayAlbumArt !== true"
+          data-pi-toggle-track-time
+          @change="onPresentationToggle('displayTrackTime', $event.target.checked)"
+        />
+        <label class="form-check-label">Display Track Time (over album art)</label>
+      </div>
+      <div v-if="showDisplayTrackTime" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.displayFavoriteBadge !== false"
+          :disabled="settings.displayAlbumArt !== true"
+          data-pi-toggle-favorite-badge
+          @change="onPresentationToggle('displayFavoriteBadge', $event.target.checked)"
+        />
+        <label class="form-check-label">Show Heart for Stream Deck Favorites</label>
+      </div>
+      <div v-if="showAllowRemoveFavorite" class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          :checked="settings.allowRemoveFavorite !== false"
+          data-pi-toggle-allow-remove-favorite
+          @change="onPresentationToggle('allowRemoveFavorite', $event.target.checked)"
+        />
+        <label class="form-check-label">Press again to remove from Stream Deck Favorites</label>
       </div>
     </section>
 

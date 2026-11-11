@@ -1,3 +1,6 @@
+import { trackTimeView, wantsTrackTime } from "./trackTime.js";
+import { composeKeyImage } from "./keyImage.js";
+
 // Characters that fit across a key in Stream Deck's bold title font. Wider text is centered and
 // cropped on both edges ("endrick ." for "Kendrick …"), so names are cut and marquees scroll at 8.
 export const MARQUEE_WIDTH = 8;
@@ -176,7 +179,13 @@ function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState, advan
     settings.lastTrackArtURI = currentAlbumArtURI;
   }
 
-  const imageDataURL = settings.displayAlbumArt ? albumArtImage(currentAlbumArtURI) : null;
+  const artImage = settings.displayAlbumArt ? albumArtImage(currentAlbumArtURI) : null;
+  // Track time (sonos-bg0.2): remaining time + bar drawn over the art, only when art is shown.
+  const hasArt = typeof artImage === "string" && artImage !== "";
+  const time = hasArt && wantsTrackTime(settings) ? trackTimeView(state) : null;
+  // Heart badge (sonos-bg0.3) when the song is in the Stream Deck Favorites playlist.
+  const badge = hasArt && settings.displayFavoriteBadge !== false && state.inFavorites === true;
+  const imageDataURL = time || badge ? composeKeyImage(artImage, { ...time, badge }) : artImage;
 
   const sources = [];
   let titleLine = "";
@@ -196,10 +205,13 @@ function buildMarqueeRenderIntent({ inActionSettings, inSonosSpeakerState, advan
 
   // Track title on the top row, album on the bottom row (sonos-9at): joined with a single newline
   // the two windows sat directly on top of each other and read as one crowded line.
-  const title = composeKeyTitle({ top: titleLine, bottom: albumLine });
+  // The time sits at the bottom of the key, so the album moves up to the second row.
+  const title = time
+    ? composeKeyTitle({ top: titleLine, middle: albumLine })
+    : composeKeyTitle({ top: titleLine, bottom: albumLine });
   const titleSource = sources.length > 0 ? sources.join("\n") : null;
 
-  return { imageDataURL, title, titleSource, titleLine, albumLine };
+  return { imageDataURL, title, titleSource, titleLine, albumLine, timeShown: !!time };
 }
 
 /**

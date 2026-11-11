@@ -125,6 +125,7 @@ describe("pollingSupervisor", () => {
       muted: false,
       audioEqualizer: { volume: 42, bass: 3, treble: -2 },
       currentURI: "x-sonos:abc",
+      position: null, // the fake reports no RelTime
       playing: {
         title: "T",
         artist: "A",

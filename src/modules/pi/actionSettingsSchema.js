@@ -29,6 +29,10 @@ export const ENCODER_PUSH_ACTIONS = Object.freeze(["NONE", "TOGGLE_MUTE", "TOGGL
 
 export const MARQUEE_ALBUM_TITLE_ACTIONS = new Set(["toggle-play-pause", "currently-playing"]);
 export const ALBUM_ART_ACTIONS = new Set(["toggle-play-pause", "currently-playing"]);
+/** Favorite Song key (sonos-bg0.4). */
+export const FAVORITE_TRACK_SHORT_NAME = "toggle-favorite-track";
+/** Remaining time + bar over the album art (sonos-bg0.2); on by default. */
+export const TRACK_TIME_ACTIONS = new Set(["toggle-play-pause", "currently-playing"]);
 
 /**
  * Extracts the short name from an action UUID (segment after the last `.`).
@@ -123,7 +127,7 @@ function favoriteToggle(shortName, key, merged) {
 }
 
 /**
- * Builds a complete 23-field action settings payload.
+ * Builds a complete 26-field action settings payload.
  * @param {object} params - Parameters object.
  * @param {string} params.action - Full action UUID.
  * @param {array} params.states - States list snapshot.
@@ -158,6 +162,10 @@ export function buildActionSettingsPayload({ action, states, controller, current
     displayAlbumArt: gateBool(ALBUM_ART_ACTIONS, shortName, merged.displayAlbumArt),
     displayMarqueeTitle: gateBool(MARQUEE_TITLE_ACTIONS, shortName, merged.displayMarqueeTitle),
     displayMarqueeAlbumTitle: gateBool(MARQUEE_ALBUM_TITLE_ACTIONS, shortName, merged.displayMarqueeAlbumTitle),
+    displayTrackTime: TRACK_TIME_ACTIONS.has(shortName) ? merged.displayTrackTime !== false : null,
+    displayFavoriteBadge: TRACK_TIME_ACTIONS.has(shortName) ? merged.displayFavoriteBadge !== false : null,
+    // A second press removes the song (every copy); on by default (sonos-bg0.4).
+    allowRemoveFavorite: shortName === FAVORITE_TRACK_SHORT_NAME ? merged.allowRemoveFavorite !== false : null,
     selectedSonosFavorite: shortName === "play-sonos-favorite" ? decodeFavorite(merged.selectedSonosFavorite) : null,
     displayFavoriteName: favoriteToggle(shortName, "displayFavoriteName", merged),
     displayTrackTitle: favoriteToggle(shortName, "displayTrackTitle", merged),

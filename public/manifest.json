@@ -252,6 +252,37 @@
       ]
     },
     {
+      "Icon": "images/actions/favorite_track",
+      "Name": "Favorite Song",
+      "PropertyInspectorPath": "pi.html",
+      "Tooltip": "Add the playing Spotify song to the Stream Deck Favorites Sonos playlist, or remove it.",
+      "Controllers": ["Keypad"],
+      "UserTitleEnabled": false,
+      "DisableAutomaticStates": true,
+      "DisableCaching": true,
+      "States": [
+        {
+          "Name": "Not a favorite",
+          "Image": "images/keys/favorite_track_off",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        },
+        {
+          "Name": "Favorite",
+          "Image": "images/keys/favorite_track_on",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        },
+        {
+          "Name": "Can't favorite",
+          "Image": "images/keys/favorite_track_unavailable",
+          "TitleAlignment": "top",
+          "FontSize": 11
+        }
+      ],
+      "UUID": "com.r-teller.sonoscontroller.toggle-favorite-track"
+    },
+    {
       "Icon": "images/actions/equalizer",
       "Name": "Audio Equalizer",
       "PropertyInspectorPath": "pi.html",
@@ -333,7 +364,7 @@
   "Name": "Sonos Controller",
   "Icon": "images/sonos",
   "URL": "https://github.com/r-teller/streamdeck-sonoscontroller",
-  "Version": "2.1.0.0",
+  "Version": "2.1.1.0",
   "Category": "Sonos Controller",
   "CategoryIcon": "images/category",
   "OS": [
