@@ -205,8 +205,9 @@ function renderLayoutItem(item, entry, tile) {
     const imgEl = document.createElement("img");
     imgEl.className = "encoder-pixmap";
     placeItem(imgEl, item.rect);
-    // Stream Deck shows the action image in the "icon" item until feedback sets it.
-    const source = value ?? (item.key === "icon" ? tile.state.image : null);
+    // Stream Deck shows the action's icon (manifest "Icon") in the "icon" item until feedback
+    // sets it. Frames do not name the action, so callers pass it via renderFrames(..., { actionIcons }).
+    const source = value ?? (item.key === "icon" ? (tile.state.image ?? actionIcons[tile.context]) : null);
     if (source) imgEl.src = resolveImage(source);
     else imgEl.style.display = "none";
     imgEl.onerror = () => (imgEl.style.display = "none");
@@ -300,7 +301,10 @@ window.resetPreview = function resetPreview() {
   document.getElementById("tiles").innerHTML = "";
 };
 
-window.renderFrames = async function renderFrames(frames) {
+let actionIcons = {};
+
+window.renderFrames = async function renderFrames(frames, { actionIcons: icons } = {}) {
+  if (icons) actionIcons = icons;
   if (frames.length < processedCount) {
     resetPreview();
   }

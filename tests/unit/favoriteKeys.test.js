@@ -56,7 +56,13 @@ beforeEach(() => {
   _resetAlbumArtCache();
   // Pre-cache art so render intents return data URLs synchronously.
   const cache = _getAlbumArtCache();
-  for (const u of [KENDRICK.albumArtURI, TOPHITS.albumArtURI, RADIO.albumArtURI, "http://192.168.50.80:1400/getaa?luther", "http://192.168.50.80:1400/getaa?hit"]) {
+  for (const u of [
+    KENDRICK.albumArtURI,
+    TOPHITS.albumArtURI,
+    RADIO.albumArtURI,
+    "http://192.168.50.80:1400/getaa?luther",
+    "http://192.168.50.80:1400/getaa?hit",
+  ]) {
     cache.set(u, `data:${u}`);
   }
 });
@@ -179,7 +185,10 @@ describe("syncFavoriteKeys: signature ownership", () => {
     setActionSettings("k2", key(KENDRICK)); // same favorite on another page
     setActionSettings("t1", key(TOPHITS, { favoriteSignature: SIG_T }));
     for (const c of ["k1", "k2", "t1"]) addContext({ UUID: SPK, context: c });
-    updateSpeakerState({ UUID: SPK, state: { ...playingState(SIG_K), loadedFavorite: { uri: KENDRICK.uri, signature: SIG_K } } });
+    updateSpeakerState({
+      UUID: SPK,
+      state: { ...playingState(SIG_K), loadedFavorite: { uri: KENDRICK.uri, signature: SIG_K } },
+    });
 
     const client = sd();
     expect(syncFavoriteKeys({ UUID: SPK, sd: client }).sort()).toEqual(["k1", "k2"]);
@@ -206,7 +215,10 @@ describe("syncFavoriteKeys: signature ownership", () => {
     setActionSettings("k1", key(KENDRICK));
     addContext({ UUID: SPK, context: "k1" });
     const atKeyDown = { ...SIG_K, updateId: "3", total: 40 }; // read while Sonos was still appending
-    updateSpeakerState({ UUID: SPK, state: { ...playingState(SIG_K), loadedFavorite: { uri: KENDRICK.uri, signature: atKeyDown } } });
+    updateSpeakerState({
+      UUID: SPK,
+      state: { ...playingState(SIG_K), loadedFavorite: { uri: KENDRICK.uri, signature: atKeyDown } },
+    });
 
     expect(syncFavoriteKeys({ UUID: SPK, sd: sd() })).toEqual(["k1"]);
     expect(actionSettings.k1.favoriteSignature).toMatchObject(SIG_K);
@@ -217,7 +229,13 @@ describe("syncFavoriteKeys: signature ownership", () => {
   test("a queue changed elsewhere (Sonos app) leaves every key inactive", () => {
     setActionSettings("k1", key(KENDRICK, { favoriteSignature: SIG_K }));
     addContext({ UUID: SPK, context: "k1" });
-    updateSpeakerState({ UUID: SPK, state: { ...playingState({ updateId: "9", total: 12, firstTrackUri: "other" }), loadedFavorite: { uri: KENDRICK.uri, signature: SIG_K } } });
+    updateSpeakerState({
+      UUID: SPK,
+      state: {
+        ...playingState({ updateId: "9", total: 12, firstTrackUri: "other" }),
+        loadedFavorite: { uri: KENDRICK.uri, signature: SIG_K },
+      },
+    });
     expect(syncFavoriteKeys({ UUID: SPK, sd: sd() })).toEqual([]);
     expect(isFavoriteActive(actionSettings.k1, getSpeaker({ UUID: SPK }).state)).toBe(false);
   });
@@ -277,11 +295,44 @@ describe("polling reads queue info only for speakers with favorite keys", () => 
       getQueueSignature: ok(SIG_K),
     };
     const afterPoll = vi.fn();
-    const stop = startPollingSupervisor({ intervalMs: 500, controllerFactory: () => controller, afterPoll, getGlobals: () => ({}) });
+    const stop = startPollingSupervisor({
+      intervalMs: 500,
+      controllerFactory: () => controller,
+      afterPoll,
+      getGlobals: () => ({}),
+    });
     await vi.advanceTimersByTimeAsync(600);
     stop();
     expect(controller.getQueueSignature).toHaveBeenCalledTimes(1);
     expect(getSpeaker({ UUID: SPK }).state).toMatchObject({ mediaURI: QUEUE, queueSignature: SIG_K });
     expect(afterPoll).toHaveBeenCalledWith(SPK);
+  });
+
+  test("a play-mode key reads the media URI but not the queue signature (sonos-8cc)", async () => {
+    vi.useFakeTimers();
+    setActionSettings("p1", {
+      action: "com.r-teller.sonoscontroller.toggle-play-mode",
+      uuid: SPK,
+      hostAddress: "192.168.50.80",
+    });
+    addContext({ UUID: SPK, context: "p1", hostAddress: "192.168.50.80" });
+    const ok = (v) => vi.fn().mockResolvedValue(v);
+    const controller = {
+      getTransportSettings: ok({ playMode: "NORMAL" }),
+      getTransportInfo: ok({ playbackState: "PLAYING" }),
+      getMute: ok(false),
+      getVolume: ok(20),
+      getBass: ok(0),
+      getTreble: ok(0),
+      getPositionInfo: ok({ trackURI: "x-sonosapi-stream:s1", title: "Radio", albumArtURI: "" }),
+      getMediaInfo: ok({ currentURI: "x-sonosapi-stream:s1" }),
+      getQueueSignature: ok(SIG_K),
+    };
+    const stop = startPollingSupervisor({ intervalMs: 500, controllerFactory: () => controller, getGlobals: () => ({}) });
+    await vi.advanceTimersByTimeAsync(600);
+    stop();
+    expect(controller.getMediaInfo).toHaveBeenCalledTimes(1);
+    expect(controller.getQueueSignature).not.toHaveBeenCalled();
+    expect(getSpeaker({ UUID: SPK }).state.mediaURI).toBe("x-sonosapi-stream:s1");
   });
 });

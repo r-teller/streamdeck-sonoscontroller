@@ -107,9 +107,17 @@
     .encoder-indicator {
       position: absolute;
     }
+    /* Plain bar as drawn on the device: a grey track with a white fill. */
+    .encoder-indicator:has(.encoder-indicator-bar) {
+      background-color: #5f5f5f;
+      border-radius: 2px;
+      height: 6px !important;
+      margin-top: 3px;
+    }
     .encoder-indicator-bar {
       position: absolute;
-      background-color: #00ff00;
+      background-color: #e6e6e6;
+      border-radius: 2px;
       height: 100%;
     }
     .encoder-indicator-gbar {

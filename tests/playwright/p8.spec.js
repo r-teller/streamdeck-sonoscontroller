@@ -18,6 +18,8 @@ const GETTER_FIXTURES = {
   GetBass: "getbass-response.xml",
   GetTreble: "gettreble-response.xml",
   GetPositionInfo: "getpositioninfo-spotify-track.xml",
+  // Play mode only changes on the queue (sonos-8cc).
+  GetMediaInfo: "getmediainfo-queue.xml",
 };
 
 // PLAY_MODES order in the plugin
@@ -178,6 +180,32 @@ test.describe("p8 - Play Mode carousel dial", () => {
     }
     await expect.poll(sentModes, { timeout: SETTLE_MS + 3000 }).toHaveLength(2); // full lap: nothing new
     frames.push(...(await mockHost.outbound()).filter((f) => f.context === ctx));
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("p8-not-on-queue", async ({ page }) => {
+    // Same rule as the Queue Track dial (sonos-8cc): radio, TV or line-in have no play mode.
+    const { mock, mockHost, shown, sentModes, pageErrors } = await setup(page, {
+      actionFixtures: { ...GETTER_FIXTURES, GetMediaInfo: "getmediainfo-radio.xml" },
+    });
+    const ctx = "ctx-pm-radio";
+    await mockHost.inject.willAppear(ctx, ACTION, { ...SPEAKER }, "Encoder");
+    await expect.poll(async () => (await shown(ctx)).caption, { timeout: 8000 }).toBe("Not playing from queue");
+    expect((await shown(ctx)).cards).toMatch(/^data:image\/png;base64,/);
+
+    await mockHost.inject.dialRotate(ctx, 1);
+    await mockHost.inject.dialRotate(ctx, 1);
+    await mockHost.inject.dialDown(ctx);
+    await mockHost.inject.touchTap(ctx);
+    await page.waitForTimeout(SETTLE_MS + 900);
+
+    expect(sentModes()).toEqual([]);
+    expect((await mockHost.outbound("showAlert")).filter((f) => f.context === ctx)).toEqual([]);
+    expect((await shown(ctx)).caption).toBe("Not playing from queue");
+    expect(mock.calls.some((c) => c.action === "GetMediaInfo")).toBe(true);
+
+    const frames = (await mockHost.outbound()).filter((f) => f.context === ctx);
+    await screenshotDial(page, frames, "play-mode-not-on-queue");
     expect(pageErrors).toEqual([]);
   });
 

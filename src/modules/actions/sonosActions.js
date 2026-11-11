@@ -180,7 +180,17 @@ function togglePlayPauseState({ inActionSettings, inSonosSpeakerState, advanceMa
 }
 
 // Action 4: Toggle Play Mode
+/**
+ * Shuffle/repeat only exist for the queue (sonos-8cc). Same rule as the Queue Track dial: once the
+ * source is known and is radio, TV or line-in, play-mode changes send nothing and show no alert.
+ */
+export function playModeBlocked(inSonosSpeakerState) {
+  const { known, onQueue } = queueView(inSonosSpeakerState);
+  return known && !onQueue;
+}
+
 async function togglePlayModeKeyDown({ inActionSettings, inSonosSpeakerState }) {
+  if (playModeBlocked(inSonosSpeakerState)) return { status: "SUCCESS" };
   try {
     const controller = makeController(inActionSettings.hostAddress, inActionSettings.uuid);
 
@@ -511,6 +521,7 @@ export function playModeCards(inActionSettings, inSonosSpeakerState) {
 
 /** Turning stopped: apply the mode under the centre card (net ticks of the burst). */
 async function encoderPlayModeDialRotate({ inActionSettings, inSonosSpeakerState, inRotation }) {
+  if (playModeBlocked(inSonosSpeakerState)) return { status: "SUCCESS" };
   const steps = Math.trunc(Number(inRotation) || 0);
   const { modes, index, current } = playModeCards(inActionSettings, inSonosSpeakerState);
   const next = modes[wrapIndex(index + steps, modes.length)];
@@ -528,12 +539,23 @@ async function encoderPlayModeDialRotate({ inActionSettings, inSonosSpeakerState
 
 /** Push and tap: next mode, like the Toggle Play Mode key, with a slide to the new card. */
 async function encoderPlayModeNext(args) {
+  if (playModeBlocked(args.inSonosSpeakerState)) return { status: "SUCCESS" };
   const result = await togglePlayModeKeyDown(args);
   if (result?.status === "SUCCESS") slideNext(args.inContext);
   return result;
 }
 
 function encoderPlayModeState({ inContext, inActionSettings, inSonosSpeakerState }) {
+  if (playModeBlocked(inSonosSpeakerState)) {
+    const current = inSonosSpeakerState?.playMode || "NORMAL";
+    return {
+      feedbackLayout: CAROUSEL_LAYOUT,
+      feedback: messageFeedback(inContext, {
+        caption: "Not playing from queue",
+        image: PLAY_MODE_DISPLAY[current]?.image,
+      }),
+    };
+  }
   const { modes, index } = playModeCards(inActionSettings, inSonosSpeakerState);
   const cards = modes.map((mode) => ({
     caption: PLAY_MODE_DISPLAY[mode]?.label ?? titleCase(mode),
