@@ -32,7 +32,15 @@ jobs:
             const fs = require("fs");
             const p = "public/manifest.json";
             const m = JSON.parse(fs.readFileSync(p, "utf8"));
-            m.Version = process.env.TAG.replace(/^v/, "") + "." + process.env.RUN;
+            // Pre-releases are tagged with four numbers (2.1.0.9) and use the tag as the version.
+            // Final releases are tagged with three (2.1.0) and get the run number as the fourth,
+            // which is always higher than the betas before them. See docs/releases.md.
+            const tag = process.env.TAG.replace(/^v/, "");
+            if (!/^\d+\.\d+\.\d+(\.\d+)?$/.test(tag)) {
+              console.error(`Tag "${tag}" is not x.y.z or x.y.z.n; Stream Deck versions must be numeric.`);
+              process.exit(1);
+            }
+            m.Version = tag.split(".").length === 4 ? tag : `${tag}.${process.env.RUN}`;
             fs.writeFileSync(p, JSON.stringify(m, null, 2) + "\n");
             console.log("Version =", m.Version);
           '
