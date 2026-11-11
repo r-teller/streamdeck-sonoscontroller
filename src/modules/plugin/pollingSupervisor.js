@@ -5,6 +5,7 @@ import { resolveSpeaker } from "../common/speakerResolver.js";
 import { globalSettings } from "./globalSettings.js";
 import { speakerHasFavoriteKeys } from "./favoriteKeys.js";
 import { actionSettings } from "./actionSettings.js";
+import { positionSnapshot } from "./trackTime.js";
 
 export const QUEUE_DIAL_ACTION = "encoder-queue-track";
 /** Play mode only changes on the queue, so these actions need the media URI (sonos-8cc). */
@@ -106,6 +107,8 @@ export function startPollingSupervisor({
           currentURI: positionInfo.trackURI,
           // 1-based position in the queue (0 when not playing from the queue)
           trackNumber: positionInfo.track,
+          // Elapsed / length at this moment; keys count on from here (sonos-bg0.2).
+          position: positionSnapshot(positionInfo),
           playing: {
             title: positionInfo.title,
             artist: positionInfo.artist,

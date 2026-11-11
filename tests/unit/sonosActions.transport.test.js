@@ -68,6 +68,8 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
     controller.getTransportInfo.mockResolvedValue({ playbackState: "PLAYING" });
     controller.getPositionInfo.mockResolvedValue({
       trackURI: "x-file:a",
+      relTime: "0:01:10",
+      trackDuration: "0:04:45",
       title: "T",
       artist: "Ar",
       album: "Al",
@@ -96,6 +98,7 @@ describe("Sonos actions – transport layer (actions 1‑7)", () => {
         muted: true,
         audioEqualizer: { volume: 42, bass: 2, treble: -1 },
         currentURI: "x-file:a",
+        position: { elapsed: 70, duration: 285, at: expect.any(Number) },
         playing: {
           title: "T",
           artist: "Ar",

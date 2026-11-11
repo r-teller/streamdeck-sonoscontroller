@@ -2,6 +2,8 @@ import { actionSettings } from "./actionSettings.js";
 import { getAllSpeakers } from "./SonosSpeakers.js";
 import { MARQUEE_WIDTH, onAlbumArtCached } from "./marquee.js";
 import { isFavoriteSettings, favoriteWantsMarquee } from "./favoriteKeys.js";
+import { trackTimeTicking } from "./trackTime.js";
+import { onKeyImageReady } from "./keyImage.js";
 
 /**
  * Whether a key currently needs frame-by-frame re-rendering for a scrolling title. Favorite keys
@@ -40,10 +42,20 @@ function renderContexts(refreshStateAndTitle, filter, advanceMarquee = false) {
  */
 export function startRenderTicker({ refreshStateAndTitle, intervalMs = 500 }) {
   // Only these frames move scrolling text; art/poll/action redraws repeat the current frame (sonos-9at).
-  const id = setInterval(() => renderContexts(refreshStateAndTitle, wantsMarquee, true), intervalMs);
+  const id = setInterval(() => {
+    renderContexts(refreshStateAndTitle, wantsMarquee, true);
+    // Track time counts down between polls (sonos-bg0.2); keys already redrawn above are skipped.
+    // The image only changes once a second, and unchanged images are not resent.
+    renderContexts(
+      refreshStateAndTitle,
+      (settings, state) => !wantsMarquee(settings, state) && trackTimeTicking(settings, state),
+    );
+  }, intervalMs);
   const unsubscribe = onAlbumArtCached(() => renderContexts(refreshStateAndTitle));
+  const unsubscribeImages = onKeyImageReady(() => renderContexts(refreshStateAndTitle));
   return () => {
     clearInterval(id);
     unsubscribe();
+    unsubscribeImages();
   };
 }

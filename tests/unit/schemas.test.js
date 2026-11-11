@@ -32,7 +32,7 @@ describe("actionSettingsSchema", () => {
     "com.r-teller.sonoscontroller.volume-up",
   ];
 
-  it("buildActionSettingsPayload returns exactly 23 keys for every action", () => {
+  it("buildActionSettingsPayload returns exactly 24 keys for every action", () => {
     const expectedKeys = [
       "action",
       "states",
@@ -49,6 +49,7 @@ describe("actionSettingsSchema", () => {
       "displayAlbumArt",
       "displayMarqueeTitle",
       "displayMarqueeAlbumTitle",
+      "displayTrackTime",
       "selectedSonosFavorite",
       "adjustVolumeIncrement",
       "displayFavoriteName",

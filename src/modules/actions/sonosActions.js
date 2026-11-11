@@ -1,3 +1,4 @@
+import { positionSnapshot } from "../plugin/trackTime.js";
 import { actionFunctionMap } from "../plugin/actionDispatcher.js";
 import { buildMarqueeRenderIntent, composeKeyTitle, albumArtImage } from "../plugin/marquee.js";
 import { queueItems } from "../plugin/queueCache.js";
@@ -46,6 +47,7 @@ function buildCurrentlyPlayingProjection(transportInfo, positionInfo, muted, vol
       treble,
     },
     currentURI: positionInfo?.trackURI,
+    position: positionSnapshot(positionInfo),
     playing: {
       title: positionInfo?.title,
       artist: positionInfo?.artist,
@@ -166,7 +168,10 @@ function togglePlayPauseState({ inActionSettings, inSonosSpeakerState, advanceMa
     return {
       stateIndex,
       imageDataURL: marquee.imageDataURL,
-      title: composeKeyTitle({ top: label, middle: marquee.titleLine ?? "", bottom: marquee.albumLine ?? "" }),
+      // With track time at the bottom, the three text rows stack from the top instead (sonos-bg0.2).
+      title: marquee.timeShown
+        ? [label, marquee.titleLine, marquee.albumLine].filter(Boolean).join("\n")
+        : composeKeyTitle({ top: label, middle: marquee.titleLine ?? "", bottom: marquee.albumLine ?? "" }),
       titleSource: marquee.titleSource ?? null,
     };
   } else {

@@ -57,7 +57,8 @@ function createKeyTile(context) {
   el.className = "tile key-tile";
   el.innerHTML = `
     <img src="" alt="" onerror="this.style.display='none'">
-    <div class="tile-title" style="top: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: center; padding: 2px;"></div>
+    <!-- Titles are top-aligned: TitleAlignment "top" in public/manifest.json for every key but Toggle Play Mode. -->
+    <div class="tile-title" style="top: 0; bottom: 0; display: flex; align-items: flex-start; justify-content: center; padding: 2px;"></div>
     <div class="tile-state" style="display:none;"></div>
     <div class="tile-alert" style="display:none;">⚠</div>
   `;
