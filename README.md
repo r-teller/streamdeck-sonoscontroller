@@ -5,52 +5,47 @@ Control Sonos speakers directly from your Elgato Stream Deck. Communicates over 
 ## Actions
 
 Every action is bound to one speaker, chosen in the action's settings. Keys work on any Stream
-Deck; dials need a Stream Deck +.
+Deck; dials need a Stream Deck +. **Icon** is what you drag from the action list in the Stream
+Deck app; **States** are the images the key can show.
 
 ### Keys
 
-| | Key | Press | Shows | Settings |
-|---|---|---|---|---|
-| <img src="public/images/keys/currently_playing@2x.png" width="40" alt=""> | Currently Playing | Refreshes the speaker's state | Album art and a scrolling title | Album art, scrolling title |
-| <img src="public/images/keys/playing@2x.png" width="40" alt=""> <img src="public/images/keys/paused@2x.png" width="40" alt=""> | Toggle Play/Pause | Play or pause | Playing, paused or stopped; optional album art | Album art, scrolling album title, state title |
-| <img src="public/images/keys/unmuted@2x.png" width="40" alt=""> <img src="public/images/keys/muted@2x.png" width="40" alt=""> | Toggle Mute | Mute or unmute | Muted or unmuted | State title |
-| <img src="public/images/keys/play_normal@2x.png" width="40" alt=""> <img src="public/images/keys/shuffle_on@2x.png" width="40" alt=""> <img src="public/images/keys/repeat_all@2x.png" width="40" alt=""> | Toggle Play Mode | Next shuffle/repeat mode | The current mode | Which modes to cycle through |
-| <img src="public/images/keys/input_sonos_queue@2x.png" width="40" alt=""> <img src="public/images/keys/input_tv@2x.png" width="40" alt=""> <img src="public/images/keys/input_line_in@2x.png" width="40" alt=""> | Toggle Input Source | Next source: Sonos Queue, TV, Line-In | The current source | Which sources to cycle through |
-| <img src="public/images/keys/previous_track@2x.png" width="40" alt=""> <img src="public/images/keys/next_track@2x.png" width="40" alt=""> | Play Previous / Next Track | Previous or next track in the queue | | |
-| <img src="public/images/keys/volume_down@2x.png" width="40" alt=""> <img src="public/images/keys/volume_up@2x.png" width="40" alt=""> | Volume Down / Up | Lowers or raises the volume | | Volume step |
-| <img src="public/images/keys/play_favorite@2x.png" width="40" alt=""> | Play Sonos Favorite | Clears the queue and plays the chosen favorite | | Favorite |
+| Icon | Key | States | Press | Shows | Settings |
+|---|---|---|---|---|---|
+| <img src="docs/images/action-icons/currently_playing.png" width="32" alt="Currently Playing" title="Currently Playing"> | Currently Playing | <img src="public/images/keys/currently_playing@2x.png" width="40" alt="currently playing" title="currently playing"> | Refreshes the speaker's state | Album art with a scrolling title | Album art, scrolling title |
+| <img src="docs/images/action-icons/paused.png" width="32" alt="Toggle Play/Pause" title="Toggle Play/Pause"> | Toggle Play/Pause | <img src="public/images/keys/paused@2x.png" width="40" alt="paused" title="paused"> <img src="public/images/keys/playing@2x.png" width="40" alt="playing" title="playing"> <img src="public/images/keys/stopped@2x.png" width="40" alt="stopped" title="stopped"> | Play or pause | Paused, playing or stopped; album art if enabled | Album art, scrolling album title, state title |
+| <img src="docs/images/action-icons/muted.png" width="32" alt="Toggle Mute" title="Toggle Mute"> | Toggle Mute | <img src="public/images/keys/unmuted@2x.png" width="40" alt="unmuted" title="unmuted"> <img src="public/images/keys/muted@2x.png" width="40" alt="muted" title="muted"> | Mute or unmute | Unmuted or muted | State title |
+| <img src="docs/images/action-icons/shuffle.png" width="32" alt="Toggle Play Mode" title="Toggle Play Mode"> | Toggle Play Mode | <img src="public/images/keys/play_normal@2x.png" width="40" alt="play normal" title="play normal"> <img src="public/images/keys/shuffle_no_repeat@2x.png" width="40" alt="shuffle no repeat" title="shuffle no repeat"> <img src="public/images/keys/shuffle_one@2x.png" width="40" alt="shuffle one" title="shuffle one"> <img src="public/images/keys/shuffle_on@2x.png" width="40" alt="shuffle on" title="shuffle on"> <img src="public/images/keys/repeat_one@2x.png" width="40" alt="repeat one" title="repeat one"> <img src="public/images/keys/repeat_all@2x.png" width="40" alt="repeat all" title="repeat all"> | Next shuffle/repeat mode | Normal, shuffle (no repeat), shuffle (repeat one), shuffle (repeat all), repeat one, repeat all | Which modes to cycle through |
+| <img src="docs/images/action-icons/input_source.png" width="32" alt="Toggle Input Source" title="Toggle Input Source"> | Toggle Input Source | <img src="public/images/keys/input_sonos_queue@2x.png" width="40" alt="input sonos queue" title="input sonos queue"> <img src="public/images/keys/input_tv@2x.png" width="40" alt="input tv" title="input tv"> <img src="public/images/keys/input_line_in@2x.png" width="40" alt="input line in" title="input line in"> | Next source | Sonos Queue, TV or Line-In | Which sources to cycle through |
+| <img src="docs/images/action-icons/previous_track.png" width="32" alt="Play Previous Track" title="Play Previous Track"> | Play Previous Track | <img src="public/images/keys/previous_track@2x.png" width="40" alt="previous track" title="previous track"> | Previous track in the queue |  |  |
+| <img src="docs/images/action-icons/next_track.png" width="32" alt="Play Next Track" title="Play Next Track"> | Play Next Track | <img src="public/images/keys/next_track@2x.png" width="40" alt="next track" title="next track"> | Next track in the queue |  |  |
+| <img src="docs/images/action-icons/volume_down.png" width="32" alt="Volume Down" title="Volume Down"> | Volume Down | <img src="public/images/keys/volume_down@2x.png" width="40" alt="volume down" title="volume down"> | Lowers the volume |  | Volume step |
+| <img src="docs/images/action-icons/volume_up.png" width="32" alt="Volume Up" title="Volume Up"> | Volume Up | <img src="public/images/keys/volume_up@2x.png" width="40" alt="volume up" title="volume up"> | Raises the volume |  | Volume step |
+| <img src="docs/images/action-icons/play_favorite.png" width="32" alt="Play Sonos Favorite" title="Play Sonos Favorite"> | Play Sonos Favorite | <img src="public/images/keys/play_favorite@2x.png" width="40" alt="play favorite" title="play favorite"> | Clears the queue and plays the chosen favorite |  | Favorite |
 
 ### Dials (Stream Deck +)
 
 Each dial draws on its part of the touch strip.
 
-#### Audio Equalizer
+| Icon | Dial | Turn | Push | Tap the strip | Settings |
+|---|---|---|---|---|---|
+| <img src="docs/images/action-icons/equalizer.png" width="32" alt="Audio Equalizer" title="Audio Equalizer"> | Audio Equalizer | Adjusts Volume, Bass or Treble | Mute, play/pause, next track or nothing | Re-reads volume, bass and treble | Which level to adjust; what push does |
+| <img src="docs/images/action-icons/shuffle.png" width="32" alt="Play Mode Dial" title="Play Mode Dial"> | Play Mode Dial | Slides through the shuffle/repeat modes; applied when you stop turning | Next mode now | Next mode now | Which modes appear |
+| <img src="docs/images/action-icons/currently_playing.png" width="32" alt="Queue Track Dial" title="Queue Track Dial"> | Queue Track Dial | Slides through the current queue (art, title, artist, position); plays the track when you stop turning; wraps at both ends | Next track now | Next track now | |
 
-<img src="docs/images/dial-audio-equalizer.png" width="300" alt="Audio Equalizer dial showing Volume 45 with a level bar">
+On the touch strip (the Queue Track Dial shows **Not playing from queue** and does nothing while
+the speaker plays radio, TV or line-in):
 
-- **Turn:** adjusts Volume, Bass or Treble (chosen in settings); the bar shows the level.
-- **Push:** mute, play/pause, next track or nothing (chosen in settings).
-- **Tap the strip:** re-reads volume, bass and treble from the speaker.
-
-#### Play Mode Dial
-
-<img src="docs/images/dial-play-mode.png" width="300" alt="Play Mode dial: a carousel of mode cards with Shuffle No Repeat in the centre">
-
-- **Turn:** slides a carousel of shuffle/repeat modes; the mode is applied when you stop turning.
-- **Push or tap:** switches to the next mode right away.
-- **Settings:** which modes appear in the carousel.
-
-#### Queue Track Dial
-
-<img src="docs/images/dial-queue-track.png" width="300" alt="Queue Track dial: a carousel of queue tracks with Track Three, 3 of 5, in the centre">
-
-- **Turn:** slides through the tracks in the current queue (album art, title, artist and
-  position); the track plays when you stop turning. Wraps from the last track to the first.
-- **Push or tap:** plays the next track right away.
-- When the speaker is playing radio, TV or line-in, the dial shows **Not playing from queue**
-  and does nothing:
-
-  <img src="docs/images/dial-queue-track-not-on-queue.png" width="300" alt="Queue Track dial showing Not playing from queue">
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/dial-audio-equalizer.png" width="200" alt="Audio Equalizer: Volume 45 with a level bar"><br>Audio Equalizer</td>
+    <td align="center"><img src="docs/images/dial-play-mode.png" width="200" alt="Play Mode Dial: carousel of modes"><br>Play Mode Dial</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/dial-queue-track.png" width="200" alt="Queue Track Dial: carousel of queue tracks"><br>Queue Track Dial</td>
+    <td align="center"><img src="docs/images/dial-queue-track-not-on-queue.png" width="200" alt="Queue Track Dial: Not playing from queue"><br>Queue Track Dial, not on the queue</td>
+  </tr>
+</table>
 
 ## First-run setup
 

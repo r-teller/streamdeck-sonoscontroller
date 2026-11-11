@@ -606,10 +606,16 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
 
     // Preview
     await page.goto("/harness/key-preview.html");
-    await page.evaluate((f) => window.renderFrames(f), volumeFrames);
+    await page.evaluate(
+      (f) => window.renderFrames(f, { actionIcons: { ctx1: "images/actions/equalizer@2x.png" } }),
+      volumeFrames,
+    );
     await page.screenshot({ path: "tests/playwright/screenshots/p5-eq-volume.png", fullPage: true });
     await page.evaluate(() => window.resetPreview());
-    await page.evaluate((f) => window.renderFrames(f), bassFrames);
+    await page.evaluate(
+      (f) => window.renderFrames(f, { actionIcons: { ctx1: "images/actions/equalizer@2x.png" } }),
+      bassFrames,
+    );
     await page.screenshot({ path: "tests/playwright/screenshots/p5-eq-bass.png", fullPage: true });
     await page.evaluate(() => window.resetPreview());
 
