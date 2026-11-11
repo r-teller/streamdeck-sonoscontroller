@@ -145,9 +145,13 @@ function renderKeyTile(tile) {
 
   let changed = false;
 
-  if (!deepEqual(state.image, prev.image)) {
-    img.src = resolveImage(state.image) || "";
-    prev.image = state.image;
+  // Without a setImage, Stream Deck shows the manifest image of the current state; callers pass
+  // those via renderFrames(..., { stateImages: { [context]: ["images/keys/x", ...] } }).
+  const fallback = stateImages[tile.context]?.[state.stateIndex ?? 0];
+  const shown = state.image ?? (fallback ? `${fallback}@2x.png` : null);
+  if (!deepEqual(shown, prev.image)) {
+    img.src = resolveImage(shown) || "";
+    prev.image = shown;
     changed = true;
   }
 
@@ -303,9 +307,11 @@ window.resetPreview = function resetPreview() {
 };
 
 let actionIcons = {};
+let stateImages = {};
 
-window.renderFrames = async function renderFrames(frames, { actionIcons: icons } = {}) {
+window.renderFrames = async function renderFrames(frames, { actionIcons: icons, stateImages: images } = {}) {
   if (icons) actionIcons = icons;
+  if (images) stateImages = images;
   if (frames.length < processedCount) {
     resetPreview();
   }

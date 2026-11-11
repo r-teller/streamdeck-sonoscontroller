@@ -15,7 +15,8 @@ const actions = [
   { short: "play-sonos-favorite", uuid: "com.r-teller.sonoscontroller.play-sonos-favorite" },
   { short: "encoder-audio-equalizer", uuid: "com.r-teller.sonoscontroller.encoder-audio-equalizer" },
   { short: "encoder-play-mode", uuid: "com.r-teller.sonoscontroller.encoder-play-mode" },
-  { short: "encoder-queue-track", uuid: "com.r-teller.sonoscontroller.encoder-queue-track" }
+  { short: "encoder-queue-track", uuid: "com.r-teller.sonoscontroller.encoder-queue-track" },
+  { short: "toggle-favorite-track", uuid: "com.r-teller.sonoscontroller.toggle-favorite-track" },
 ];
 
 async function bootPi(page, shortName, settings = {}) {
@@ -27,10 +28,10 @@ async function bootPi(page, shortName, settings = {}) {
     uuid: "pi-uuid-p4",
     registerEvent: "registerPropertyInspector",
     actionInfo: {
-      action: actions.find(a => a.short === shortName).uuid,
+      action: actions.find((a) => a.short === shortName).uuid,
       context: "ctx-p4",
-      payload: { settings, controller: "Keypad" }
-    }
+      payload: { settings, controller: "Keypad" },
+    },
   });
   return mockHost;
 }
@@ -63,7 +64,7 @@ test("p4-first-run", async ({ page }, testInfo) => {
   const mock = await installMockSonos(page, {
     topologyFixture: "zonegroupstate-live-bonded-and-grouped.xml",
     favoritesFixture: "browse-fv2-mixed.xml",
-    failures: { topology: { mode: "delay", ms: 1500 } }
+    failures: { topology: { mode: "delay", ms: 1500 } },
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -77,13 +78,15 @@ test("p4-first-run", async ({ page }, testInfo) => {
     actionInfo: {
       action: "com.r-teller.sonoscontroller.volume-up",
       context: "ctx-p4",
-      payload: { settings: {}, controller: "Keypad" }
-    }
+      payload: { settings: {}, controller: "Keypad" },
+    },
   });
 
   // Assert disconnected state
   const disconnectedHint = page.locator("[data-pi-disconnected-hint]");
-  await expect(disconnectedHint).toHaveText("Set the Primary Device Address below and tap \"Save and Connect\" to discover your speakers.");
+  await expect(disconnectedHint).toHaveText(
+    'Set the Primary Device Address below and tap "Save and Connect" to discover your speakers.',
+  );
   const saveButton = page.locator("[data-pi-save-and-connect]");
   await expect(saveButton).toBeDisabled();
   await expect(saveButton).toHaveText("Save and Connect");
@@ -115,7 +118,7 @@ test("p4-first-run", async ({ page }, testInfo) => {
     "Living Room (192.168.1.11) 🛰️",
     "Living Room (192.168.1.12) 🛰️",
     "Living Room (192.168.1.13) 🛰️",
-    "Office (192.168.1.30)"
+    "Office (192.168.1.30)",
   ];
   expect(optionLabels).toEqual(expectedLabels);
 
@@ -138,7 +141,7 @@ test("p4-first-run", async ({ page }, testInfo) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   expect(setSettingsFrames[0].payload.uuid).toBe("RINCON_LIVINGROOMBAR01400");
-  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(25);
+  expect(Object.keys(setSettingsFrames[0].payload)).toHaveLength(26);
 
   // Assert bound speaker alert
   const boundAlert = page.locator("[data-pi-bound-speaker-alert]");
@@ -154,7 +157,7 @@ test("p4-discovery-failure", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   const mock = await installMockSonos(page, {
     topologyFixture: "zonegroupstate-multi-group.xml",
-    failures: { topology: { mode: "hang", ms: 5000 } }
+    failures: { topology: { mode: "hang", ms: 5000 } },
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -168,8 +171,8 @@ test("p4-discovery-failure", async ({ page }, testInfo) => {
     actionInfo: {
       action: "com.r-teller.sonoscontroller.volume-up",
       context: "ctx-p4",
-      payload: { settings: {}, controller: "Keypad" }
-    }
+      payload: { settings: {}, controller: "Keypad" },
+    },
   });
 
   const addressInput = page.locator("[data-pi-primary-device-address]");
@@ -218,8 +221,8 @@ for (const action of actions) {
       actionInfo: {
         action: action.uuid,
         context: "ctx-p4",
-        payload: { settings: {}, controller: "Keypad" }
-      }
+        payload: { settings: {}, controller: "Keypad" },
+      },
     });
 
     const sections = {
@@ -227,7 +230,7 @@ for (const action of actions) {
       "input-sources": page.locator("[data-pi-section='input-sources']"),
       "equalizer-target": page.locator("[data-pi-section='equalizer-target']"),
       "sonos-favorites": page.locator("[data-pi-section='sonos-favorites']"),
-      "volume-increment-override": page.locator("[data-pi-section='volume-increment-override']")
+      "volume-increment-override": page.locator("[data-pi-section='volume-increment-override']"),
     };
 
     const toggles = {
@@ -236,64 +239,69 @@ for (const action of actions) {
       "marquee-album-title": page.locator("[data-pi-toggle-marquee-album-title]"),
       "album-art": page.locator("[data-pi-toggle-album-art]"),
       "track-time": page.locator("[data-pi-toggle-track-time]"),
-      "favorite-badge": page.locator("[data-pi-toggle-favorite-badge]")
+      "favorite-badge": page.locator("[data-pi-toggle-favorite-badge]"),
+      "allow-remove-favorite": page.locator("[data-pi-toggle-allow-remove-favorite]"),
     };
 
     const expected = {
       "currently-playing": {
         togglesPresent: ["marquee-title", "marquee-album-title", "album-art", "track-time", "favorite-badge"],
-        sectionsPresent: []
+        sectionsPresent: [],
       },
       "toggle-mute-unmute": {
         togglesPresent: ["state-based-title"],
-        sectionsPresent: []
+        sectionsPresent: [],
       },
       "toggle-play-pause": {
         togglesPresent: ["state-based-title", "marquee-album-title", "album-art", "track-time", "favorite-badge"],
-        sectionsPresent: []
+        sectionsPresent: [],
       },
       "toggle-play-mode": {
         togglesPresent: ["state-based-title"],
-        sectionsPresent: ["play-modes"]
+        sectionsPresent: ["play-modes"],
       },
       "toggle-input-source": {
         togglesPresent: ["state-based-title"],
-        sectionsPresent: ["input-sources"]
+        sectionsPresent: ["input-sources"],
       },
       "play-next-track": {
         togglesPresent: ["state-based-title"],
-        sectionsPresent: []
+        sectionsPresent: [],
       },
       "play-previous-track": {
         togglesPresent: ["state-based-title"],
-        sectionsPresent: []
+        sectionsPresent: [],
       },
       "volume-up": {
         togglesPresent: ["state-based-title"],
-        sectionsPresent: ["volume-increment-override"]
+        sectionsPresent: ["volume-increment-override"],
       },
       "volume-down": {
         togglesPresent: ["state-based-title"],
-        sectionsPresent: ["volume-increment-override"]
+        sectionsPresent: ["volume-increment-override"],
+      },
+      "toggle-favorite-track": {
+        togglesPresent: ["allow-remove-favorite"],
+        sectionsPresent: [],
       },
       "play-sonos-favorite": {
         // Favorite keys use their own five toggles (sonos-gw5), checked below.
         togglesPresent: [],
         favoriteToggles: true,
-        sectionsPresent: ["sonos-favorites"]
+        sectionsPresent: ["sonos-favorites"],
       },
       "encoder-audio-equalizer": {
         togglesPresent: [],
-        sectionsPresent: ["equalizer-target"]
+        sectionsPresent: ["equalizer-target"],
       },
       "encoder-play-mode": {
         togglesPresent: [],
-        sectionsPresent: ["play-modes"]
+        sectionsPresent: ["play-modes"],
       },
       "encoder-queue-track": {
         togglesPresent: [],
-        sectionsPresent: []
-      }
+        sectionsPresent: [],
+      },
     };
 
     const config = expected[action.short];
@@ -337,14 +345,7 @@ for (const action of actions) {
 
     // Play modes: assert 6 switches in canonical order
     if (action.short === "toggle-play-mode") {
-      const playModes = [
-        "NORMAL",
-        "SHUFFLE_NOREPEAT",
-        "SHUFFLE_REPEAT_ONE",
-        "SHUFFLE",
-        "REPEAT_ONE",
-        "REPEAT_ALL"
-      ];
+      const playModes = ["NORMAL", "SHUFFLE_NOREPEAT", "SHUFFLE_REPEAT_ONE", "SHUFFLE", "REPEAT_ONE", "REPEAT_ALL"];
       for (const mode of playModes) {
         const switchEl = page.locator(`[data-pi-play-mode="${mode}"]`);
         await expect(switchEl).toBeVisible();
@@ -384,7 +385,7 @@ for (const action of actions) {
 
 test("p4-bind-speaker", async ({ page }) => {
   await installMockSonos(page, {
-    topologyFixture: "zonegroupstate-multi-group.xml"
+    topologyFixture: "zonegroupstate-multi-group.xml",
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -398,53 +399,53 @@ test("p4-bind-speaker", async ({ page }) => {
     actionInfo: {
       action: "com.r-teller.sonoscontroller.volume-up",
       context: "ctx-p4",
-      payload: { settings: {}, controller: "Keypad" }
-    }
+      payload: { settings: {}, controller: "Keypad" },
+    },
   });
 
   await mockHost.inject.globalSettings({
     devices: {
-      "RINCON_OFFICE01400": {
+      RINCON_OFFICE01400: {
         uuid: "RINCON_OFFICE01400",
         zoneName: "Office",
         hostAddress: "192.168.1.42",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_KITCHEN01400": {
+      RINCON_KITCHEN01400: {
         uuid: "RINCON_KITCHEN01400",
         zoneName: "Kitchen",
         hostAddress: "192.168.1.43",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_DININGROOM01400": {
+      RINCON_DININGROOM01400: {
         uuid: "RINCON_DININGROOM01400",
         zoneName: "Dining Room",
         hostAddress: "192.168.1.44",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_PATIO01400": {
+      RINCON_PATIO01400: {
         uuid: "RINCON_PATIO01400",
         zoneName: "Patio",
         hostAddress: "192.168.1.45",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
-      }
+        primary: false,
+      },
     },
     deviceCheckInterval: 10,
     deviceTimeoutDuration: 10,
     adjustVolumeIncrement: 10,
-    favorites: []
+    favorites: [],
   });
 
   const saveButton = page.locator("[data-pi-save-and-connect]");
@@ -461,7 +462,7 @@ test("p4-bind-speaker", async ({ page }) => {
   const setSettingsFrames = await mockHost.outbound("setSettings");
   expect(setSettingsFrames).toHaveLength(1);
   const payload = setSettingsFrames[0].payload;
-  expect(Object.keys(payload)).toHaveLength(25);
+  expect(Object.keys(payload)).toHaveLength(26);
   expect(payload.uuid).toBe("RINCON_OFFICE01400");
   expect(payload.title).toBe("Office (192.168.1.42)");
   expect(payload.hostAddress).toBe("192.168.1.42");
@@ -482,7 +483,7 @@ test("p4-bind-speaker", async ({ page }) => {
 
 test("p4-filter", async ({ page }) => {
   await installMockSonos(page, {
-    topologyFixture: "zonegroupstate-live-bonded-and-grouped.xml"
+    topologyFixture: "zonegroupstate-live-bonded-and-grouped.xml",
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -496,71 +497,71 @@ test("p4-filter", async ({ page }) => {
     actionInfo: {
       action: "com.r-teller.sonoscontroller.volume-up",
       context: "ctx-p4",
-      payload: { settings: {}, controller: "Keypad" }
-    }
+      payload: { settings: {}, controller: "Keypad" },
+    },
   });
 
   await mockHost.inject.globalSettings({
     devices: {
-      "RINCON_LIVINGROOMBAR01400": {
+      RINCON_LIVINGROOMBAR01400: {
         uuid: "RINCON_LIVINGROOMBAR01400",
         zoneName: "Living Room",
         hostAddress: "192.168.1.10",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: true
+        primary: true,
       },
-      "RINCON_LIVINGROOMSUB01400": {
+      RINCON_LIVINGROOMSUB01400: {
         uuid: "RINCON_LIVINGROOMSUB01400",
         zoneName: "Living Room",
         hostAddress: "192.168.1.11",
         port: 1400,
         isSatellite: true,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_LIVINGROOMSURROUNDLEFT01400": {
+      RINCON_LIVINGROOMSURROUNDLEFT01400: {
         uuid: "RINCON_LIVINGROOMSURROUNDLEFT01400",
         zoneName: "Living Room",
         hostAddress: "192.168.1.12",
         port: 1400,
         isSatellite: true,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_LIVINGROOMSURROUNDRIGHT01400": {
+      RINCON_LIVINGROOMSURROUNDRIGHT01400: {
         uuid: "RINCON_LIVINGROOMSURROUNDRIGHT01400",
         zoneName: "Living Room",
         hostAddress: "192.168.1.13",
         port: 1400,
         isSatellite: true,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_BEDROOM01400": {
+      RINCON_BEDROOM01400: {
         uuid: "RINCON_BEDROOM01400",
         zoneName: "Bedroom",
         hostAddress: "192.168.1.20",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_OFFICE01400": {
+      RINCON_OFFICE01400: {
         uuid: "RINCON_OFFICE01400",
         zoneName: "Office",
         hostAddress: "192.168.1.30",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
-      }
+        primary: false,
+      },
     },
     deviceCheckInterval: 10,
     deviceTimeoutDuration: 10,
     adjustVolumeIncrement: 10,
-    favorites: []
+    favorites: [],
   });
 
   await expandAccordion(page, "#sonos-speakers-accordeon");
@@ -583,7 +584,7 @@ test("p4-filter", async ({ page }) => {
 
 test("p4-volume-override-1", async ({ page }) => {
   await installMockSonos(page, {
-    topologyFixture: "zonegroupstate-multi-group.xml"
+    topologyFixture: "zonegroupstate-multi-group.xml",
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -597,8 +598,8 @@ test("p4-volume-override-1", async ({ page }) => {
     actionInfo: {
       action: "com.r-teller.sonoscontroller.volume-up",
       context: "ctx-p4",
-      payload: { settings: {}, controller: "Keypad" }
-    }
+      payload: { settings: {}, controller: "Keypad" },
+    },
   });
 
   const volInput = page.locator("[data-pi-volume-increment-override]");
@@ -625,7 +626,7 @@ test("p4-favorites", async ({ page }, testInfo) => {
   test.setTimeout(30_000);
   const mock = await installMockSonos(page, {
     topologyFixture: "zonegroupstate-multi-group.xml",
-    favoritesFixture: "browse-fv2-mixed.xml"
+    favoritesFixture: "browse-fv2-mixed.xml",
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -639,8 +640,8 @@ test("p4-favorites", async ({ page }, testInfo) => {
     actionInfo: {
       action: "com.r-teller.sonoscontroller.play-sonos-favorite",
       context: "ctx-p4",
-      payload: { settings: {}, controller: "Keypad" }
-    }
+      payload: { settings: {}, controller: "Keypad" },
+    },
   });
 
   const addressInput = page.locator("[data-pi-primary-device-address]");
@@ -673,7 +674,7 @@ test("p4-favorites", async ({ page }, testInfo) => {
 
 test("p4-reopen", async ({ page }) => {
   const mock = await installMockSonos(page, {
-    topologyFixture: "zonegroupstate-multi-group.xml"
+    topologyFixture: "zonegroupstate-multi-group.xml",
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -692,51 +693,51 @@ test("p4-reopen", async ({ page }) => {
           uuid: "RINCON_OFFICE01400",
           title: "Office (192.168.1.42)",
           hostAddress: "192.168.1.42",
-          zoneName: "Office"
+          zoneName: "Office",
         },
-        controller: "Keypad"
-      }
-    }
+        controller: "Keypad",
+      },
+    },
   });
 
   await mockHost.inject.globalSettings({
     devices: {
-      "RINCON_OFFICE01400": {
+      RINCON_OFFICE01400: {
         uuid: "RINCON_OFFICE01400",
         zoneName: "Office",
         hostAddress: "192.168.1.42",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: true
+        primary: true,
       },
-      "RINCON_KITCHEN01400": {
+      RINCON_KITCHEN01400: {
         uuid: "RINCON_KITCHEN01400",
         zoneName: "Kitchen",
         hostAddress: "192.168.1.43",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_DININGROOM01400": {
+      RINCON_DININGROOM01400: {
         uuid: "RINCON_DININGROOM01400",
         zoneName: "Dining Room",
         hostAddress: "192.168.1.44",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
+        primary: false,
       },
-      "RINCON_PATIO01400": {
+      RINCON_PATIO01400: {
         uuid: "RINCON_PATIO01400",
         zoneName: "Patio",
         hostAddress: "192.168.1.45",
         port: 1400,
         isSatellite: false,
         idleState: "ACTIVE",
-        primary: false
-      }
+        primary: false,
+      },
     },
     deviceCheckInterval: 10,
     deviceTimeoutDuration: 10,
@@ -745,9 +746,9 @@ test("p4-reopen", async ({ page }) => {
       {
         title: "Test Favorite",
         uri: "x-rincon:RINCON_OFFICE01400",
-        metadata: "<DIDL-Lite></DIDL-Lite>"
-      }
-    ]
+        metadata: "<DIDL-Lite></DIDL-Lite>",
+      },
+    ],
   });
 
   const saveButton = page.locator("[data-pi-save-and-connect]");
@@ -768,7 +769,7 @@ test("p4-reopen", async ({ page }) => {
 
 test("p4-keyboard-a11y", async ({ page }) => {
   await installMockSonos(page, {
-    topologyFixture: "zonegroupstate-multi-group.xml"
+    topologyFixture: "zonegroupstate-multi-group.xml",
   });
 
   await page.addInitScript(mockStreamDeckHostSource);
@@ -782,8 +783,8 @@ test("p4-keyboard-a11y", async ({ page }) => {
     actionInfo: {
       action: "com.r-teller.sonoscontroller.volume-up",
       context: "ctx-p4",
-      payload: { settings: {}, controller: "Keypad" }
-    }
+      payload: { settings: {}, controller: "Keypad" },
+    },
   });
 
   const globalAccordionHeader = page.locator("#global-settings-accordeon .accordion-button");

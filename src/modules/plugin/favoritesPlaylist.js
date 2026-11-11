@@ -99,3 +99,49 @@ export function recordPlaylistChange(uuid, { id, updateId, total, keys }) {
   const entry = playlists.get(uuid) ?? { searchedAt: 0 };
   playlists.set(uuid, { ...entry, id, updateId, total, keys });
 }
+
+const xmlEscape = (s) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+/**
+ * Metadata for adding a Spotify track to a Sonos playlist so its title, artist and art are kept.
+ * Verified on a real speaker (sonos-bg0.1): the speaker needs Spotify's item id form and the account
+ * tag (service type = sid * 256 + 7, e.g. 3079 for sid 12); the queue item's own id loses the title,
+ * and the queue id together with the tag is refused (error 814).
+ */
+export function spotifyTrackMetadata({ uri, title, artist, album, albumArtURI }) {
+  const plain = String(uri ?? "").replace(/&amp;/g, "&");
+  const trackId = plain.match(/spotify(?:%3a|:)track(?:%3a|:)([A-Za-z0-9]+)/i)?.[1];
+  const sid = Number(plain.match(/[?&]sid=(\d+)/)?.[1]);
+  if (!trackId || !sid) return null;
+  const type = sid * 256 + 7;
+  // The speaker serves art from its own /getaa path; keep it relative like the Sonos app does.
+  const art = String(albumArtURI ?? "").replace(/^https?:\/\/[^/]+(?=\/getaa)/, "");
+  return (
+    `<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" ` +
+    `xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/" xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">` +
+    `<item id="10032020spotify%3atrack%3a${trackId}" parentID="" restricted="true">` +
+    `<res protocolInfo="sonos.com-spotify:*:audio/x-spotify:*">${xmlEscape(plain)}</res>` +
+    (art ? `<upnp:albumArtURI>${xmlEscape(art)}</upnp:albumArtURI>` : "") +
+    `<dc:title>${xmlEscape(title)}</dc:title><upnp:class>object.item.audioItem.musicTrack</upnp:class>` +
+    `<dc:creator>${xmlEscape(artist)}</dc:creator><upnp:album>${xmlEscape(album)}</upnp:album>` +
+    `<desc id="cdudn" nameSpace="urn:schemas-rinconnetworks-com:metadata-1-0/">SA_RINCON${type}_X_#Svc${type}-0-Token</desc>` +
+    `</item></DIDL-Lite>`
+  );
+}
+
+const pressChains = new Map(); // speaker UUID -> promise of the press in progress
+
+/** Runs presses one at a time per speaker, so a fast double press is add then remove, never two adds. */
+export function oneAtATime(uuid, task) {
+  const run = (pressChains.get(uuid) ?? Promise.resolve()).then(task, task);
+  pressChains.set(
+    uuid,
+    run.catch(() => {}),
+  );
+  return run;
+}

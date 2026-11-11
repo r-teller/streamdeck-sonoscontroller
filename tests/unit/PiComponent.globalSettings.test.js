@@ -248,7 +248,7 @@ describe("PiComponent Global Settings & saveAndConnect flow", () => {
     const savedSettings = stubClient.saveSettings.mock.calls[0][0].actionSettings;
     expect(savedSettings.uuid).toBe("RINCON_A");
     expect(savedSettings.title).toBe("Office (192.168.1.42)");
-    expect(Object.keys(savedSettings)).toHaveLength(25);
+    expect(Object.keys(savedSettings)).toHaveLength(26);
   });
 
   it("No clobber of existing binding", async () => {

@@ -1,4 +1,14 @@
 import { positionSnapshot } from "../plugin/trackTime.js";
+import {
+  PLAYLIST_TITLE,
+  canFavorite,
+  oneAtATime,
+  positionsOf,
+  recordPlaylistChange,
+  refreshPlaylist,
+  spotifyTrackMetadata,
+  trackKey,
+} from "../plugin/favoritesPlaylist.js";
 import { actionFunctionMap } from "../plugin/actionDispatcher.js";
 import { buildMarqueeRenderIntent, composeKeyTitle, albumArtImage } from "../plugin/marquee.js";
 import { queueItems } from "../plugin/queueCache.js";
@@ -665,6 +675,57 @@ function encoderQueueTrackState({ inContext, inActionSettings, inSonosSpeakerSta
 }
 
 // Register all actions
+// Action 14: Favorite Song key (sonos-bg0.4): adds the playing song to the "Stream Deck Favorites"
+// Sonos playlist, or removes it (every copy) when it is already there.
+export const FAVORITE_TRACK_STATES = { NOT_FAVORITE: 0, FAVORITE: 1, UNAVAILABLE: 2 };
+
+async function favoriteTrackKeyDown({ inActionSettings, inSonosSpeakerState }) {
+  const uri = inSonosSpeakerState?.currentURI;
+  // TV, line-in, radio and services other than Spotify: nothing to do (the key is dimmed).
+  if (!canFavorite(uri)) return { status: "SUCCESS" };
+  const uuid = inActionSettings.uuid;
+  return oneAtATime(uuid, async () => {
+    try {
+      const controller = makeController(inActionSettings.hostAddress, uuid);
+      // Re-read the playlist from the speaker first: it accepts duplicates, the plugin must not add one.
+      let entry = await raceWithTimeout(refreshPlaylist(uuid, controller, { force: true }), "refreshPlaylist");
+      if (!entry.id) {
+        const id = await raceWithTimeout(controller.createPlaylist(PLAYLIST_TITLE), "createPlaylist");
+        const sig = await raceWithTimeout(controller.getPlaylistSignature(id), "getPlaylistSignature");
+        entry = { id, updateId: sig.updateId, total: sig.total, keys: [] };
+      }
+      const positions = positionsOf(uuid, uri);
+      if (positions.length > 0) {
+        if (inActionSettings.allowRemoveFavorite === false) {
+          return { status: "SUCCESS", updatedSonosSpeakerState: { inFavorites: true } };
+        }
+        const res = await raceWithTimeout(
+          controller.removeFromPlaylist(entry.id, entry.updateId, positions),
+          "removeFromPlaylist",
+        );
+        const drop = new Set(positions);
+        recordPlaylistChange(uuid, { ...entry, ...res, keys: entry.keys.filter((_, i) => !drop.has(i)) });
+        return { status: "SUCCESS", updatedSonosSpeakerState: { inFavorites: false } };
+      }
+      const playing = inSonosSpeakerState?.playing ?? {};
+      const metadata = spotifyTrackMetadata({ uri, ...playing });
+      const res = await raceWithTimeout(controller.addToPlaylist(entry.id, entry.updateId, uri, metadata), "addToPlaylist");
+      recordPlaylistChange(uuid, { ...entry, ...res, keys: [...entry.keys, trackKey(uri)] });
+      return { status: "SUCCESS", updatedSonosSpeakerState: { inFavorites: true } };
+    } catch (e) {
+      console.warn("favoriteTrackKeyDown error:", e);
+      return { status: "ERROR" };
+    }
+  });
+}
+
+function favoriteTrackState({ inSonosSpeakerState }) {
+  if (!canFavorite(inSonosSpeakerState?.currentURI)) return { stateIndex: FAVORITE_TRACK_STATES.UNAVAILABLE };
+  return {
+    stateIndex: inSonosSpeakerState?.inFavorites === true ? FAVORITE_TRACK_STATES.FAVORITE : FAVORITE_TRACK_STATES.NOT_FAVORITE,
+  };
+}
+
 export function registerSonosActions() {
   // Action 1: currently-playing
   actionFunctionMap["currently-playing"].keyDown = [currentlyPlayingKeyDown];
@@ -729,6 +790,10 @@ export function registerSonosActions() {
   queueDial.dialDown = [encoderQueueTrackNext];
   queueDial.touchTap = [encoderQueueTrackNext];
   queueDial.state.encoder = encoderQueueTrackState;
+
+  // Action 14: toggle-favorite-track (sonos-bg0.4)
+  actionFunctionMap["toggle-favorite-track"].keyDown = [favoriteTrackKeyDown];
+  actionFunctionMap["toggle-favorite-track"].state.keypad = favoriteTrackState;
 }
 
 // Register on import (idempotent)
