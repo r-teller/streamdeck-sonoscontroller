@@ -4,6 +4,7 @@
 import { test, expect } from "@playwright/test";
 import { mockStreamDeckHostSource, createMockHost, connect } from "./support/mockStreamDeckHost.js";
 import { installMockSonos } from "./support/mockSonos.js";
+import { waitForPollAfter } from "./support/polling.js";
 
 const ACTION = "com.r-teller.sonoscontroller.encoder-play-mode";
 const SPEAKER = { uuid: "RINCON_OFFICE01400", hostAddress: "192.168.1.42", zoneName: "Office" };
@@ -55,20 +56,7 @@ async function setup(page, mockOptions = {}) {
   const shown = async (ctx) => (await feedback(ctx)).at(-1) ?? {};
   const sentModes = () =>
     mock.calls.filter((c) => c.action === "SetPlayMode").map((c) => c.body.match(/<NewPlayMode>([^<]*)</)[1]);
-  /** The plugin re-polls right after an action: wait for a GetTransportSettings after the n-th SetPlayMode. */
-  const afterNextPoll = async (n) => {
-    await expect
-      .poll(
-        () => {
-          const sets = mock.calls.filter((c) => c.action === "SetPlayMode");
-          const i = mock.calls.indexOf(sets[n - 1]);
-          return i >= 0 && mock.calls.slice(i + 1).some((c) => c.action === "GetTransportSettings");
-        },
-        { timeout: 8000 },
-      )
-      .toBe(true);
-    await page.waitForTimeout(300);
-  };
+  const afterNextPoll = (n) => waitForPollAfter(page, mock, { set: "SetPlayMode", get: "GetTransportSettings", n });
   return { mock, mockHost, pageErrors, feedback, shown, sentModes, afterNextPoll };
 }
 

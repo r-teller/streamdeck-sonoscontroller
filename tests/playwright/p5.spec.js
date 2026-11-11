@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { test, expect } from "@playwright/test";
 import { mockStreamDeckHostSource, createMockHost, connect } from "./support/mockStreamDeckHost.js";
 import { installMockSonos } from "./support/mockSonos.js";
+import { waitForPollAfter } from "./support/polling.js";
 
 const GETTER_FIXTURES = {
   GetTransportInfo: "gettransportinfo-playing.xml",
@@ -629,20 +630,10 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
       encoderPushAction: "TOGGLE_MUTE",
     };
     const lastTitle = async () =>
-      (await mockHost.outbound("setFeedback")).filter((f) => f.context === ctx && f.payload.title !== undefined).at(-1)
-        ?.payload.title;
+      (await mockHost.outbound("setFeedback")).filter((f) => f.context === ctx && f.payload.title !== undefined).at(-1)?.payload
+        .title;
     const setMutes = () => mock.calls.filter((c) => c.action === "SetMute");
-    // The plugin re-polls right after every action (sonos-e9y): wait for a GetMute issued after the
-    // n-th SetMute, then give the render a moment, so the check runs against the polled value.
-    const afterNextPoll = async (n) => {
-      await expect
-        .poll(() => {
-          const i = mock.calls.indexOf(setMutes()[n - 1]);
-          return i >= 0 && mock.calls.slice(i + 1).some((c) => c.action === "GetMute");
-        }, { timeout: 8000 })
-        .toBe(true);
-      await page.waitForTimeout(300);
-    };
+    const afterNextPoll = (n) => waitForPollAfter(page, mock, { set: "SetMute", get: "GetMute", n });
 
     await mockHost.inject.willAppear(ctx, "encoder-audio-equalizer", settings, "Encoder");
     await expect.poll(lastTitle, { timeout: 8000 }).toBe("Volume");
@@ -723,7 +714,10 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
     const titles = frames
       .filter(
         (f) =>
-          f.event === "setTitle" && f.context === ctx1 && typeof f.payload.title === "string" && f.payload.title.length === WIDTH,
+          f.event === "setTitle" &&
+          f.context === ctx1 &&
+          typeof f.payload.title === "string" &&
+          f.payload.title.length === WIDTH,
       )
       .map((f) => f.payload.title);
 
@@ -794,9 +788,7 @@ test.describe("p5 - Sonos Stream Deck plugin end-to-end scenarios", () => {
     // DEFERRED-ICONS baseline: the built bundle ships no images/ yet, so the
     // preview page 404s on "./images/keys/input_tv.png". The frame-level
     // assertion above is the acceptance; filter the resource-load noise.
-    expect(
-      consoleErrors.filter((e) => !e.includes("net::ERR") && !e.includes("Failed to load resource")),
-    ).toEqual([]);
+    expect(consoleErrors.filter((e) => !e.includes("net::ERR") && !e.includes("Failed to load resource"))).toEqual([]);
   });
 
   test("p5-error-alert", async ({ page }) => {

@@ -13,7 +13,9 @@ const actions = [
   { short: "volume-up", uuid: "com.r-teller.sonoscontroller.volume-up" },
   { short: "volume-down", uuid: "com.r-teller.sonoscontroller.volume-down" },
   { short: "play-sonos-favorite", uuid: "com.r-teller.sonoscontroller.play-sonos-favorite" },
-  { short: "encoder-audio-equalizer", uuid: "com.r-teller.sonoscontroller.encoder-audio-equalizer" }
+  { short: "encoder-audio-equalizer", uuid: "com.r-teller.sonoscontroller.encoder-audio-equalizer" },
+  { short: "encoder-play-mode", uuid: "com.r-teller.sonoscontroller.encoder-play-mode" },
+  { short: "encoder-queue-track", uuid: "com.r-teller.sonoscontroller.encoder-queue-track" }
 ];
 
 async function bootPi(page, shortName, settings = {}) {
@@ -281,6 +283,14 @@ for (const action of actions) {
       "encoder-audio-equalizer": {
         togglesPresent: [],
         sectionsPresent: ["equalizer-target"]
+      },
+      "encoder-play-mode": {
+        togglesPresent: [],
+        sectionsPresent: ["play-modes"]
+      },
+      "encoder-queue-track": {
+        togglesPresent: [],
+        sectionsPresent: []
       }
     };
 

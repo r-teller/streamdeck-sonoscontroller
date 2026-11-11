@@ -4,6 +4,7 @@
 import { test, expect } from "@playwright/test";
 import { mockStreamDeckHostSource, createMockHost, connect } from "./support/mockStreamDeckHost.js";
 import { installMockSonos } from "./support/mockSonos.js";
+import { waitForPollAfter } from "./support/polling.js";
 
 const ACTION = "com.r-teller.sonoscontroller.encoder-queue-track";
 const SPEAKER = { uuid: "RINCON_OFFICE01400", hostAddress: "192.168.1.42", zoneName: "Office" };
@@ -49,19 +50,7 @@ async function setup(page, { fixtures = {}, ...mockOptions } = {}) {
       .filter((c) => c.action === "Seek")
       .map((c) => `${c.body.match(/<Unit>([^<]*)</)[1]}:${c.body.match(/<Target>([^<]*)</)[1]}`);
   const plays = () => mock.calls.filter((c) => c.action === "Play").length;
-  /** The plugin re-polls right after an action: wait for a GetPositionInfo after the n-th Seek. */
-  const afterNextPoll = async (n) => {
-    await expect
-      .poll(
-        () => {
-          const i = mock.calls.indexOf(mock.calls.filter((c) => c.action === "Seek")[n - 1]);
-          return i >= 0 && mock.calls.slice(i + 1).some((c) => c.action === "GetPositionInfo");
-        },
-        { timeout: 8000 },
-      )
-      .toBe(true);
-    await page.waitForTimeout(300);
-  };
+  const afterNextPoll = (n) => waitForPollAfter(page, mock, { set: "Seek", get: "GetPositionInfo", n });
   return { mock, mockHost, pageErrors, shown, seeks, plays, afterNextPoll };
 }
 
